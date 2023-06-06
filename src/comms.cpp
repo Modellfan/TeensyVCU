@@ -66,10 +66,7 @@
 //     add_repeating_timer_ms(1000, poll_packs_for_data, NULL, &pollModuleTimer);
 // }
 
-/*
-Blink the built in led to visualize main state 
-*/
-
+//Blink the built in led to visualize main state 
 void led_blink()
 {
     digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
@@ -84,16 +81,14 @@ void enable_led_blink()
     Serial.println("Led blink enabled.");
 }
 
-/*
-Poll the Jaguar iPace Shunt
-*/
 
+//Poll the Jaguar iPace Shunt
 void update_shunt()
 {
     shunt.update();
 }
 
-Task update_shunt_timer(10, TASK_FOREVER, &update_shunt);
+Task update_shunt_timer(5, TASK_FOREVER, &update_shunt);
 
 void enable_update_shunt()
 {
@@ -102,6 +97,17 @@ void enable_update_shunt()
     update_shunt_timer.enable();
     Serial.println("Shunt update timer enabled.");
 }
+
+//Monitor CPU load
+void monitor_cpu_load()
+{
+    
+}
+
+
+//Reset Watchdog
+
+
 
 // /*
 // Update the contactor manager
