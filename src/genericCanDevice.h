@@ -73,16 +73,31 @@ void can_poll()
         // printFrame(message);
         int32_t current = 0;
         float Temperature = 0.0;
-        long temp = 0;
+        int32_t temp = 0;
 
         switch (message.id)
         {
-        case 0x3c3:
+        case 0x3c3: //10ms
             current = (int32_t)(((message.data[4] << 8) + (message.data[5])) - ((message.data[2] << 8) + (message.data[3])));
             Serial.print("Current: ");
             Serial.println(current);
             break;
-        case 0x3D2:
+
+//             1
+// High nibble
+// IVT__Resulte_state
+// 0b0000 .. 0b1111
+// bit 0: set if OCS is true
+// bit 1: set if
+// - this result is out of (spec-) range,
+// - this result has reduced precision
+// - this result has a measurement-error
+// bit 2: set if
+// - any result has a measurement-error
+// bit 3: set if
+// - system-error, sensor functionality is not ensured!
+
+        case 0x3D2: //100ms
             temp = (int32_t)(((message.data[4] << 8) + (message.data[5])) - ((message.data[2] << 8) + (message.data[3])));
             Temperature = temp / 10;
             Serial.print("Temperature: ");

@@ -51,7 +51,6 @@ void setup()
   //-- only constructors go here. No setup if initialization methods
 
   enable_led_blink();
-
   enable_poll_can();
   
   //   printf("Enabling handling of inbound CAN messages from batteries\n");
