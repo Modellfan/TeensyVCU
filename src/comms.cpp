@@ -23,10 +23,14 @@
 #include "settings.h"
 #include "comms.h"
 
-#include "genericCanDevice.h"
+#include <current.h>
+#include <contactor.cpp>
+
+
 // #include "statemachine.h"
 // #include "battery.h"
 // #include "pack.h"
+
 
 
 // struct repeating_timer statusPrintTimer;
@@ -75,31 +79,48 @@ Task led_blink_timer(1000, TASK_FOREVER, &led_blink);
 
 void enable_led_blink()
 {
-    extern Scheduler scheduler;
     scheduler.addTask(led_blink_timer);
     led_blink_timer.enable();
     Serial.println("Led blink enabled.");
 }
 
 /*
-Poll the generic can device on can 1 
+Poll the Jaguar iPace Shunt
 */
 
-void poll_can()
+void update_shunt()
 {
-    can_poll();
+    shunt.update();
 }
 
-Task can_poll_timer(10, TASK_FOREVER, &poll_can);
+Task update_shunt_timer(10, TASK_FOREVER, &update_shunt);
 
-void enable_poll_can()
+void enable_update_shunt()
 {
-    can_setup();
-    extern Scheduler scheduler;
-    scheduler.addTask(can_poll_timer);
-    can_poll_timer.enable();
-    Serial.println("Poll CAN 1 enabled.");
+    shunt.initialise();
+    scheduler.addTask(update_shunt_timer);
+    update_shunt_timer.enable();
+    Serial.println("Shunt update timer enabled.");
 }
+
+// /*
+// Update the contactor manager
+// */
+
+// void update_contactors()
+// {
+//     myContactor.update();
+// }
+
+// Task update_contactors_timer(100, TASK_FOREVER, &update_contactors);
+
+// void enable_update_contactors()
+// {
+//     myContactor.initialise();
+//     scheduler.addTask(update_contactors_timer);
+//     update_contactors_timer.enable();
+//     Serial.println("Contactors update timer enabled.");
+// }
 
 
 

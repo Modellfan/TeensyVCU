@@ -20,13 +20,27 @@
 #ifndef COMMS_H
 #define COMMS_H
 
-// #include "battery.h"
+#include <Arduino.h>
+#include <TaskSchedulerDeclarations.h>
 
+#include <current.h>
+#include <contactor.cpp>
+
+extern Scheduler scheduler;
+
+//Commands to make the onboard LED blink
 void led_blink();
 void enable_led_blink();
 
-void poll_can();
-void enable_poll_can();
+//Commands to handle the current sensor
+extern Shunt_ISA_iPace shunt;
+void update_shunt();
+void enable_update_shunt();
+
+// //Commands to handle the contactors
+// extern Contactor myContactor;
+// void update_contactors();
+// void enable_update_contactors();
 
 // void enable_status_print();
 // void request_module_data(BatteryModule *module);

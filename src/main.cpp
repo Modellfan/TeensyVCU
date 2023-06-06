@@ -2,11 +2,16 @@
 #include <TaskScheduler.h>
 #include <ACAN_T4.h>
 
+#include <current.h>
+#include <contactor.cpp>
+
 #include "comms.h"
 
 #ifndef __IMXRT1062__
 #error "This sketch should be compiled for Teensy 4.1"
 #endif
+
+using namespace std;
 
 // Create a Scheduler instance
 #define _TASK_TIMECRITICAL
@@ -16,6 +21,10 @@ Scheduler scheduler;
 
 // Battery battery(NUM_PACKS);
 // MCP2515 mainCAN(SPI_PORT, MAIN_CAN_CS, SPI_MISO, SPI_MOSI, SPI_CLK, 500000);
+Shunt_ISA_iPace shunt;
+
+// // Define a Contactor instance
+// Contactor myContactor(2, 3, 10, 1000); // Example values for outputPin, inputPin, debounce_ms, timeout_ms
 
 // bool watchdog_keepalive(struct repeating_timer *t) {
 //     watchdog_update();
@@ -52,7 +61,7 @@ void setup()
 
   enable_led_blink();
 
-  enable_poll_can();
+  enable_update_shunt();
   
   //   printf("Enabling handling of inbound CAN messages from batteries\n");
   // enable_handle_battery_CAN_messages();
@@ -74,28 +83,3 @@ void loop()
 {
   scheduler.execute();
 }
-
-// void printFrame(CANMessage &frame)
-// {
-//   // Print message
-//   Serial.print("ID: ");
-//   Serial.print(frame.id, HEX);
-//   Serial.print(" Ext: ");
-//   if (frame.ext)
-//   {
-//     Serial.print("Y");
-//   }
-//   else
-//   {
-//     Serial.print("N");
-//   }
-//   Serial.print(" Len: ");
-//   Serial.print(frame.len, DEC);
-//   Serial.print(" ");
-//   for (int i = 0; i < frame.len; i++)
-//   {
-//     Serial.print(frame.data[i], HEX);
-//     Serial.print(" ");
-//   }
-//   Serial.println();
-// }
