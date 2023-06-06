@@ -1,3 +1,6 @@
+#include <Arduino.h>
+#include "settings.h"
+
 class Contactormanager {
 public:
     typedef enum State {
@@ -13,37 +16,13 @@ public:
         FAULT                 // Contactors are in fault state
     };
 
-        ContactorManager(int negOutputPin, int negInputPin,
-                     int preOutputPin, int preInputPin,
-                     int posOutputPin, int posInputPin,
-                     int debounce_ms, int timeout_ms)
-        : _negContactor(negOutputPin, negInputPin, debounce_ms, timeout_ms),
-          _preContactor(preOutputPin, preInputPin, debounce_ms, timeout_ms),
-          _posContactor(posOutputPin, posInputPin, debounce_ms, timeout_ms),
-          _currentState(INIT),
-          _lastStateChange(millis())
-    {}
-
-    void initialise()
-    {
-        _negContactor.initialise();
-        _preContactor.initialise();
-        _posContactor.initialise();
-
-        if (_currentState == INIT) {
-            _currentState = NEG_CLOSING;
-            _lastStateChange = millis();
-            _negContactor.close();
-        }
-    }
-
     Contactormanager(int negativeOutputPin, int negativeInputPin,
                      int prechargeOutputPin, int prechargeInputPin,
-                     int positiveOutputPin, int positiveInputPin)
-        : _negativeContactor(negativeOutputPin, negativeInputPin),
-          _prechargeContactor(prechargeOutputPin, prechargeInputPin),
-          _positiveContactor(positiveOutputPin, positiveInputPin),
-          _currentState(INIT) {}
+                     int positiveOutputPin, int positiveInputPin) {
+         _negativeContactor(negativeOutputPin, negativeInputPin);
+          _prechargeContactor(prechargeOutputPin, prechargeInputPin);
+          _positiveContactor(positiveOutputPin, positiveInputPin);
+          _currentState  = INIT; }
 
     void initialise() {
         _negativeContactor.initialise();
@@ -124,16 +103,7 @@ public:
         return _currentState;
     }
 
-    void update() {
-        switch (_currentState) {
-            case INIT:
-                initialise();
-                break;
-            case OPEN:
-                if (_negativeContactor.getState() == FAULT ||
-                    _prechargeContactor.getState() == FAULT ||
-
-void ContactorManager::update()
+void update()
 {
     // Update state of each contactor
     _negContactor.update();
@@ -224,3 +194,4 @@ private:
     State _currentState;
     State _closingState;
     State _openingState;
+};
