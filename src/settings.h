@@ -97,5 +97,6 @@ const int INHIBIT_CONTACTOR_PINS[2] = { 2, 3 };    // Low-side switch to disallo
 
 
 #define ISA_SHUNT_CAN can1
+#define ISA_SHUNT_TIMEOUT 100 //Timeout in ms, when no new message is recieved 
 
 #endif

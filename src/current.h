@@ -33,7 +33,9 @@ private:
     Shunt_ISA_iPace_State _state;
     
     long _lastUpdate; // Time we received last update from BMS
-    uint8_t _pollMessageId; // For counting if a message was skipped
+    uint8_t _0x3c3_framecounter;
+    uint8_t _0x3D2_framecounter;
+    uint8_t _last_status_bits;
 
     float _temperature;            // Internal temperature of shunt
     float _current;                // Current value

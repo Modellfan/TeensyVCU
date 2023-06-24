@@ -1,6 +1,8 @@
 #include <Arduino.h>
-#include <TaskScheduler.h>
 #include <ACAN_T4.h>
+
+#define _TASK_TIMECRITICAL
+#include <TaskScheduler.h>
 
 #include <current.h>
 #include <contactor.cpp>
@@ -11,10 +13,7 @@
 #error "This sketch should be compiled for Teensy 4.1"
 #endif
 
-using namespace std;
-
 // Create a Scheduler instance
-#define _TASK_TIMECRITICAL
 Scheduler scheduler;
 // State state;
 // StatusLight statusLight;
@@ -49,9 +48,10 @@ void setup()
   }
 
   // Setup scheduler
-  // scheduler.startNow();
-  // scheduler.delay();
-  // scheduler.cpuLoadReset()
+  scheduler.startNow();
+  scheduler.cpuLoadReset();
+
+
 
   // Setup non-volatile memory
   //---
@@ -62,6 +62,7 @@ void setup()
   enable_led_blink();
 
   enable_update_shunt();
+  //-> Update shunt until in State = Operating . Then start initialzing contactors
   
   //   printf("Enabling handling of inbound CAN messages from batteries\n");
   // enable_handle_battery_CAN_messages();
@@ -77,6 +78,25 @@ void setup()
 
   // printf("Enable listen for CHARGE_ENABLE signal\n");
   // enable_listen_for_charge_enable_signal();
+}
+
+void tOff() {
+  unsigned long cpuTot = scheduler.getCpuLoadTotal();
+  unsigned long cpuCyc = scheduler.getCpuLoadCycle();
+  unsigned long cpuIdl = scheduler.getCpuLoadIdle();
+
+  Serial.print("Total CPU time="); Serial.print(cpuTot); Serial.println(" micros");
+  Serial.print("Scheduling Overhead CPU time="); Serial.print(cpuCyc); Serial.println(" micros");
+  Serial.print("Idle Sleep CPU time="); Serial.print(cpuIdl); Serial.println(" micros");
+  Serial.print("Productive work CPU time="); Serial.print(cpuTot - cpuIdl - cpuCyc); Serial.println(" micros");
+  Serial.println();
+
+  float idle = (float)cpuIdl / (float)cpuTot * 100;
+  Serial.print("CPU Idle Sleep "); Serial.print(idle); Serial.println(" % of time.");
+
+  float prod = (float)(cpuIdl + cpuCyc) / (float)cpuTot * 100;
+  Serial.print("Productive work (not idle, not scheduling)"); Serial.print(100.00 - prod); Serial.println(" % of time.");
+
 }
 
 void loop()
