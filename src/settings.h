@@ -89,14 +89,30 @@ const int INHIBIT_CONTACTOR_PINS[2] = { 2, 3 };    // Low-side switch to disallo
 
 #define BALANCE_INTERVAL 1200                       // number of seconds between balancing sessions
 
-//// ---- CAN message IDs
-
-#define STATUS_MSG_ID 0x300                         // Status message emitted by the BMS
-#define CAN_ID_ISA_SHUNT_AH 0x527                   // Message ISA shunt sends which contains Ah data.
-#define CAN_ID_ISA_SHUNT_WH 0x528                   // Message ISA shunt sends which contains Wh data.
-
-
+// Shunt Settings
 #define ISA_SHUNT_CAN can1
 #define ISA_SHUNT_TIMEOUT 100 //Timeout in ms, when no new message is recieved 
+
+// Contactor Manager Settings
+#define CONTACTOR_TIMELOOP 20
+#define CONTACTOR_TIMEOUT 200
+#define CONTACTOR_DEBOUNCE 100 //Debounce should be bigger than time loop
+
+#define CONTACTOR_NEG_IN_PIN 3
+#define CONTACTOR_NEG_OUT_PIN 2
+#define CONTACTOR_POS_IN_PIN 5
+#define CONTACTOR_POS_OUT_PIN 4
+#define CONTACTOR_PRCHG_IN_PIN 29
+#define CONTACTOR_PRCHG_OUT_PIN 28
+
+#define CONTACTOR_PRCHG_TIME 2000 //Time for the precharge contactor to be closed before positive contactor
+
+
+// Debug function for teleplot app in vscode
+#define PLOT(name, value) \
+    do { \
+        SerialUSB1.print(">" #name ":"); \
+        SerialUSB1.println(value); \
+    } while(0)
 
 #endif

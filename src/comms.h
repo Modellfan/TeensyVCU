@@ -22,9 +22,10 @@
 
 #include <Arduino.h>
 #include <TaskSchedulerDeclarations.h>
+#include <settings.h>
 
 #include <current.h>
-#include <contactor.cpp>
+#include <contactor.h>
 
 extern Scheduler scheduler;
 
@@ -37,10 +38,13 @@ extern Shunt_ISA_iPace shunt;
 void update_shunt();
 void enable_update_shunt();
 
-// //Commands to handle the contactors
-// extern Contactor myContactor;
-// void update_contactors();
-// void enable_update_contactors();
+//Commands to handle the contactors
+extern Contactor myContactor;
+void update_contactors();
+void enable_update_contactors();
+
+void update_system_load();
+void enable_update_system_load();
 
 // void enable_status_print();
 // void request_module_data(BatteryModule *module);

@@ -1,11 +1,10 @@
 #include <Arduino.h>
 #include <ACAN_T4.h>
 
-#define _TASK_TIMECRITICAL
 #include <TaskScheduler.h>
 
 #include <current.h>
-#include <contactor.cpp>
+#include <contactor.h>
 
 #include "comms.h"
 
@@ -23,7 +22,7 @@ Scheduler scheduler;
 Shunt_ISA_iPace shunt;
 
 // // Define a Contactor instance
-// Contactor myContactor(2, 3, 10, 1000); // Example values for outputPin, inputPin, debounce_ms, timeout_ms
+Contactor myContactor(2, 3, 100, 200); // Example values for outputPin, inputPin, debounce_ms, timeout_ms
 
 // bool watchdog_keepalive(struct repeating_timer *t) {
 //     watchdog_update();
@@ -47,12 +46,20 @@ void setup()
     digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
   }
 
+  delay(2000);
+
+  Serial.println("Fct: Setup");
+
   // Setup scheduler
   scheduler.startNow();
-  scheduler.cpuLoadReset();
+  // scheduler.cpuLoadReset();
 
-
-
+  // pinMode(28, INPUT_PULLUP);
+  //  if (digitalRead(28)) {
+  //     Serial.println("High");
+  //   } else {
+  //     Serial.println("Low");
+  //   }
   // Setup non-volatile memory
   //---
 
@@ -60,10 +67,11 @@ void setup()
   //-- only constructors go here. No setup if initialization methods
 
   enable_led_blink();
-
-  enable_update_shunt();
+  enable_update_system_load();
+  // enable_update_shunt();
+  enable_update_contactors();
   //-> Update shunt until in State = Operating . Then start initialzing contactors
-  
+
   //   printf("Enabling handling of inbound CAN messages from batteries\n");
   // enable_handle_battery_CAN_messages();
 
@@ -78,26 +86,28 @@ void setup()
 
   // printf("Enable listen for CHARGE_ENABLE signal\n");
   // enable_listen_for_charge_enable_signal();
+
+  Serial.println("Fct: Loop");
 }
 
-void tOff() {
-  unsigned long cpuTot = scheduler.getCpuLoadTotal();
-  unsigned long cpuCyc = scheduler.getCpuLoadCycle();
-  unsigned long cpuIdl = scheduler.getCpuLoadIdle();
+// void tOff() {
+//   unsigned long cpuTot = scheduler.getCpuLoadTotal();
+//   unsigned long cpuCyc = scheduler.getCpuLoadCycle();
+//   unsigned long cpuIdl = scheduler.getCpuLoadIdle();
 
-  Serial.print("Total CPU time="); Serial.print(cpuTot); Serial.println(" micros");
-  Serial.print("Scheduling Overhead CPU time="); Serial.print(cpuCyc); Serial.println(" micros");
-  Serial.print("Idle Sleep CPU time="); Serial.print(cpuIdl); Serial.println(" micros");
-  Serial.print("Productive work CPU time="); Serial.print(cpuTot - cpuIdl - cpuCyc); Serial.println(" micros");
-  Serial.println();
+//   Serial.print("Total CPU time="); Serial.print(cpuTot); Serial.println(" micros");
+//   Serial.print("Scheduling Overhead CPU time="); Serial.print(cpuCyc); Serial.println(" micros");
+//   Serial.print("Idle Sleep CPU time="); Serial.print(cpuIdl); Serial.println(" micros");
+//   Serial.print("Productive work CPU time="); Serial.print(cpuTot - cpuIdl - cpuCyc); Serial.println(" micros");
+//   Serial.println();
 
-  float idle = (float)cpuIdl / (float)cpuTot * 100;
-  Serial.print("CPU Idle Sleep "); Serial.print(idle); Serial.println(" % of time.");
+//   float idle = (float)cpuIdl / (float)cpuTot * 100;
+//   Serial.print("CPU Idle Sleep "); Serial.print(idle); Serial.println(" % of time.");
 
-  float prod = (float)(cpuIdl + cpuCyc) / (float)cpuTot * 100;
-  Serial.print("Productive work (not idle, not scheduling)"); Serial.print(100.00 - prod); Serial.println(" % of time.");
+//   float prod = (float)(cpuIdl + cpuCyc) / (float)cpuTot * 100;
+//   Serial.print("Productive work (not idle, not scheduling)"); Serial.print(100.00 - prod); Serial.println(" % of time.");
 
-}
+// }
 
 void loop()
 {

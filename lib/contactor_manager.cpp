@@ -1,109 +1,97 @@
 #include <Arduino.h>
 #include "settings.h"
+#include "contactor_manager.h"
 
-class Contactormanager {
-public:
-    typedef enum State {
-        INIT,                 // Contactors are being initialized
-        OPEN,                 // Contactors are open
-        OPENING_POSITIVE,     // Positive contactor is opening
-        OPENING_PRECHARGE,    // Precharge contactor is opening
-        OPENING_NEGATIVE,     // Negative contactor is opening
-        CLOSING_NEGATIVE,     // Negative contactor is closing
-        CLOSING_PRECHARGE,    // Precharge contactor is closing
-        CLOSING_POSITIVE,     // Positive contactor is closing
-        CLOSED,               // Contactors are closed
-        FAULT                 // Contactors are in fault state
-    };
+Contactormanager::Contactormanager(int negativeOutputPin, int negativeInputPin,
+                                   int prechargeOutputPin, int prechargeInputPin,
+                                   int positiveOutputPin, int positiveInputPin) {
+    _negativeContactor(negativeOutputPin, negativeInputPin);
+    _prechargeContactor(prechargeOutputPin, prechargeInputPin);
+    _positiveContactor(positiveOutputPin, positiveInputPin);
+    _currentState = INIT;
+}
 
-    Contactormanager(int negativeOutputPin, int negativeInputPin,
-                     int prechargeOutputPin, int prechargeInputPin,
-                     int positiveOutputPin, int positiveInputPin) {
-         _negativeContactor(negativeOutputPin, negativeInputPin);
-          _prechargeContactor(prechargeOutputPin, prechargeInputPin);
-          _positiveContactor(positiveOutputPin, positiveInputPin);
-          _currentState  = INIT; }
-
-    void initialise() {
-        _negativeContactor.initialise();
-        _prechargeContactor.initialise();
-        _positiveContactor.initialise();
-        if (_negativeContactor.getState() == FAULT ||
-            _prechargeContactor.getState() == FAULT ||
-            _positiveContactor.getState() == FAULT) {
-            _currentState = FAULT;
-        } else {
-            _currentState = OPEN;
-        }
+void Contactormanager::initialise() {
+    _negativeContactor.initialise();
+    _prechargeContactor.initialise();
+    _positiveContactor.initialise();
+    if (_negativeContactor.getState() == FAULT ||
+        _prechargeContactor.getState() == FAULT ||
+        _positiveContactor.getState() == FAULT) {
+        _currentState = FAULT;
+    } else {
+        _currentState = OPEN;
     }
+}
 
-    void close() {
-        switch (_currentState) {
-            case OPEN:
-            case OPENING_NEGATIVE:
-                _currentState = CLOSING_NEGATIVE;
-                _negativeContactor.close();
-                break;
-            case CLOSING_NEGATIVE:
-                if (_negativeContactor.getState() == CLOSED) {
-                    _currentState = CLOSING_PRECHARGE;
-                    _prechargeContactor.close();
-                }
-                break;
-            case CLOSING_PRECHARGE:
-                if (_prechargeContactor.getState() == CLOSED) {
-                    _currentState = CLOSING_POSITIVE;
-                    _positiveContactor.close();
-                }
-                break;
-            case CLOSING_POSITIVE:
-                if (_positiveContactor.getState() == CLOSED) {
-                    _currentState = CLOSED;
-                }
-                break;
-            case OPENING_PRECHARGE:
-            case OPENING_POSITIVE:
-            case CLOSED:
-            case FAULT:
-            default:
-                break;
-        }
+void Contactormanager::close() {
+    switch (_currentState) {
+        case OPEN:
+        case OPENING_NEGATIVE:
+            _currentState = CLOSING_NEGATIVE;
+            _negativeContactor.close();
+            break;
+        case CLOSING_NEGATIVE:
+            if (_negativeContactor.getState() == CLOSED) {
+                _currentState = CLOSING_PRECHARGE;
+                _prechargeContactor.close();
+            }
+            break;
+        case CLOSING_PRECHARGE:
+            if (_prechargeContactor.getState() == CLOSED) {
+                _currentState = CLOSING_POSITIVE;
+                _positiveContactor.close();
+            }
+            break;
+        case CLOSING_POSITIVE:
+            if (_positiveContactor.getState() == CLOSED) {
+                _currentState = CLOSED;
+            }
+            break;
+        case OPENING_PRECHARGE:
+        case OPENING_POSITIVE:
+        case CLOSED:
+        case FAULT:
+        default:
+            break;
     }
+}
 
-    void open() {
-        switch (_currentState) {
-            case CLOSED:
-            case OPENING_POSITIVE:
-                _currentState = OPENING_POSITIVE;
-                _positiveContactor.open();
-                break;
-            case OPENING_PRECHARGE:
-                _prechargeContactor.open();
-                if (_prechargeContactor.getState() == OPEN) {
-                    _currentState = OPENING_NEGATIVE;
-                    _negativeContactor.open();
-                }
-                break;
-            case OPENING_NEGATIVE:
-                if (_negativeContactor.getState() == OPEN) {
-                    _currentState = OPEN;
-                }
-                break;
-            case OPEN:
-            case CLOSING_NEGATIVE:
-            case CLOSING_PRECHARGE:
-            case CLOSING_POSITIVE:
-            case FAULT:
-            default:
-                break;
-        }
+void Contactormanager::open() {
+    switch (_currentState) {
+        case CLOSED:
+        case OPENING_POSITIVE:
+            _currentState = OPENING_POSITIVE;
+            _positiveContactor.open();
+            break;
+        case OPENING_PRECHARGE:
+            _prechargeContactor.open();
+            if (_prechargeContactor.getState() == OPEN) {
+                _currentState = OPENING_NEGATIVE;
+                _negativeContactor.open();
+            }
+            break;
+        case OPENING_NEGATIVE:
+            if (_negativeContactor.getState() == OPEN) {
+                _currentState = OPEN;
+            }
+            break;
+        case OPEN:
+        case CLOSING_NEGATIVE:
+        case CLOSING_PRECHARGE:
+        case CLOSING_POSITIVE:
+        case FAULT:
+        default:
+            break;
     }
+}
 
-    State getState() {
-        return _currentState;
-    }
+Contactormanager::State Contactormanager::getState() {
+    return _currentState;
+}
 
-void update()
+
+void Contactormanager::update()
 {
     // Update state of each contactor
     _negContactor.update();
@@ -186,12 +174,3 @@ void update()
     }
 }
 
-private:
-    Contactor _negativeContactor;
-    Contactor _positiveContactor;
-    Contactor _prechargeContactor;
-    unsigned long _lastStateChange;
-    State _currentState;
-    State _closingState;
-    State _openingState;
-};

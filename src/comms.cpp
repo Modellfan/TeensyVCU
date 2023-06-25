@@ -24,7 +24,7 @@
 #include "comms.h"
 
 #include <current.h>
-#include <contactor.cpp>
+#include <contactor.h>
 
 
 // #include "statemachine.h"
@@ -70,6 +70,7 @@
 void led_blink()
 {
     digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
+     //Serial.println("Serial Alive");
 }
 
 Task led_blink_timer(1000, TASK_FOREVER, &led_blink);
@@ -99,9 +100,18 @@ void enable_update_shunt()
 }
 
 //Monitor CPU load
-void monitor_cpu_load()
+void update_system_load()
 {
-    
+    //Serial.print("Monitor");
+}
+
+Task update_system_load_timer(100, TASK_FOREVER, &update_system_load);
+
+void enable_update_system_load()
+{
+    scheduler.addTask(update_system_load_timer);
+    update_system_load_timer.enable();
+    Serial.println("System Load update timer enabled.");
 }
 
 
@@ -109,24 +119,22 @@ void monitor_cpu_load()
 
 
 
-// /*
-// Update the contactor manager
-// */
+//Update the contactor manager
+void update_contactors()
+{
+    myContactor.update();
+}
 
-// void update_contactors()
-// {
-//     myContactor.update();
-// }
+Task update_contactors_timer(20, TASK_FOREVER, &update_contactors);
 
-// Task update_contactors_timer(100, TASK_FOREVER, &update_contactors);
-
-// void enable_update_contactors()
-// {
-//     myContactor.initialise();
-//     scheduler.addTask(update_contactors_timer);
-//     update_contactors_timer.enable();
-//     Serial.println("Contactors update timer enabled.");
-// }
+void enable_update_contactors()
+{
+    myContactor.initialise();
+    scheduler.addTask(update_contactors_timer);
+    update_contactors_timer.enable();
+    Serial.println("Contactors update timer enabled.");
+    myContactor.close();
+}
 
 
 
