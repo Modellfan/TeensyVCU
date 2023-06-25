@@ -26,6 +26,7 @@
 
 #include <current.h>
 #include <contactor.h>
+#include "contactor_manager.h"
 
 extern Scheduler scheduler;
 
@@ -39,7 +40,7 @@ void update_shunt();
 void enable_update_shunt();
 
 //Commands to handle the contactors
-extern Contactor myContactor;
+extern Contactormanager contactor_manager;
 void update_contactors();
 void enable_update_contactors();
 

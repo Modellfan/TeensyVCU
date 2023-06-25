@@ -25,6 +25,7 @@
 
 #include <current.h>
 #include <contactor.h>
+#include "contactor_manager.h"
 
 
 // #include "statemachine.h"
@@ -122,18 +123,18 @@ void enable_update_system_load()
 //Update the contactor manager
 void update_contactors()
 {
-    myContactor.update();
+    contactor_manager.update();
 }
 
-Task update_contactors_timer(20, TASK_FOREVER, &update_contactors);
+Task update_contactors_timer(CONTACTOR_TIMELOOP, TASK_FOREVER, &update_contactors);
 
 void enable_update_contactors()
 {
-    myContactor.initialise();
+    contactor_manager.initialise();
     scheduler.addTask(update_contactors_timer);
     update_contactors_timer.enable();
     Serial.println("Contactors update timer enabled.");
-    myContactor.close();
+    contactor_manager.close();
 }
 
 

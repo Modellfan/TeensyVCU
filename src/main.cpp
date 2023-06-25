@@ -5,6 +5,7 @@
 
 #include <current.h>
 #include <contactor.h>
+#include "contactor_manager.h"
 
 #include "comms.h"
 
@@ -22,7 +23,8 @@ Scheduler scheduler;
 Shunt_ISA_iPace shunt;
 
 // // Define a Contactor instance
-Contactor myContactor(2, 3, 100, 200); // Example values for outputPin, inputPin, debounce_ms, timeout_ms
+//Contactor myContactor(2, 3, 100, 200); // Example values for outputPin, inputPin, debounce_ms, timeout_ms
+Contactormanager contactor_manager;
 
 // bool watchdog_keepalive(struct repeating_timer *t) {
 //     watchdog_update();
