@@ -26,6 +26,7 @@
 #include <current.h>
 #include <contactor.h>
 #include "contactor_manager.h"
+#include "battery i3/pack.h"
 
 
 // #include "statemachine.h"
@@ -262,14 +263,32 @@ void enable_update_contactors()
 //     add_repeating_timer_ms(10, handle_main_CAN_messages, NULL, &handleMainCANMessageTimer);
 // }
 
-// struct repeating_timer handleBatteryCANMessagesTimer;
+void handle_battery_CAN_messages() {
+    extern BatteryPack batteryPack;
+    batteryPack.read_message();
+}
 
-// bool handle_battery_CAN_messages(struct repeating_timer *t) {
-//     extern Battery battery;
-//     battery.read_message();
-//     return true;
-// }
+Task handle_battery_CAN_messages_timer(5, TASK_FOREVER, &handle_battery_CAN_messages);
 
-// void enable_handle_battery_CAN_messages() {
-//     add_repeating_timer_ms(10, handle_battery_CAN_messages, NULL, &handleBatteryCANMessagesTimer);
-// }
+void enable_handle_battery_CAN_messages() {
+    //batteryPack.initialise();
+    scheduler.addTask(handle_battery_CAN_messages_timer);
+    handle_battery_CAN_messages_timer.enable();
+    Serial.println("Battery handle CAN messages timer enabled.");
+}
+
+void poll_battery_for_data() {
+    extern BatteryPack batteryPack;
+    batteryPack.request_data();
+}
+
+Task poll_battery_for_data_timer(1000, TASK_FOREVER, &poll_battery_for_data);
+
+void enable_poll_battery_for_data() {
+    scheduler.addTask(poll_battery_for_data_timer);
+    poll_battery_for_data_timer.enable();
+    Serial.println("Battery handle CAN messages timer enabled.");
+}
+
+
+

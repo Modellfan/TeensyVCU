@@ -6,6 +6,7 @@
 #include <current.h>
 #include <contactor.h>
 #include "contactor_manager.h"
+#include "battery i3/pack.h"
 
 #include "comms.h"
 
@@ -19,11 +20,13 @@ Scheduler scheduler;
 // StatusLight statusLight;
 
 // Battery battery(NUM_PACKS);
+
+BatteryPack batteryPack(8, 12, 4);
 // MCP2515 mainCAN(SPI_PORT, MAIN_CAN_CS, SPI_MISO, SPI_MOSI, SPI_CLK, 500000);
 Shunt_ISA_iPace shunt;
 
 // // Define a Contactor instance
-//Contactor myContactor(2, 3, 100, 200); // Example values for outputPin, inputPin, debounce_ms, timeout_ms
+// Contactor myContactor(2, 3, 100, 200); // Example values for outputPin, inputPin, debounce_ms, timeout_ms
 Contactormanager contactor_manager;
 
 // bool watchdog_keepalive(struct repeating_timer *t) {
@@ -71,7 +74,10 @@ void setup()
   enable_led_blink();
   enable_update_system_load();
   // enable_update_shunt();
-  enable_update_contactors();
+  // enable_update_contactors();
+  //enable_handle_battery_CAN_messages();
+  //enable_poll_battery_for_data();
+  
   //-> Update shunt until in State = Operating . Then start initialzing contactors
 
   //   printf("Enabling handling of inbound CAN messages from batteries\n");
@@ -88,28 +94,7 @@ void setup()
 
   // printf("Enable listen for CHARGE_ENABLE signal\n");
   // enable_listen_for_charge_enable_signal();
-
-  Serial.println("Fct: Loop");
 }
-
-// void tOff() {
-//   unsigned long cpuTot = scheduler.getCpuLoadTotal();
-//   unsigned long cpuCyc = scheduler.getCpuLoadCycle();
-//   unsigned long cpuIdl = scheduler.getCpuLoadIdle();
-
-//   Serial.print("Total CPU time="); Serial.print(cpuTot); Serial.println(" micros");
-//   Serial.print("Scheduling Overhead CPU time="); Serial.print(cpuCyc); Serial.println(" micros");
-//   Serial.print("Idle Sleep CPU time="); Serial.print(cpuIdl); Serial.println(" micros");
-//   Serial.print("Productive work CPU time="); Serial.print(cpuTot - cpuIdl - cpuCyc); Serial.println(" micros");
-//   Serial.println();
-
-//   float idle = (float)cpuIdl / (float)cpuTot * 100;
-//   Serial.print("CPU Idle Sleep "); Serial.print(idle); Serial.println(" % of time.");
-
-//   float prod = (float)(cpuIdl + cpuCyc) / (float)cpuTot * 100;
-//   Serial.print("Productive work (not idle, not scheduling)"); Serial.print(100.00 - prod); Serial.println(" % of time.");
-
-// }
 
 void loop()
 {

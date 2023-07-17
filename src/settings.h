@@ -72,6 +72,8 @@ const int INHIBIT_CONTACTOR_PINS[2] = { 2, 3 };    // Low-side switch to disallo
 
 #define CAN_CLK_PIN     21 // pin 27
 
+// Battery
+
 // Official min pack voltage = 269V. 269 / 6 / 16 = 2.8020833333V
 #define CELL_EMPTY_VOLTAGE 2.9
 
@@ -88,6 +90,8 @@ const int INHIBIT_CONTACTOR_PINS[2] = { 2, 3 };    // Low-side switch to disallo
 #define CHARGE_CURRENT_MIN 8                        // ~3.3kw
 
 #define BALANCE_INTERVAL 1200                       // number of seconds between balancing sessions
+
+#define BATTERY_CAN can2
 
 // Shunt Settings
 #define ISA_SHUNT_CAN can1

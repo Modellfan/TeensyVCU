@@ -27,19 +27,20 @@
 #include <current.h>
 #include <contactor.h>
 #include "contactor_manager.h"
+#include "battery i3/pack.h"
 
 extern Scheduler scheduler;
 
-//Commands to make the onboard LED blink
+// Commands to make the onboard LED blink
 void led_blink();
 void enable_led_blink();
 
-//Commands to handle the current sensor
+// Commands to handle the current sensor
 extern Shunt_ISA_iPace shunt;
 void update_shunt();
 void enable_update_shunt();
 
-//Commands to handle the contactors
+// Commands to handle the contactors
 extern Contactormanager contactor_manager;
 void update_contactors();
 void enable_update_contactors();
@@ -47,6 +48,12 @@ void enable_update_contactors();
 void update_system_load();
 void enable_update_system_load();
 
+// Command to handle the BMW i3 Battery
+extern BatteryPack batteryPack;
+void handle_battery_CAN_messages();
+void enable_handle_battery_CAN_messages();
+void poll_battery_for_data();
+void enable_poll_battery_for_data();
 // void enable_status_print();
 // void request_module_data(BatteryModule *module);
 // bool poll_all_modules_for_data(struct repeating_timer *t);
@@ -59,7 +66,7 @@ void enable_update_system_load();
 
 // bool handle_main_CAN_messages(struct repeating_timer *t);
 // void enable_handle_main_CAN_messages();
-// bool handle_battery_CAN_messages(struct repeating_timer *t);
-// void enable_handle_battery_CAN_messages();
+bool handle_battery_CAN_messages(struct repeating_timer *t);
+void enable_handle_battery_CAN_messages();
 
 #endif
