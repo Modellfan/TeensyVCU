@@ -1,3 +1,5 @@
+//ToDO: Battery Pack is written for BMW Hybrid
+
 #include <Arduino.h>
 #include <ACAN_T4.h>
 
@@ -19,10 +21,10 @@ Scheduler scheduler;
 // State state;
 // StatusLight statusLight;
 
-// Battery battery(NUM_PACKS);
+
 
 BatteryPack batteryPack(8, 12, 4);
-// MCP2515 mainCAN(SPI_PORT, MAIN_CAN_CS, SPI_MISO, SPI_MOSI, SPI_CLK, 500000);
+
 Shunt_ISA_iPace shunt;
 
 // // Define a Contactor instance
@@ -51,7 +53,7 @@ void setup()
     digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
   }
 
-  delay(2000);
+  delay(100);
 
   Serial.println("Fct: Setup");
 
@@ -75,8 +77,10 @@ void setup()
   enable_update_system_load();
   // enable_update_shunt();
   // enable_update_contactors();
-  //enable_handle_battery_CAN_messages();
-  //enable_poll_battery_for_data();
+  enable_handle_battery_CAN_messages();
+  enable_poll_battery_for_data();
+
+  enable_print_debug();
   
   //-> Update shunt until in State = Operating . Then start initialzing contactors
 

@@ -54,6 +54,13 @@ void handle_battery_CAN_messages();
 void enable_handle_battery_CAN_messages();
 void poll_battery_for_data();
 void enable_poll_battery_for_data();
+
+
+//Debug
+void print_debug();
+void enable_print_debug();
+
+
 // void enable_status_print();
 // void request_module_data(BatteryModule *module);
 // bool poll_all_modules_for_data(struct repeating_timer *t);
@@ -66,7 +73,7 @@ void enable_poll_battery_for_data();
 
 // bool handle_main_CAN_messages(struct repeating_timer *t);
 // void enable_handle_main_CAN_messages();
-bool handle_battery_CAN_messages(struct repeating_timer *t);
-void enable_handle_battery_CAN_messages();
+// bool handle_battery_CAN_messages(struct repeating_timer *t);
+// void enable_handle_battery_CAN_messages();
 
 #endif

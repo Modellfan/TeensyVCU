@@ -268,10 +268,10 @@ void handle_battery_CAN_messages() {
     batteryPack.read_message();
 }
 
-Task handle_battery_CAN_messages_timer(5, TASK_FOREVER, &handle_battery_CAN_messages);
+Task handle_battery_CAN_messages_timer(2, TASK_FOREVER, &handle_battery_CAN_messages);
 
 void enable_handle_battery_CAN_messages() {
-    //batteryPack.initialise();
+    batteryPack.initialize();
     scheduler.addTask(handle_battery_CAN_messages_timer);
     handle_battery_CAN_messages_timer.enable();
     Serial.println("Battery handle CAN messages timer enabled.");
@@ -282,12 +282,26 @@ void poll_battery_for_data() {
     batteryPack.request_data();
 }
 
-Task poll_battery_for_data_timer(1000, TASK_FOREVER, &poll_battery_for_data);
+Task poll_battery_for_data_timer(13, TASK_FOREVER, &poll_battery_for_data); //Orginal BMW i3 polls each pack at 100ms at 8 modules 13 ms comes to approx 100ms
 
 void enable_poll_battery_for_data() {
     scheduler.addTask(poll_battery_for_data_timer);
     poll_battery_for_data_timer.enable();
-    Serial.println("Battery handle CAN messages timer enabled.");
+    Serial.println("Battery poll timer enabled.");
+}
+
+//Print debug messages
+void print_debug() {
+    extern BatteryPack batteryPack;
+    batteryPack.print();
+}
+
+Task print_debug_timer(1000, TASK_FOREVER, &print_debug); 
+
+void enable_print_debug() {
+    scheduler.addTask(print_debug_timer);
+    print_debug_timer.enable();
+    Serial.println("Print debug timer enabled.");
 }
 
 

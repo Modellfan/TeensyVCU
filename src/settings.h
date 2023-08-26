@@ -31,12 +31,12 @@
 
 //#define NUM_PACKS         2                        // The total number of paralleled packs in this battery
 #define NUM_PACKS         1
-#define CELLS_PER_MODULE 16                        // The number of cells in each module
+#define CELLS_PER_MODULE 12                        // The number of cells in each module
 #define TEMPS_PER_MODULE  4                        // The number of temperature sensors in each module
-#define MODULES_PER_PACK  6                        // The number of modules in each pack
+#define MODULES_PER_PACK  8                        // The number of modules in each pack
 
 
-#define PACK_ALIVE_TIMEOUT 5                       // If we have not seen an update from the BMS in
+#define PACK_ALIVE_TIMEOUT 300                       // If we have not seen an update from the BMS in
                                                    // PACK_ALIVE_TIMEOUT seconds, then mark the pack
                                                    // as dead.
 

@@ -20,7 +20,7 @@
 // This code was directly borrowed from the SimpBMS project over here :
 //   https://github.com/Tom-evnut/BMWPhevBMS.git
 
-#include <stdint.h>
+#include "Arduino.h"
 
 #ifndef CRC8_H
 #define CRC8_H

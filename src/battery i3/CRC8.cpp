@@ -21,6 +21,7 @@
 //   https://github.com/Tom-evnut/BMWPhevBMS.git
 
 #include "CRC8.h"
+#include "Arduino.h"
 
 CRC8::CRC8(void) { }
 

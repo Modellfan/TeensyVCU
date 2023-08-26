@@ -39,6 +39,8 @@ public:
     BatteryPack(int _numModules, int _numCellsPerModule, int _numTemperatureSensorsPerModule);
 
     void print();
+    void initialize();
+    
     uint8_t getcheck(CANMessage &msg, int id);
     void request_data();
     void read_message();
@@ -51,37 +53,32 @@ public:
     int get_pack_error_status();
     void set_pack_balance_status(int newBalanceStatus);
     int get_pack_balance_status();
-    bool pack_is_due_to_be_balanced();
-    void reset_balance_timer();
 
     // Voltage
     float get_voltage();
     void update_voltage();
+
     float get_lowest_cell_voltage();
-    void update_cell_delta();
-    bool has_empty_cell();
     float get_highest_cell_voltage();
-    bool has_full_cell();
+
     void update_cell_voltage(int moduleIndex, int cellIndex, float newCellVoltage);
-    int get_index_of_high_pack();
-    int get_index_of_low_pack();
     void decode_voltages(CANMessage *frame);
 
     // Temperature
-    bool has_temperature_sensor_over_max();
-    int get_max_charging_current();
     float get_lowest_temperature();
     void decode_temperatures(CANMessage *temperatureMessageFrame);
 
 
 private:
-    unsigned long lastUpdate;         // Time we received last update from BMS
     int numModules;                     //
     int numCellsPerModule;              //
     int numTemperatureSensorsPerModule; //
     float voltage;                      // Voltage of the total pack
     int cellDelta;                      // Difference in voltage between high and low cell, in mV
 
+    float balanceTargetVoltage;
+    bool balanceActive;
+    
     int balanceStatus; //
     int errorStatus;
     unsigned long nextBalanceTime; // Time that the next balance should occur.
@@ -92,6 +89,7 @@ private:
 
     bool inStartup;
     uint8_t modulePollingCycle;
+    uint8_t moduleToPoll;
     CANMessage pollModuleFrame;
 };
 

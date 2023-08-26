@@ -30,15 +30,23 @@ class BatteryModule {
         int id;
         int numCells;                            // Number of cells in this module
         int numTemperatureSensors;               // Number of temperature sensors in this module
+
         float cellVoltage[CELLS_PER_MODULE];     // Voltages of each cell
         float cellTemperature[TEMPS_PER_MODULE]; // Temperatures of each cell
+
         bool allModuleDataPopulated;             // True when we have voltage/temp information for all cells
+        u_int32_t lastUpdate;                    // Times out with setting value of PACK_ALIVE_TIMEOUT in ms
         
         BatteryPack* pack;                       // The parent BatteryPack that contains this module
 
     public:
         BatteryModule();
         BatteryModule(int _id, BatteryPack* _pack, int _numCells, int _numTemperatureSensors);
+
+        bool all_module_data_populated();
+        void check_if_module_data_is_populated();
+        bool module_is_alive();
+
         void print();
 
         // Voltage
@@ -49,21 +57,12 @@ class BatteryModule {
         bool has_empty_cell();
         bool has_full_cell();
 
-        bool all_module_data_populated();
-        void check_if_module_data_is_populated();
-
         // Temperature
         void update_temperature(int tempSensorId, float newTemperature);
         float get_lowest_temperature();
         float get_highest_temperature();
         bool has_temperature_sensor_over_max();
         bool temperature_at_warning_level();
-
-        // Charging
-        int get_max_charging_current();
-                
-
-
 };
 
 #endif
