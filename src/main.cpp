@@ -1,9 +1,8 @@
-//ToDO: Battery Pack is written for BMW Hybrid
-
 #include <Arduino.h>
 #include <ACAN_T4.h>
 
 #include <TaskScheduler.h>
+#include "signalManager.h"
 
 #include <current.h>
 #include <contactor.h>
@@ -24,13 +23,9 @@ Scheduler scheduler;
 
 int balancecount = 0;
 
-
+//Create all needed objects here
 BatteryPack batteryPack(8, 12, 4);
-
 Shunt_ISA_iPace shunt;
-
-// // Define a Contactor instance
-// Contactor myContactor(2, 3, 100, 200); // Example values for outputPin, inputPin, debounce_ms, timeout_ms
 Contactormanager contactor_manager;
 
 // bool watchdog_keepalive(struct repeating_timer *t) {
@@ -49,6 +44,8 @@ void setup()
 
   // Setup serial port
   Serial.begin(500000);
+  SerialUSB1.begin(1000000);
+  SignalManager::setStream(SerialUSB1);
   while (!Serial)
   {
     delay(50);

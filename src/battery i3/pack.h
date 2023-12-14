@@ -24,6 +24,7 @@
 #include <Arduino.h>
 
 #include "module.h"
+#include "can_packer.h"
 #include "settings.h"
 #include "CRC8.h"
 
@@ -47,28 +48,16 @@ public:
     void send_message(CANMessage *frame); //Send out CAN message
     uint8_t getcheck(CANMessage &msg, int id); //Calculate BMW i3 checksum
 
-    void set_pack_error_status(int newErrorStatus);
-    int get_pack_error_status();
-    void set_pack_balance_status(int newBalanceStatus);
-    int get_pack_balance_status();
-
     void set_balancing_active(bool status);
     void set_balancing_voltage(float voltage);
 
     // Voltage
-    float get_voltage();
-    void update_voltage();
-
     float get_lowest_cell_voltage();
     float get_highest_cell_voltage();
 
-    void update_cell_voltage(int moduleIndex, int cellIndex, float newCellVoltage);
-    void decode_voltages(CANMessage *frame);
-
     // Temperature
     float get_lowest_temperature();
-    void decode_temperatures(CANMessage *temperatureMessageFrame);
-
+ 
 
 private:
     int numModules;                     //
@@ -80,9 +69,6 @@ private:
     float balanceTargetVoltage;
     bool balanceActive;
     
-    int balanceStatus; //
-    int errorStatus;
-
     uint8_t pollMessageId;           //
     bool initialised;
     BatteryModule modules[MODULES_PER_PACK]; // The child modules that make up this BatteryPack

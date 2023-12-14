@@ -293,7 +293,7 @@ void print_debug()
     balancecount++;
     if (balancecount == 10)
     {
-        batteryPack.set_balancing_voltage(4.00);
+        batteryPack.set_balancing_voltage(3.932);
         batteryPack.set_balancing_active(true);
     }
 }
@@ -306,3 +306,59 @@ void enable_print_debug()
     print_debug_timer.enable();
     Serial.println("Print debug timer enabled.");
 }
+
+
+// // Update the battery manager
+// void update_battery_manager()
+// {
+//     extern BatteryPack batteryPack;
+//     extern BatteryManager batteryManager;
+
+//     //Set signals from battery
+//     batteryManager.setMinCellVoltage(float newVoltage);
+//     batteryManager.setMaxCellVoltage(float newVoltage);
+//     batteryManager.setPackVoltage(float newVoltage);
+
+//     batteryManager.setMinTemperature(float newtemperature);
+//     batteryManager.setMaxTemperature(float newtemperature);
+
+//     batteryManager.setPackState();
+    
+//     //Set signals from current sensor
+//     batteryManager.setCurrentIntegral(float current_integral); // in mAh since last request
+//     batteryManager.setCurrentDerivative(); //mA/s change of current since last update
+//     batteryManager.setCurrent();
+//     batteryManager.setCurrentState();
+
+//     //Set signals from contactor manager
+//     batteryManager.setContactorManagerState();
+
+
+//     //Set signals from digital inputs
+
+//     batteryManager.update();
+
+//     //Get signal for contactor manager
+//     contactor_manager.close();
+
+//     //Get signal for battery 
+//     batteryPack.set_balancing_voltage
+//     batteryPack.set_balancing_active
+
+// }
+
+// Task update_battery_manager_timer(200, TASK_FOREVER, &update_battery_manager);
+
+// void enable_update_battery_manager()
+// {
+//     scheduler.addTask(update_battery_manager_timer);
+//     update_battery_manager_timer.enable();
+//     Serial.println("Update contactor manager timer enabled.");
+// }
+
+
+//Comms for UDS messages
+
+//Comms for error handling?
+
+//Comms for sending out Nissan leaf messages

@@ -21,6 +21,7 @@
 #include <Arduino.h>
 
 #include "module.h"
+#include "can_packer.h"
 #include "settings.h"
 #include "CRC8.h"
 #include "pack.h"
@@ -40,7 +41,7 @@ BatteryPack::BatteryPack(int _numModules, int _numCellsPerModule, int _numTemper
     for (int m = 0; m < numModules; m++)
     {
         // printf("Creating module %d (cpm:%d, tpm:%d)\n", m, numCellsPerModule, numTemperatureSensorsPerModule);
-        modules[m] = BatteryModule(m, this, numCellsPerModule, numTemperatureSensorsPerModule);
+        modules[m] = BatteryModule(m, this);
     }
 }
 
@@ -145,8 +146,8 @@ void BatteryPack::request_data()
     // Byte 0 & 1: hold the target voltage for balancing
     if (balanceActive == true)
     {
-        pollModuleFrame.data[0] = lowByte((uint16_t(balanceTargetVoltage * 1000) + 5));
-        pollModuleFrame.data[1] = highByte((uint16_t(balanceTargetVoltage * 1000) + 5));
+        pollModuleFrame.data[0] = lowByte((uint16_t(balanceTargetVoltage * 1000) + 0));
+        pollModuleFrame.data[1] = highByte((uint16_t(balanceTargetVoltage * 1000) + 0));
     }
     else
     {
@@ -207,28 +208,13 @@ void BatteryPack::read_message()
 
     // Serial.printf("Pack %d : checking for messages\n", 1);
 
-    CANMessage frame;
+    CANMessage msg;
 
-    if (ACAN_T4::BATTERY_CAN.receive(frame))
+    if (ACAN_T4::BATTERY_CAN.receive(msg))
     {
-
-        // Serial.printf("Pack %d received message : id:%02X : ", 1, frame.id);
-        // for (int i = 0; i < frame.len; i++)
-        // {
-        //     Serial.printf("%02X ", frame.data[i]);
-        // }
-        // Serial.printf("\n");
-
-        // Temperature messages
-        if ((frame.id & 0xFF0) == 0x170)
+        for (int i = 0; i < numModules; i++)
         {
-            decode_temperatures(&frame);
-        }
-
-        // Voltage messages
-        if (frame.id > 0x99 && frame.id < 0x160)
-        {
-            decode_voltages(&frame);
+            modules[i].process_message(msg);
         }
     }
 }
@@ -248,27 +234,6 @@ void BatteryPack::send_message(CANMessage *frame)
     }
 }
 
-void BatteryPack::set_pack_error_status(int newErrorStatus)
-{
-    errorStatus = newErrorStatus;
-    // getError() & 0x2000 >= 0)
-}
-
-int BatteryPack::get_pack_error_status()
-{
-    return errorStatus;
-}
-
-void BatteryPack::set_pack_balance_status(int newBalanceStatus)
-{
-    balanceStatus = newBalanceStatus;
-}
-
-int BatteryPack::get_pack_balance_status()
-{
-    return balanceStatus;
-}
-
 void BatteryPack::set_balancing_active(bool status)
 {
     balanceActive = status;
@@ -279,39 +244,22 @@ void BatteryPack::set_balancing_voltage(float voltage)
     balanceTargetVoltage = voltage;
 }
 
-// Return the voltage of the whole pack
-float BatteryPack::get_voltage()
-{
-    return voltage;
-}
-
-// Update the pack voltage value by summing all of the cell voltages
-void BatteryPack::update_voltage()
-{
-    float newVoltage = 0;
-    for (int m = 0; m < numModules; m++)
-    {
-        newVoltage += modules[m].get_voltage();
-    }
-    voltage = newVoltage;
-}
-
 // Return the voltage of the lowest cell in the pack
 float BatteryPack::get_lowest_cell_voltage()
 {
     float lowestCellVoltage = 10.0000f;
-    for (int m = 0; m < numModules; m++)
-    {
-        // skip modules with incomplete cell data
-        if (!modules[m].all_module_data_populated())
-        {
-            continue;
-        }
-        if (modules[m].get_lowest_cell_voltage() < lowestCellVoltage)
-        {
-            lowestCellVoltage = modules[m].get_lowest_cell_voltage();
-        }
-    }
+    // for (int m = 0; m < numModules; m++)
+    // {
+    //     // skip modules with incomplete cell data
+    //     if (!modules[m].all_module_data_populated())
+    //     {
+    //         continue;
+    //     }
+    //     if (modules[m].get_lowest_cell_voltage() < lowestCellVoltage)
+    //     {
+    //         lowestCellVoltage = modules[m].get_lowest_cell_voltage();
+    //     }
+    // }
     return lowestCellVoltage;
 }
 
@@ -319,91 +267,19 @@ float BatteryPack::get_lowest_cell_voltage()
 float BatteryPack::get_highest_cell_voltage()
 {
     float highestCellVoltage = 0.0000f;
-    for (int m = 0; m < numModules; m++)
-    {
-        // skip modules with incomplete cell data
-        if (!modules[m].all_module_data_populated())
-        {
-            continue;
-        }
-        if (modules[m].get_highest_cell_voltage() > highestCellVoltage)
-        {
-            highestCellVoltage = modules[m].get_highest_cell_voltage();
-        }
-    }
+    // for (int m = 0; m < numModules; m++)
+    // {
+    //     // skip modules with incomplete cell data
+    //     if (!modules[m].all_module_data_populated())
+    //     {
+    //         continue;
+    //     }
+    //     if (modules[m].get_highest_cell_voltage() > highestCellVoltage)
+    //     {
+    //         highestCellVoltage = modules[m].get_highest_cell_voltage();
+    //     }
+    // }
     return highestCellVoltage;
-}
-
-// Update the value for the voltage of an individual cell in a pack
-void BatteryPack::update_cell_voltage(int moduleId, int cellIndex, float newCellVoltage)
-{
-    modules[moduleId].update_cell_voltage(cellIndex, newCellVoltage);
-}
-
-// Extract voltage readings from CAN message and updated stored values
-void BatteryPack::decode_voltages(CANMessage *frame)
-{
-
-    // Serial.printf("    Inside decode_voltages\n");
-
-    int messageId = (frame->id & 0x0F0);
-    int moduleId = (frame->id & 0x00F);
-
-    // Serial.printf("    decode voltages :: messageId : %02X, moduleId : %02X\n", messageId, moduleId);
-
-    switch (messageId)
-    {
-    case 0x000:
-        set_pack_error_status(frame->data[0] + (frame->data[1] << 8) + (frame->data[2] << 16) + (frame->data[3] << 24));
-        set_pack_balance_status((frame->data[5] << 8) + frame->data[4]);
-        break;
-    case 0x020:
-        modules[moduleId].update_cell_voltage(0, float(frame->data[0] + (frame->data[1] & 0x3F) * 256) / 1000);
-        modules[moduleId].update_cell_voltage(1, float(frame->data[2] + (frame->data[3] & 0x3F) * 256) / 1000);
-        modules[moduleId].update_cell_voltage(2, float(frame->data[4] + (frame->data[5] & 0x3F) * 256) / 1000);
-
-        modules[moduleId].update_cell_balancing(0, uint8_t(frame->data[1] & 0xC0)); //Two highest bytes have a status, if the cell is balanced
-        modules[moduleId].update_cell_balancing(1, uint8_t(frame->data[3] & 0xC0));
-        modules[moduleId].update_cell_balancing(2, uint8_t(frame->data[5] & 0xC0));
-        break;
-    case 0x30:
-        modules[moduleId].update_cell_voltage(3, float(frame->data[0] + (frame->data[1] & 0x3F) * 256) / 1000);
-        modules[moduleId].update_cell_voltage(4, float(frame->data[2] + (frame->data[3] & 0x3F) * 256) / 1000);
-        modules[moduleId].update_cell_voltage(5, float(frame->data[4] + (frame->data[5] & 0x3F) * 256) / 1000);
-                
-        modules[moduleId].update_cell_balancing(3, uint8_t(frame->data[1] & 0xC0)); //Two highest bytes have a status, if the cell is balanced
-        modules[moduleId].update_cell_balancing(4, uint8_t(frame->data[3] & 0xC0));
-        modules[moduleId].update_cell_balancing(5, uint8_t(frame->data[5] & 0xC0));
-        break;
-    case 0x40:
-        modules[moduleId].update_cell_voltage(6, float(frame->data[0] + (frame->data[1] & 0x3F) * 256) / 1000);
-        modules[moduleId].update_cell_voltage(7, float(frame->data[2] + (frame->data[3] & 0x3F) * 256) / 1000);
-        modules[moduleId].update_cell_voltage(8, float(frame->data[4] + (frame->data[5] & 0x3F) * 256) / 1000);
-
-        modules[moduleId].update_cell_balancing(6, uint8_t(frame->data[1] & 0xC0)); //Two highest bytes have a status, if the cell is balanced
-        modules[moduleId].update_cell_balancing(7, uint8_t(frame->data[3] & 0xC0));
-        modules[moduleId].update_cell_balancing(8, uint8_t(frame->data[5] & 0xC0));
-        break;
-    case 0x50:
-        modules[moduleId].update_cell_voltage(9, float(frame->data[0] + (frame->data[1] & 0x3F) * 256) / 1000);
-        modules[moduleId].update_cell_voltage(10, float(frame->data[2] + (frame->data[3] & 0x3F) * 256) / 1000);
-        modules[moduleId].update_cell_voltage(11, float(frame->data[4] + (frame->data[5] & 0x3F) * 256) / 1000);
-
-        modules[moduleId].update_cell_balancing(9, uint8_t(frame->data[1] & 0xC0));//Two highest bytes have a status, if the cell is balanced
-        modules[moduleId].update_cell_balancing(10, uint8_t(frame->data[3] & 0xC0));
-        modules[moduleId].update_cell_balancing(11, uint8_t(frame->data[5] & 0xC0));
-        break;
-    default:
-        break;
-    }
-
-    // Check if this update has left us with a complete set of voltage/temperature readings
-    if (!modules[moduleId].all_module_data_populated())
-    {
-        modules[moduleId].check_if_module_data_is_populated();
-    }
-
-    update_voltage();
 }
 
 // return the temperature of the lowest sensor in the pack
@@ -418,20 +294,4 @@ float BatteryPack::get_lowest_temperature()
         }
     }
     return lowestModuleTemperature;
-}
-
-// Extract temperature sensor readings from CAN frame and update stored values
-void BatteryPack::decode_temperatures(CANMessage *temperatureMessageFrame)
-{
-    int moduleId = (temperatureMessageFrame->id & 0x00F);
-    for (int t = 0; t < numTemperatureSensorsPerModule; t++)
-    {
-        modules[moduleId].update_temperature(t, temperatureMessageFrame->data[t] - 40);
-    }
-
-    // Check if this update has left us with a complete set of voltage/temperature readings
-    if (!modules[moduleId].all_module_data_populated())
-    {
-        modules[moduleId].check_if_module_data_is_populated();
-    }
 }
