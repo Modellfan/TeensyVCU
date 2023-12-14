@@ -22,6 +22,8 @@ Scheduler scheduler;
 // StatusLight statusLight;
 
 
+int balancecount = 0;
+
 
 BatteryPack batteryPack(8, 12, 4);
 

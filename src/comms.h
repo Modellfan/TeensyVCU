@@ -57,6 +57,7 @@ void enable_poll_battery_for_data();
 
 
 //Debug
+extern int balancecount;
 void print_debug();
 void enable_print_debug();
 

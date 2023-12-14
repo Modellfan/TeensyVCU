@@ -45,6 +45,7 @@ BatteryModule::BatteryModule (int _id, BatteryPack* _pack, int _numCells, int _n
 
     for ( int c = 0; c < numCells; c++ ) {
         cellVoltage[c] = 0.000f;
+        cellBalancing[c] = 0;
     }
 
     // Initialise temperature sensor readings to zero
@@ -64,7 +65,7 @@ void BatteryModule::print () {
     Serial.printf("    Module id : %d (populated : %d; alive : %d)\n", id, all_module_data_populated(), module_is_alive());
     Serial.printf("        Cell Voltages : ");
     for ( int c = 0; c < numCells; c++ ) {
-        Serial.printf("%d:%1.3fV ", c, cellVoltage[c]);
+        Serial.printf("%d:%1.3fV B%d ", c, cellVoltage[c], cellBalancing[c]);
     }
     Serial.printf("\n");
     Serial.printf("        Temperatures : ");
@@ -112,6 +113,10 @@ void BatteryModule::update_cell_voltage(int cellIndex, float newCellVoltage) {
     //printf("module : update_cell_voltage : %d : %.4f\n", cellIndex, newCellVoltage);
     cellVoltage[cellIndex] = newCellVoltage;
     lastUpdate = millis();
+}
+
+void BatteryModule::update_cell_balancing(int cellIndex, u_int8_t newCellBalancing) {
+    cellBalancing[cellIndex] = newCellBalancing;
 }
 
 // Return true if we have voltage/temp information for all cells

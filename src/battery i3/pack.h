@@ -41,18 +41,19 @@ public:
     void print();
     void initialize();
     
-    uint8_t getcheck(CANMessage &msg, int id);
-    void request_data();
+    void request_data(); 
     void read_message();
 
-    bool pack_is_alive();
-
-    void send_message(CANMessage *frame);
+    void send_message(CANMessage *frame); //Send out CAN message
+    uint8_t getcheck(CANMessage &msg, int id); //Calculate BMW i3 checksum
 
     void set_pack_error_status(int newErrorStatus);
     int get_pack_error_status();
     void set_pack_balance_status(int newBalanceStatus);
     int get_pack_balance_status();
+
+    void set_balancing_active(bool status);
+    void set_balancing_voltage(float voltage);
 
     // Voltage
     float get_voltage();
@@ -81,7 +82,7 @@ private:
     
     int balanceStatus; //
     int errorStatus;
-    unsigned long nextBalanceTime; // Time that the next balance should occur.
+
     uint8_t pollMessageId;           //
     bool initialised;
     BatteryModule modules[MODULES_PER_PACK]; // The child modules that make up this BatteryPack

@@ -93,6 +93,9 @@ void BatteryPack::initialize()
     modulePollingCycle = 0;
     moduleToPoll = 0;
 
+    balanceActive = false;
+    balanceTargetVoltage = 4.27;
+
     crc8.begin();
 }
 
@@ -121,19 +124,6 @@ uint8_t BatteryPack::getcheck(CANMessage &msg, int id)
     return (crc8.get_crc8(canmes, meslen, finalxor[id]));
 }
 
-/*
- *
- * Contents of message
- *   byte 0 : balance data
- *   byte 1 : balance data
- *   byte 2 : 0x00
- *   byte 3 : 0x00
- *   byte 4 :
- *   byte 5 : 0x01
- *   byte 6 :
- *   byte 7 : checksum
- */
-
 void BatteryPack::request_data()
 {
     // modulePollinCycle is the frameCounter send to the BMS
@@ -151,28 +141,55 @@ void BatteryPack::request_data()
 
     pollModuleFrame.id = 0x080 | (moduleToPoll);
     pollModuleFrame.len = 8;
-    pollModuleFrame.data[0] = 0xC7;
-    pollModuleFrame.data[1] = 0x10;
-    pollModuleFrame.data[2] = 0x00;
-    pollModuleFrame.data[3] = 0x50;
-    if (inStartup)
+
+    // Byte 0 & 1: hold the target voltage for balancing
+    if (balanceActive == true)
     {
-        pollModuleFrame.data[4] = 0x20;
-        pollModuleFrame.data[5] = 0x00;
+        pollModuleFrame.data[0] = lowByte((uint16_t(balanceTargetVoltage * 1000) + 5));
+        pollModuleFrame.data[1] = highByte((uint16_t(balanceTargetVoltage * 1000) + 5));
     }
     else
     {
-        pollModuleFrame.data[4] = 0x40;
-        pollModuleFrame.data[5] = 0x01;
+        pollModuleFrame.data[0] = 0xC7;
+        pollModuleFrame.data[1] = 0x10;
     }
-    pollModuleFrame.data[6] = modulePollingCycle << 4;
 
+    // Byte 2: is always 0x00
+    pollModuleFrame.data[2] = 0x00;
+
+    // Byte 3: For the first three messages 0x00. Then 0x50 to signalize that temperature and voltage should be measured.
+    // Byte 4: For the first three messages 0x00. Then 0x08 if balancing active or 0x00 if balancing is inactive
+    if (inStartup)
+    {
+        pollModuleFrame.data[3] = 0x00;
+        pollModuleFrame.data[4] = 0x00;
+    }
+    else
+    {
+        pollModuleFrame.data[3] = 0x50; // 0x00 request no measurements, 0x50 request voltage and temp, 0x10 request voltage measurement, 0x40 request temperature measurement.//balancing bits
+        if (balanceActive == 1)
+        {
+            pollModuleFrame.data[4] = 0x08; // 0x00 request no balancing
+        }
+        else
+        {
+            pollModuleFrame.data[4] = 0x00;
+        }
+    }
+
+    // Byte 5: is alsways 0x00
+    pollModuleFrame.data[5] = 0x00;
+
+    // Byte 6: has the frame counter in the higher nibble. One bit is set at the end of startup.
+    pollModuleFrame.data[6] = modulePollingCycle << 4;
     if (inStartup && (modulePollingCycle == 2))
     {
         pollModuleFrame.data[6] = pollModuleFrame.data[6] + 0x04;
     }
+
+    // Byte 7: is the checksum
     pollModuleFrame.data[7] = getcheck(pollModuleFrame, moduleToPoll);
-    
+
     send_message(&pollModuleFrame);
 
     // Only run this one, for the last module being polled
@@ -181,7 +198,6 @@ void BatteryPack::request_data()
         inStartup = false;
     }
 
-    
     moduleToPoll++;
     return;
 }
@@ -235,7 +251,7 @@ void BatteryPack::send_message(CANMessage *frame)
 void BatteryPack::set_pack_error_status(int newErrorStatus)
 {
     errorStatus = newErrorStatus;
-    //getError() & 0x2000 >= 0)
+    // getError() & 0x2000 >= 0)
 }
 
 int BatteryPack::get_pack_error_status()
@@ -251,6 +267,16 @@ void BatteryPack::set_pack_balance_status(int newBalanceStatus)
 int BatteryPack::get_pack_balance_status()
 {
     return balanceStatus;
+}
+
+void BatteryPack::set_balancing_active(bool status)
+{
+    balanceActive = status;
+}
+
+void BatteryPack::set_balancing_voltage(float voltage)
+{
+    balanceTargetVoltage = voltage;
 }
 
 // Return the voltage of the whole pack
@@ -335,21 +361,37 @@ void BatteryPack::decode_voltages(CANMessage *frame)
         modules[moduleId].update_cell_voltage(0, float(frame->data[0] + (frame->data[1] & 0x3F) * 256) / 1000);
         modules[moduleId].update_cell_voltage(1, float(frame->data[2] + (frame->data[3] & 0x3F) * 256) / 1000);
         modules[moduleId].update_cell_voltage(2, float(frame->data[4] + (frame->data[5] & 0x3F) * 256) / 1000);
+
+        modules[moduleId].update_cell_balancing(0, uint8_t(frame->data[1] & 0xC0)); //Two highest bytes have a status, if the cell is balanced
+        modules[moduleId].update_cell_balancing(1, uint8_t(frame->data[3] & 0xC0));
+        modules[moduleId].update_cell_balancing(2, uint8_t(frame->data[5] & 0xC0));
         break;
     case 0x30:
         modules[moduleId].update_cell_voltage(3, float(frame->data[0] + (frame->data[1] & 0x3F) * 256) / 1000);
         modules[moduleId].update_cell_voltage(4, float(frame->data[2] + (frame->data[3] & 0x3F) * 256) / 1000);
         modules[moduleId].update_cell_voltage(5, float(frame->data[4] + (frame->data[5] & 0x3F) * 256) / 1000);
+                
+        modules[moduleId].update_cell_balancing(3, uint8_t(frame->data[1] & 0xC0)); //Two highest bytes have a status, if the cell is balanced
+        modules[moduleId].update_cell_balancing(4, uint8_t(frame->data[3] & 0xC0));
+        modules[moduleId].update_cell_balancing(5, uint8_t(frame->data[5] & 0xC0));
         break;
     case 0x40:
         modules[moduleId].update_cell_voltage(6, float(frame->data[0] + (frame->data[1] & 0x3F) * 256) / 1000);
         modules[moduleId].update_cell_voltage(7, float(frame->data[2] + (frame->data[3] & 0x3F) * 256) / 1000);
         modules[moduleId].update_cell_voltage(8, float(frame->data[4] + (frame->data[5] & 0x3F) * 256) / 1000);
+
+        modules[moduleId].update_cell_balancing(6, uint8_t(frame->data[1] & 0xC0)); //Two highest bytes have a status, if the cell is balanced
+        modules[moduleId].update_cell_balancing(7, uint8_t(frame->data[3] & 0xC0));
+        modules[moduleId].update_cell_balancing(8, uint8_t(frame->data[5] & 0xC0));
         break;
     case 0x50:
         modules[moduleId].update_cell_voltage(9, float(frame->data[0] + (frame->data[1] & 0x3F) * 256) / 1000);
         modules[moduleId].update_cell_voltage(10, float(frame->data[2] + (frame->data[3] & 0x3F) * 256) / 1000);
         modules[moduleId].update_cell_voltage(11, float(frame->data[4] + (frame->data[5] & 0x3F) * 256) / 1000);
+
+        modules[moduleId].update_cell_balancing(9, uint8_t(frame->data[1] & 0xC0));//Two highest bytes have a status, if the cell is balanced
+        modules[moduleId].update_cell_balancing(10, uint8_t(frame->data[3] & 0xC0));
+        modules[moduleId].update_cell_balancing(11, uint8_t(frame->data[5] & 0xC0));
         break;
     default:
         break;

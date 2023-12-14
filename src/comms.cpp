@@ -28,12 +28,9 @@
 #include "contactor_manager.h"
 #include "battery i3/pack.h"
 
-
 // #include "statemachine.h"
 // #include "battery.h"
 // #include "pack.h"
-
-
 
 // struct repeating_timer statusPrintTimer;
 
@@ -68,11 +65,11 @@
 //     add_repeating_timer_ms(1000, poll_packs_for_data, NULL, &pollModuleTimer);
 // }
 
-//Blink the built in led to visualize main state 
+// Blink the built in led to visualize main state
 void led_blink()
 {
     digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
-     //Serial.println("Serial Alive");
+    // Serial.println("Serial Alive");
 }
 
 Task led_blink_timer(1000, TASK_FOREVER, &led_blink);
@@ -84,8 +81,7 @@ void enable_led_blink()
     Serial.println("Led blink enabled.");
 }
 
-
-//Poll the Jaguar iPace Shunt
+// Poll the Jaguar iPace Shunt
 void update_shunt()
 {
     shunt.update();
@@ -101,10 +97,10 @@ void enable_update_shunt()
     Serial.println("Shunt update timer enabled.");
 }
 
-//Monitor CPU load
+// Monitor CPU load
 void update_system_load()
 {
-    //Serial.print("Monitor");
+    // Serial.print("Monitor");
 }
 
 Task update_system_load_timer(100, TASK_FOREVER, &update_system_load);
@@ -116,12 +112,9 @@ void enable_update_system_load()
     Serial.println("System Load update timer enabled.");
 }
 
+// Reset Watchdog
 
-//Reset Watchdog
-
-
-
-//Update the contactor manager
+// Update the contactor manager
 void update_contactors()
 {
     contactor_manager.update();
@@ -137,8 +130,6 @@ void enable_update_contactors()
     Serial.println("Contactors update timer enabled.");
     contactor_manager.close();
 }
-
-
 
 // //// ----
 // //
@@ -263,46 +254,55 @@ void enable_update_contactors()
 //     add_repeating_timer_ms(10, handle_main_CAN_messages, NULL, &handleMainCANMessageTimer);
 // }
 
-void handle_battery_CAN_messages() {
+void handle_battery_CAN_messages()
+{
     extern BatteryPack batteryPack;
     batteryPack.read_message();
 }
 
 Task handle_battery_CAN_messages_timer(2, TASK_FOREVER, &handle_battery_CAN_messages);
 
-void enable_handle_battery_CAN_messages() {
+void enable_handle_battery_CAN_messages()
+{
     batteryPack.initialize();
     scheduler.addTask(handle_battery_CAN_messages_timer);
     handle_battery_CAN_messages_timer.enable();
     Serial.println("Battery handle CAN messages timer enabled.");
 }
 
-void poll_battery_for_data() {
+void poll_battery_for_data()
+{
     extern BatteryPack batteryPack;
     batteryPack.request_data();
 }
 
-Task poll_battery_for_data_timer(13, TASK_FOREVER, &poll_battery_for_data); //Orginal BMW i3 polls each pack at 100ms at 8 modules 13 ms comes to approx 100ms
+Task poll_battery_for_data_timer(13, TASK_FOREVER, &poll_battery_for_data); // Orginal BMW i3 polls each pack at 100ms at 8 modules 13 ms comes to approx 100ms
 
-void enable_poll_battery_for_data() {
+void enable_poll_battery_for_data()
+{
     scheduler.addTask(poll_battery_for_data_timer);
     poll_battery_for_data_timer.enable();
     Serial.println("Battery poll timer enabled.");
 }
 
-//Print debug messages
-void print_debug() {
+// Print debug messages
+void print_debug()
+{
     extern BatteryPack batteryPack;
     batteryPack.print();
+    balancecount++;
+    if (balancecount == 10)
+    {
+        batteryPack.set_balancing_voltage(4.00);
+        batteryPack.set_balancing_active(true);
+    }
 }
 
-Task print_debug_timer(1000, TASK_FOREVER, &print_debug); 
+Task print_debug_timer(1000, TASK_FOREVER, &print_debug);
 
-void enable_print_debug() {
+void enable_print_debug()
+{
     scheduler.addTask(print_debug_timer);
     print_debug_timer.enable();
     Serial.println("Print debug timer enabled.");
 }
-
-
-

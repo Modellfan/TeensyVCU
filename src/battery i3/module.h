@@ -33,6 +33,11 @@ class BatteryModule {
 
         float cellVoltage[CELLS_PER_MODULE];     // Voltages of each cell
         float cellTemperature[TEMPS_PER_MODULE]; // Temperatures of each cell
+        u_int8_t cellBalancing[CELLS_PER_MODULE];
+        float totalVoltage;
+
+        u_int16_t balanceStatus; 
+        u_int64_t errorStatus;
 
         bool allModuleDataPopulated;             // True when we have voltage/temp information for all cells
         u_int32_t lastUpdate;                    // Times out with setting value of PACK_ALIVE_TIMEOUT in ms
@@ -49,16 +54,23 @@ class BatteryModule {
 
         void print();
 
+        //Misc signals from csc
+        void update_error_status();
+        void update_balancing_status();
+
         // Voltage
         float get_voltage();
         float get_lowest_cell_voltage();
         float get_highest_cell_voltage();
         void update_cell_voltage(int cellIndex, float newCellVoltage);
+        void update_module_voltage(float newModuleVoltage);
+        void update_cell_balancing(int cellIndex, u_int8_t newCellBalancing);
         bool has_empty_cell();
         bool has_full_cell();
 
         // Temperature
         void update_temperature(int tempSensorId, float newTemperature);
+        void update_csc_temperature(float newTemperature);
         float get_lowest_temperature();
         float get_highest_temperature();
         bool has_temperature_sensor_over_max();
