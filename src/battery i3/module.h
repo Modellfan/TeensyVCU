@@ -53,6 +53,7 @@ public:
 
     // Runnables
     void process_message(CANMessage &msg);
+    void check_alive();
     void print();
 
     // Our state
@@ -88,11 +89,10 @@ private:
     BatteryPack *pack;    // The parent BatteryPack that contains this module
 
     const char *getStateString();
-    const char *getDTCString();
+    String getDTCString();
 
     bool check_if_module_data_is_populated();
     bool plausibilityCheck();
-    bool module_is_alive();
 };
 
 #endif

@@ -30,7 +30,6 @@
 #include "can_packer.h"
 #include <ACAN_T4.h>
 
-
 BatteryModule::BatteryModule() {}
 
 BatteryModule::BatteryModule(int _id, BatteryPack *_pack)
@@ -71,7 +70,8 @@ BatteryModule::BatteryModule(int _id, BatteryPack *_pack)
 
 void BatteryModule::print()
 {
-    Serial.printf("Module id: %d (state: %s; DTC: %s)\n", id, getStateString(), getDTCString());
+    // Serial.println(static_cast<uint8_t>(dtc));
+    Serial.printf("Module id: %d (state: %s; DTC: %s; Module Voltage %fV)\n", id, getStateString(), getDTCString().c_str(), moduleVoltage);
     Serial.printf("        Cell Voltages : ");
     for (int c = 0; c < numCells; c++)
     {
@@ -85,8 +85,8 @@ void BatteryModule::print()
     }
     Serial.printf("\n");
 
-    SignalManager::logSignal("sg_mod" + String(id) + "_alive", module_is_alive());
-    //SignalManager::logSignal("sg_mod" + String(id) + "_populated", all_module_data_populated());
+    // SignalManager::logSignal("sg_mod" + String(id) + "_alive", module_is_alive());
+    //  SignalManager::logSignal("sg_mod" + String(id) + "_populated", all_module_data_populated());
     for (int c = 0; c < numCells; c++)
     {
         SignalManager::logSignal("sg_mod" + String(id) + "_cell" + String(c) + "_voltage", cellVoltage[c]);
@@ -100,18 +100,18 @@ void BatteryModule::print()
 
 void BatteryModule::process_message(CANMessage &msg)
 {
-    if ((msg.id & 0x00F) == id) // check if module id belongs to this module
+    if ((msg.id & 0x00F) != id) // check if module id belongs to this module
     {
-        lastUpdate = millis();
+        return;
     }
     else
     {
-        return;
+        lastUpdate = millis();
     }
 
     switch (msg.id & 0x0F0) // removes the module spicif part of the message id
     {
-    case 0x0:                                           // Message 0x105 CMU0ErrorBalanceStatus 8bits 50ms
+    case 0x0:                                             // Message 0x105 CMU0ErrorBalanceStatus 8bits 50ms
         cmuError = unpack(msg, 0, 32, false);             // cmuError : 0|32 little_endian unsigned scale: 1, offset: 0, unit: None, None
         balanceDirection[0] = unpack(msg, 32, 1, false);  // balanceDirection0 : 32|1 little_endian unsigned scale: 1, offset: 0, unit: None, 0=Charge;_1=Discharge
         balanceDirection[1] = unpack(msg, 33, 1, false);  // balanceDirection1 : 33|1 little_endian unsigned scale: 1, offset: 0, unit: None, 0=Charge;_1=Discharge
@@ -129,18 +129,18 @@ void BatteryModule::process_message(CANMessage &msg)
         // CRC_x105 = unpack(msg, 56, 8, false, 1, 0);       // CRC_x105 : 56|8 little_endian unsigned scale: 1, offset: 0, unit: None, None
         break;
 
-    case 0x20:                                                // Message 0x125 CMU_0x125_Voltage_0_2 8bits 100ms
+    case 0x20:                                                 // Message 0x125 CMU_0x125_Voltage_0_2 8bits 100ms
         cellVoltage[0] = unpack(msg, 0, 15, false, 0.001, 0);  // cellVoltage0 : 0|15 little_endian unsigned scale: 0.001, offset: 0, unit: V, None
-        cellBalance[1] = unpack(msg, 15, 1, false);            // cellBalance1 : 15|1 little_endian unsigned scale: 1, offset: 0, unit: None, 0=Balance_Inactive;_1=Balance_Active
+        cellBalance[0] = unpack(msg, 15, 1, false);            // cellBalance1 : 15|1 little_endian unsigned scale: 1, offset: 0, unit: None, 0=Balance_Inactive;_1=Balance_Active
         cellVoltage[1] = unpack(msg, 16, 15, false, 0.001, 0); // cellVoltage1 : 16|15 little_endian unsigned scale: 0.001, offset: 0, unit: V, None
-        cellBalance[2] = unpack(msg, 31, 1, false);            // cellBalance2 : 31|1 little_endian unsigned scale: 1, offset: 0, unit: None, 0=Balance_Inactive;_1=Balance_Active
+        cellBalance[1] = unpack(msg, 31, 1, false);            // cellBalance2 : 31|1 little_endian unsigned scale: 1, offset: 0, unit: None, 0=Balance_Inactive;_1=Balance_Active
         cellVoltage[2] = unpack(msg, 32, 15, false, 0.001, 0); // cellVoltage2 : 32|15 little_endian unsigned scale: 0.001, offset: 0, unit: V, None
-        cellBalance[3] = unpack(msg, 47, 1, false);            // cellBalance3 : 47|1 little_endian unsigned scale: 1, offset: 0, unit: None, None
+        cellBalance[2] = unpack(msg, 47, 1, false);            // cellBalance3 : 47|1 little_endian unsigned scale: 1, offset: 0, unit: None, None
         // Counter_0x125 = unpack(msg, 52, 4, false, 1, 0);     // Counter_0x125 : 52|4 little_endian unsigned scale: 1, offset: 0, unit: None, None
         // CRC_0x125 = unpack(msg, 56, 8, false, 1, 0);         // CRC_0x125 : 56|8 little_endian unsigned scale: 1, offset: 0, unit: None, None
         break;
 
-    case 0x30:                                                // Message 0x135 CMU_0x135_Voltage_3_5 8bits 100ms
+    case 0x30:                                                 // Message 0x135 CMU_0x135_Voltage_3_5 8bits 100ms
         cellVoltage[3] = unpack(msg, 0, 15, false, 0.001, 0);  // cellVoltage3 : 0|15 little_endian unsigned scale: 0.001, offset: 0, unit: V, None
         cellBalance[3] = unpack(msg, 15, 1, false);            // cellBalance3 : 15|1 little_endian unsigned scale: 1, offset: 0, unit: None, 0=Balance_Inactive;_1=Balance_Active
         cellVoltage[4] = unpack(msg, 16, 15, false, 0.001, 0); // cellVoltage4 : 16|15 little_endian unsigned scale: 0.001, offset: 0, unit: V, None
@@ -151,7 +151,7 @@ void BatteryModule::process_message(CANMessage &msg)
         // CRC_0x135 = unpack(msg, 56, 8, false, 1, 0);         // CRC_0x135 : 56|8 little_endian unsigned scale: 1, offset: 0, unit: None, None
         break;
 
-    case 0x40:                                                // Message 0x145 CMU_0x145_Voltage_6_8 8bits 100ms
+    case 0x40:                                                 // Message 0x145 CMU_0x145_Voltage_6_8 8bits 100ms
         cellVoltage[6] = unpack(msg, 0, 15, false, 0.001, 0);  // CellVoltage6 : 0|15 little_endian unsigned scale: 0.001, offset: 0, unit: V, None
         cellBalance[6] = unpack(msg, 15, 1, false);            // cellBalance6 : 15|1 little_endian unsigned scale: 1, offset: 0, unit: None, 0=Balance_Inactive;_1=Balance_Active
         cellVoltage[7] = unpack(msg, 16, 15, false, 0.001, 0); // CellVoltage7 : 16|15 little_endian unsigned scale: 0.001, offset: 0, unit: V, None
@@ -162,7 +162,7 @@ void BatteryModule::process_message(CANMessage &msg)
         // CRC_0x145 = unpack(msg, 56, 8, false, 1, 0);         // CRC_0x145 : 56|8 little_endian unsigned scale: 1, offset: 0, unit: None, None
         break;
 
-    case 0x50:                                                 // Message 0x155 CMU_0x155_Voltage_9_11 8bits 100ms
+    case 0x50:                                                  // Message 0x155 CMU_0x155_Voltage_9_11 8bits 100ms
         cellVoltage[9] = unpack(msg, 0, 15, false, 0.001, 0);   // CellVoltage9 : 0|15 little_endian unsigned scale: 0.001, offset: 0, unit: V, None
         cellBalance[9] = unpack(msg, 15, 1, false);             // cellBalance9 : 15|1 little_endian unsigned scale: 1, offset: 0, unit: None, 0=Balance_Inactive;_1=Balance_Active
         cellVoltage[10] = unpack(msg, 16, 15, false, 0.001, 0); // CellVoltage10 : 16|15 little_endian unsigned scale: 0.001, offset: 0, unit: V, None
@@ -173,13 +173,13 @@ void BatteryModule::process_message(CANMessage &msg)
         // CRC_0x155 = unpack(msg, 56, 8, false, 1, 0);          // CRC_0x155 : 56|8 little_endian unsigned scale: 1, offset: 0, unit: None, None
         break;
 
-    case 0x60:                                              // Message 0x165 CMU_0x165_Total_Voltage 8bits 100ms
+    case 0x60:                                               // Message 0x165 CMU_0x165_Total_Voltage 8bits 100ms
         moduleVoltage = unpack(msg, 0, 16, false, 0.001, 0); // moduleVoltage : 0|16 little_endian unsigned scale: 0.001, offset: 0, unit: None, None
         // Counter_0x165 = unpack(msg, 52, 4, false, 1, 0);     // Counter_0x165 : 52|4 little_endian unsigned scale: 1, offset: 0, unit: None, None
         // CRC_0x165 = unpack(msg, 56, 8, false, 1, 0);         // CRC_0x165 : 56|8 little_endian unsigned scale: 1, offset: 0, unit: None, None
         break;
 
-    case 0x70:                                                  // Message 0x175 CMU_0x175_Temperatures 8bits 100ms
+    case 0x70:                                                   // Message 0x175 CMU_0x175_Temperatures 8bits 100ms
         cellTemperature[0] = unpack(msg, 0, 8, false, 1, -40);   // temperature0 : 0|8 little_endian unsigned scale: 1, offset: -40, unit: Â°C, None
         cellTemperature[1] = unpack(msg, 8, 8, false, 1, -40);   // temperature1 : 8|8 little_endian unsigned scale: 1, offset: -40, unit: Â°C, None
         cellTemperature[2] = unpack(msg, 16, 8, false, 1, -40);  // temperature2 : 16|8 little_endian unsigned scale: 1, offset: -40, unit: Â°C, None
@@ -197,163 +197,249 @@ void BatteryModule::process_message(CANMessage &msg)
     switch (state)
     {
     case INIT:
-        if (check_if_module_data_is_populated())
+    {
+        if (check_if_module_data_is_populated() && (!cmuError))
         {
             state = OPERATING;
+            // Serial.println(String(millis()) + ": Now in operation");
         }
+        // if (cmuError)
+        // { // CMU Error is normal on startup before receiving the right messages
+        //     state = FAULT;
+        //     dtc |= DTC_CMU_INTERNAL_ERROR;
+        // }
+        break;
+    }
+    case OPERATING:
+    {
+        // We check for all errors to come
         if (cmuError)
         {
             state = FAULT;
             dtc |= DTC_CMU_INTERNAL_ERROR;
         }
+        if (temperatureInternal > CMU_MAX_INTERNAL_WARNING_TEMPERATURE)
+        {
+            state = FAULT;
+            dtc |= DTC_CMU_INTERNAL_ERROR;
+        }
+        if (plausibilityCheck() == false)
+        {
+            state = FAULT;
+        }
         break;
-    case OPERATING:
-
-        break;
+    }
     case FAULT:
-
+    {
+        // We check for more errors to come. No routine implemented to heal fault state except power off.
+        if (cmuError)
+        {
+            state = FAULT;
+            dtc |= DTC_CMU_INTERNAL_ERROR;
+        }
+        if (temperatureInternal > CMU_MAX_INTERNAL_WARNING_TEMPERATURE)
+        {
+            state = FAULT;
+            dtc |= DTC_CMU_INTERNAL_ERROR;
+        }
+        if (plausibilityCheck() == false)
+        {
+            state = FAULT;
+        }
         break;
     }
-}
-
-// Return total module voltage by summing the cell voltages
-float BatteryModule::get_voltage()
-{
-    float voltage = 0;
-    for (int c = 0; c < numCells; c++)
-    {
-        voltage += cellVoltage[c];
     }
-    return voltage;
 }
 
-// Return the voltage of the lowest cell voltage in the module
-float BatteryModule::get_lowest_cell_voltage()
-{
-    float lowestCellVoltage = 10.0000f;
-    for (int c = 0; c < numCells; c++)
+    // Return total module voltage by summing the cell voltages
+    float BatteryModule::get_voltage()
     {
-        // printf("Comparing %3.3f and %3.3f\n", cellVoltage[c], lowestCellVoltage);
-        if (cellVoltage[c] < lowestCellVoltage)
+        return moduleVoltage;
+    }
+
+    // Return the voltage of the lowest cell voltage in the module
+    float BatteryModule::get_lowest_cell_voltage()
+    {
+        float lowestCellVoltage = 10.0000f;
+        for (int c = 0; c < numCells; c++)
         {
-            lowestCellVoltage = cellVoltage[c];
+            // printf("Comparing %3.3f and %3.3f\n", cellVoltage[c], lowestCellVoltage);
+            if (cellVoltage[c] < lowestCellVoltage)
+            {
+                lowestCellVoltage = cellVoltage[c];
+            }
+        }
+        return lowestCellVoltage;
+    }
+
+    // Return the voltage of the highest cell in the module
+    float BatteryModule::get_highest_cell_voltage()
+    {
+        float highestCellVoltage = 0.000f;
+        for (int c = 0; c < numCells; c++)
+        {
+            // printf("module : comparing : %.4f to %.4f\n", cellVoltage[c], highestCellVoltage);
+            if (cellVoltage[c] > highestCellVoltage)
+            {
+                highestCellVoltage = cellVoltage[c];
+            }
+        }
+        return highestCellVoltage;
+    }
+
+    // Check on startup, if all values are populated
+    bool BatteryModule::check_if_module_data_is_populated()
+    {
+        bool voltageMissing = false;
+        for (int c = 0; c < numCells; c++)
+        {
+            if (cellVoltage[c] == 0.000f)
+            {
+                voltageMissing = true;
+            }
+        }
+        bool temperatureMissing = false;
+        for (int t = 0; t < numTemperatureSensors; t++)
+        {
+            if (cellTemperature[t] == -50.000f)
+            {
+                temperatureMissing = true;
+            }
+        }
+        return (!voltageMissing) && (!temperatureMissing) && (moduleVoltage != -50.000f);
+    }
+
+    // Return the temperature of the coldest sensor in the module
+    float BatteryModule::get_lowest_temperature()
+    {
+        float lowestTemperature = 1000.0f;
+        for (int t = 0; t < numTemperatureSensors; t++)
+        {
+            if (cellTemperature[t] < lowestTemperature)
+            {
+                lowestTemperature = cellTemperature[t];
+            }
+        }
+        return lowestTemperature;
+    }
+
+    // Return the temperature of the hottest sensor in the module
+    float BatteryModule::get_highest_temperature()
+    {
+        float highestTemperature = -50;
+        for (int t = 0; t < numTemperatureSensors; t++)
+        {
+            if (cellTemperature[t] > highestTemperature)
+            {
+                highestTemperature = cellTemperature[t];
+            }
+        }
+        return highestTemperature;
+    }
+
+    // Check module alive cannot be in the same runable as process message. becaus ethis is only called, when a message is available.
+    void BatteryModule::check_alive()
+    {
+        // Statemaschine
+        switch (state)
+        {
+        case INIT:
+            break;
+        case OPERATING:
+            if ((millis() - lastUpdate) > PACK_ALIVE_TIMEOUT)
+            {
+                state = FAULT;
+                dtc |= DTC_CMU_TIMED_OUT;
+                // Serial.println(String(millis()) + ": Timed out");
+            }
+            break;
+        case FAULT:
+            break;
         }
     }
-    return lowestCellVoltage;
-}
 
-// Return the voltage of the highest cell in the module
-float BatteryModule::get_highest_cell_voltage()
-{
-    float highestCellVoltage = 0.000f;
-    for (int c = 0; c < numCells; c++)
+    bool BatteryModule::plausibilityCheck()
     {
-        // printf("module : comparing : %.4f to %.4f\n", cellVoltage[c], highestCellVoltage);
-        if (cellVoltage[c] > highestCellVoltage)
+        bool plausible = true;
+        if ((get_lowest_cell_voltage() < CMU_MIN_PLAUSIBLE_VOLTAGE) || (get_highest_cell_voltage() > CMU_MAX_PLAUSIBLE_VOLTAGE))
         {
-            highestCellVoltage = cellVoltage[c];
+            plausible = false;
+            dtc |= DTC_CMU_SINGLE_VOLTAGE_IMPLAUSIBLE;
+        }
+        if ((get_lowest_temperature() < CMU_MIN_PLAUSIBLE_TEMPERATURE) || (get_highest_temperature() > CMU_MAX_PLAUSIBLE_TEMPERATURE))
+        {
+            plausible = false;
+            dtc |= DTC_CMU_TEMPERATURE_IMPLAUSIBLE;
+        }
+
+        float totalVoltage = 0.0000f;
+        for (int c = 0; c < numCells; c++)
+        {
+            totalVoltage += cellVoltage[c];
+        }
+
+        if (((totalVoltage - CMU_MAX_DELTA_MODULE_CELL_VOLTAGE) > moduleVoltage) || ((totalVoltage + CMU_MAX_DELTA_MODULE_CELL_VOLTAGE) < moduleVoltage))
+        {
+            plausible = false;
+            dtc |= DTC_CMU_MODULE_VOLTAGE_IMPLAUSIBLE;
+        }
+        return plausible;
+    }
+
+    const char *BatteryModule::getStateString()
+    {
+        switch (state)
+        {
+        case INIT:
+            return "INIT";
+        case OPERATING:
+            return "OPERATING";
+        case FAULT:
+            return "FAULT";
+        default:
+            return "UNKNOWN STATE";
         }
     }
-    return highestCellVoltage;
-}
 
-// Check on startup, if all values are populated
-bool BatteryModule::check_if_module_data_is_populated()
-{
-    bool voltageMissing = false;
-    for (int c = 0; c < numCells; c++)
+    BatteryModule::STATE_CMU BatteryModule::getState() { return state; }
+
+    String BatteryModule::getDTCString()
     {
-        if (cellVoltage[c] == 0.000f)
+        String errorString = "";
+
+        if (static_cast<uint8_t>(dtc) == 0)
         {
-            voltageMissing = true;
+            errorString += "None";
         }
-    }
-    bool temperatureMissing = false;
-    for (int t = 0; t < numTemperatureSensors; t++)
-    {
-        if (cellTemperature[t] == -50.000f)
+        else
         {
-            temperatureMissing = true;
+            if (dtc & DTC_CMU_INTERNAL_ERROR)
+            {
+                errorString += "DTC_CMU_INTERNAL_ERROR, ";
+            }
+            if (dtc & DTC_CMU_TEMPERATURE_TOO_HIGH)
+            {
+                errorString += "DTC_CMU_TEMPERATURE_TOO_HIGH, ";
+            }
+            if (dtc & DTC_CMU_SINGLE_VOLTAGE_IMPLAUSIBLE)
+            {
+                errorString += "DTC_CMU_SINGLE_VOLTAGE_IMPLAUSIBLE, ";
+            }
+            if (dtc & DTC_CMU_TEMPERATURE_IMPLAUSIBLE)
+            {
+                errorString += "DTC_CMU_TEMPERATURE_IMPLAUSIBLE, ";
+            }
+            if (dtc & DTC_CMU_TIMED_OUT)
+            {
+                errorString += "DTC_CMU_TIMED_OUT, ";
+            }
+            if (dtc & DTC_CMU_MODULE_VOLTAGE_IMPLAUSIBLE)
+            {
+                errorString += "DTC_CMU_MODULE_VOLTAGE_IMPLAUSIBLE, ";
+            }
+
+            // Remove the trailing comma and space
+            errorString.remove(errorString.length() - 2);
         }
+        return errorString;
     }
-    return voltageMissing && temperatureMissing && (moduleVoltage != -50.000f);
-}
-
-// Return the temperature of the coldest sensor in the module
-float BatteryModule::get_lowest_temperature()
-{
-    float lowestTemperature = 1000.0f;
-    for (int t = 0; t < numTemperatureSensors; t++)
-    {
-        if (cellTemperature[t] < lowestTemperature)
-        {
-            lowestTemperature = cellTemperature[t];
-        }
-    }
-    return lowestTemperature;
-}
-
-// Return the temperature of the hottest sensor in the module
-float BatteryModule::get_highest_temperature()
-{
-    float highestTemperature = -50;
-    for (int t = 0; t < numTemperatureSensors; t++)
-    {
-        if (cellTemperature[t] > highestTemperature)
-        {
-            highestTemperature = cellTemperature[t];
-        }
-    }
-    return highestTemperature;
-}
-
-bool BatteryModule::module_is_alive()
-{
-    int64_t timeSinceLastUpdate = millis() - lastUpdate;
-    if (timeSinceLastUpdate >= PACK_ALIVE_TIMEOUT)
-    {
-        return false;
-    }
-    return true;
-}
-
-bool BatteryModule::plausibilityCheck()
-{
-    return true;
-}
-
-const char *BatteryModule::getStateString()
-{
-    switch (state)
-    {
-    case INIT:
-        return "INIT";
-    case OPERATING:
-        return "OPERATING";
-    case FAULT:
-        return "FAULT";
-    default:
-        return "UNKNOWN STATE";
-    }
-}
-
-const char* BatteryModule::getDTCString() {
-    switch (dtc) {
-    case DTC_CMU_NONE:
-        return "No Error";
-    case DTC_CMU_INTERNAL_ERROR:
-        return "Internal Error";
-    case DTC_CMU_TEMPERATURE_TOO_HIGH:
-        return "Temperature Too High";
-    case DTC_CMU_SINGLE_VOLTAGE_IMPLAUSIBLE:
-        return "Single Voltage Implausible";
-    case DTC_CMU_TEMPERATURE_IMPLAUSIBLE:
-        return "Temperature Implausible";
-    case DTC_CMU_TIMED_OUT:
-        return "Timed Out";
-    case DTC_CMU_MODULE_VOLTAGE_IMPLAUSIBLE:
-        return "Module Voltage Implausible";
-    default:
-        return "Unknown DTC";
-    }
-}

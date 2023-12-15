@@ -35,10 +35,18 @@
 #define TEMPS_PER_MODULE  4                        // The number of temperature sensors in each module
 #define MODULES_PER_PACK  8                        // The number of modules in each pack
 
-
+//CMU Settings
+#define CMU_MAX_INTERNAL_WARNING_TEMPERATURE 50.00f
+#define CMU_MAX_DELTA_MODULE_CELL_VOLTAGE 2.00f
+#define CMU_MIN_PLAUSIBLE_VOLTAGE 2.00f
+#define CMU_MAX_PLAUSIBLE_VOLTAGE 5.00f
+#define CMU_MAX_PLAUSIBLE_TEMPERATURE 80.00f
+#define CMU_MIN_PLAUSIBLE_TEMPERATURE -40.00f
 #define PACK_ALIVE_TIMEOUT 300                       // If we have not seen an update from the BMS in
                                                    // PACK_ALIVE_TIMEOUT seconds, then mark the pack
                                                    // as dead.
+//Pack Setting
+#define PACK_WAIT_FOR_NUM_MODULES 1
 
 #define SAFE_VOLTAGE_DELTA_BETWEEN_PACKS 0.01      // When closing contactors, the voltage difference between the packs shall not
                                                    // be greater than this voltage, in volts.

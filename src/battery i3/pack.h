@@ -1,22 +1,3 @@
-/*
- * This file is part of the ev mustang bms project.
- *
- * Copyright (C) 2022 Christian Kelly <chrskly@chrskly.com>
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
-
 #ifndef PACK_H
 #define PACK_H
 
@@ -36,18 +17,36 @@ class BatteryPack
 {
 
 public:
+    enum STATE_PACK
+    {
+        INIT,      // pack is being initialized
+        OPERATING, // pack is in operation state
+        FAULT      // pack is in fault state
+    };
+
+    typedef enum
+    {
+        DTC_PACK_NONE = 0,
+        DTC_PACK_CAN_SEND_ERROR = 1 << 0,
+        DTC_PACK_CAN_INIT_ERROR = 1 << 1,
+        DTC_PACK_MODULE_FAULT = 1 << 2,
+    } DTC_PACK;
+
     BatteryPack();
     BatteryPack(int _numModules, int _numCellsPerModule, int _numTemperatureSensorsPerModule);
 
+    // Runnables
     void print();
     void initialize();
-    
-    void request_data(); 
+
+    void request_data();
     void read_message();
 
-    void send_message(CANMessage *frame); //Send out CAN message
-    uint8_t getcheck(CANMessage &msg, int id); //Calculate BMW i3 checksum
+    // Helper functions
+    void send_message(CANMessage *frame);      // Send out CAN message
+    uint8_t getcheck(CANMessage &msg, int id); // Calculate BMW i3 checksum
 
+    // Setter and getter
     void set_balancing_active(bool status);
     void set_balancing_voltage(float voltage);
 
@@ -57,7 +56,7 @@ public:
 
     // Temperature
     float get_lowest_temperature();
- 
+    float get_highest_temperature();
 
 private:
     int numModules;                     //
@@ -66,18 +65,26 @@ private:
     float voltage;                      // Voltage of the total pack
     int cellDelta;                      // Difference in voltage between high and low cell, in mV
 
+    BatteryModule modules[MODULES_PER_PACK]; // The child modules that make up this BatteryPack
+
     float balanceTargetVoltage;
     bool balanceActive;
-    
-    uint8_t pollMessageId;           //
-    bool initialised;
-    BatteryModule modules[MODULES_PER_PACK]; // The child modules that make up this BatteryPack
-    CRC8 crc8;
 
+    //private variables for polling
+    uint8_t pollMessageId;
+    bool initialised;
+    CRC8 crc8;
     bool inStartup;
     uint8_t modulePollingCycle;
     uint8_t moduleToPoll;
     CANMessage pollModuleFrame;
+
+    //sate and dtc
+    STATE_PACK state;
+    DTC_PACK dtc;
+
+    const char *getStateString();
+    String getDTCString();
 };
 
 #endif
