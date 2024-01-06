@@ -26,8 +26,8 @@
 #include <stdio.h>
 #include "module.h"
 #include "pack.h"
-#include "signalManager.h"
-#include "can_packer.h"
+#include "utils/signalManager.h"
+#include "utils/can_packer.h"
 #include <ACAN_T4.h>
 
 BatteryModule::BatteryModule() {}
@@ -68,6 +68,30 @@ BatteryModule::BatteryModule(int _id, BatteryPack *_pack)
     lastUpdate = millis();
 }
 
+void BatteryModule::printFrame(CANMessage &frame)
+{
+    // Print message
+    Serial.print("ID: ");
+    Serial.print(frame.id, HEX);
+    Serial.print(" Ext: ");
+    if (frame.ext)
+    {
+        Serial.print("Y");
+    }
+    else
+    {
+        Serial.print("N");
+    }
+    Serial.print(" Len: ");
+    Serial.print(frame.len, DEC);
+    Serial.print(" ");
+    for (int i = 0; i < frame.len; i++)
+    {
+        Serial.print(frame.data[i], HEX);
+        Serial.print(" ");
+    }
+    Serial.println();
+}
 void BatteryModule::print()
 {
     // Serial.println(static_cast<uint8_t>(dtc));
@@ -221,7 +245,7 @@ void BatteryModule::process_message(CANMessage &msg)
         if (temperatureInternal > CMU_MAX_INTERNAL_WARNING_TEMPERATURE)
         {
             state = FAULT;
-            dtc |= DTC_CMU_INTERNAL_ERROR;
+            dtc |= DTC_CMU_TEMPERATURE_TOO_HIGH;
         }
         if (plausibilityCheck() == false)
         {
@@ -240,7 +264,7 @@ void BatteryModule::process_message(CANMessage &msg)
         if (temperatureInternal > CMU_MAX_INTERNAL_WARNING_TEMPERATURE)
         {
             state = FAULT;
-            dtc |= DTC_CMU_INTERNAL_ERROR;
+            dtc |= DTC_CMU_TEMPERATURE_TOO_HIGH;
         }
         if (plausibilityCheck() == false)
         {
@@ -251,195 +275,238 @@ void BatteryModule::process_message(CANMessage &msg)
     }
 }
 
-    // Return total module voltage by summing the cell voltages
-    float BatteryModule::get_voltage()
-    {
-        return moduleVoltage;
-    }
+// Return total module voltage by summing the cell voltages
+float BatteryModule::get_voltage()
+{
+    return moduleVoltage;
+}
 
-    // Return the voltage of the lowest cell voltage in the module
-    float BatteryModule::get_lowest_cell_voltage()
+// Return the voltage of the lowest cell voltage in the module
+float BatteryModule::get_lowest_cell_voltage()
+{
+    float lowestCellVoltage = 10.0000f;
+    for (int c = 0; c < numCells; c++)
     {
-        float lowestCellVoltage = 10.0000f;
-        for (int c = 0; c < numCells; c++)
+        // printf("Comparing %3.3f and %3.3f\n", cellVoltage[c], lowestCellVoltage);
+        if (cellVoltage[c] < lowestCellVoltage)
         {
-            // printf("Comparing %3.3f and %3.3f\n", cellVoltage[c], lowestCellVoltage);
-            if (cellVoltage[c] < lowestCellVoltage)
-            {
-                lowestCellVoltage = cellVoltage[c];
-            }
-        }
-        return lowestCellVoltage;
-    }
-
-    // Return the voltage of the highest cell in the module
-    float BatteryModule::get_highest_cell_voltage()
-    {
-        float highestCellVoltage = 0.000f;
-        for (int c = 0; c < numCells; c++)
-        {
-            // printf("module : comparing : %.4f to %.4f\n", cellVoltage[c], highestCellVoltage);
-            if (cellVoltage[c] > highestCellVoltage)
-            {
-                highestCellVoltage = cellVoltage[c];
-            }
-        }
-        return highestCellVoltage;
-    }
-
-    // Check on startup, if all values are populated
-    bool BatteryModule::check_if_module_data_is_populated()
-    {
-        bool voltageMissing = false;
-        for (int c = 0; c < numCells; c++)
-        {
-            if (cellVoltage[c] == 0.000f)
-            {
-                voltageMissing = true;
-            }
-        }
-        bool temperatureMissing = false;
-        for (int t = 0; t < numTemperatureSensors; t++)
-        {
-            if (cellTemperature[t] == -50.000f)
-            {
-                temperatureMissing = true;
-            }
-        }
-        return (!voltageMissing) && (!temperatureMissing) && (moduleVoltage != -50.000f);
-    }
-
-    // Return the temperature of the coldest sensor in the module
-    float BatteryModule::get_lowest_temperature()
-    {
-        float lowestTemperature = 1000.0f;
-        for (int t = 0; t < numTemperatureSensors; t++)
-        {
-            if (cellTemperature[t] < lowestTemperature)
-            {
-                lowestTemperature = cellTemperature[t];
-            }
-        }
-        return lowestTemperature;
-    }
-
-    // Return the temperature of the hottest sensor in the module
-    float BatteryModule::get_highest_temperature()
-    {
-        float highestTemperature = -50;
-        for (int t = 0; t < numTemperatureSensors; t++)
-        {
-            if (cellTemperature[t] > highestTemperature)
-            {
-                highestTemperature = cellTemperature[t];
-            }
-        }
-        return highestTemperature;
-    }
-
-    // Check module alive cannot be in the same runable as process message. becaus ethis is only called, when a message is available.
-    void BatteryModule::check_alive()
-    {
-        // Statemaschine
-        switch (state)
-        {
-        case INIT:
-            break;
-        case OPERATING:
-            if ((millis() - lastUpdate) > PACK_ALIVE_TIMEOUT)
-            {
-                state = FAULT;
-                dtc |= DTC_CMU_TIMED_OUT;
-                // Serial.println(String(millis()) + ": Timed out");
-            }
-            break;
-        case FAULT:
-            break;
+            lowestCellVoltage = cellVoltage[c];
         }
     }
+    return lowestCellVoltage;
+}
 
-    bool BatteryModule::plausibilityCheck()
+// Return the voltage of the highest cell in the module
+float BatteryModule::get_highest_cell_voltage()
+{
+    float highestCellVoltage = 0.000f;
+    for (int c = 0; c < numCells; c++)
     {
-        bool plausible = true;
-        if ((get_lowest_cell_voltage() < CMU_MIN_PLAUSIBLE_VOLTAGE) || (get_highest_cell_voltage() > CMU_MAX_PLAUSIBLE_VOLTAGE))
+        // printf("module : comparing : %.4f to %.4f\n", cellVoltage[c], highestCellVoltage);
+        if (cellVoltage[c] > highestCellVoltage)
         {
-            plausible = false;
-            dtc |= DTC_CMU_SINGLE_VOLTAGE_IMPLAUSIBLE;
-        }
-        if ((get_lowest_temperature() < CMU_MIN_PLAUSIBLE_TEMPERATURE) || (get_highest_temperature() > CMU_MAX_PLAUSIBLE_TEMPERATURE))
-        {
-            plausible = false;
-            dtc |= DTC_CMU_TEMPERATURE_IMPLAUSIBLE;
-        }
-
-        float totalVoltage = 0.0000f;
-        for (int c = 0; c < numCells; c++)
-        {
-            totalVoltage += cellVoltage[c];
-        }
-
-        if (((totalVoltage - CMU_MAX_DELTA_MODULE_CELL_VOLTAGE) > moduleVoltage) || ((totalVoltage + CMU_MAX_DELTA_MODULE_CELL_VOLTAGE) < moduleVoltage))
-        {
-            plausible = false;
-            dtc |= DTC_CMU_MODULE_VOLTAGE_IMPLAUSIBLE;
-        }
-        return plausible;
-    }
-
-    const char *BatteryModule::getStateString()
-    {
-        switch (state)
-        {
-        case INIT:
-            return "INIT";
-        case OPERATING:
-            return "OPERATING";
-        case FAULT:
-            return "FAULT";
-        default:
-            return "UNKNOWN STATE";
+            highestCellVoltage = cellVoltage[c];
         }
     }
+    return highestCellVoltage;
+}
 
-    BatteryModule::STATE_CMU BatteryModule::getState() { return state; }
-
-    String BatteryModule::getDTCString()
+// Check on startup, if all values are populated
+bool BatteryModule::check_if_module_data_is_populated()
+{
+    bool voltageMissing = false;
+    for (int c = 0; c < numCells; c++)
     {
-        String errorString = "";
-
-        if (static_cast<uint8_t>(dtc) == 0)
+        if (cellVoltage[c] == 0.000f)
         {
-            errorString += "None";
+            voltageMissing = true;
         }
-        else
-        {
-            if (dtc & DTC_CMU_INTERNAL_ERROR)
-            {
-                errorString += "DTC_CMU_INTERNAL_ERROR, ";
-            }
-            if (dtc & DTC_CMU_TEMPERATURE_TOO_HIGH)
-            {
-                errorString += "DTC_CMU_TEMPERATURE_TOO_HIGH, ";
-            }
-            if (dtc & DTC_CMU_SINGLE_VOLTAGE_IMPLAUSIBLE)
-            {
-                errorString += "DTC_CMU_SINGLE_VOLTAGE_IMPLAUSIBLE, ";
-            }
-            if (dtc & DTC_CMU_TEMPERATURE_IMPLAUSIBLE)
-            {
-                errorString += "DTC_CMU_TEMPERATURE_IMPLAUSIBLE, ";
-            }
-            if (dtc & DTC_CMU_TIMED_OUT)
-            {
-                errorString += "DTC_CMU_TIMED_OUT, ";
-            }
-            if (dtc & DTC_CMU_MODULE_VOLTAGE_IMPLAUSIBLE)
-            {
-                errorString += "DTC_CMU_MODULE_VOLTAGE_IMPLAUSIBLE, ";
-            }
-
-            // Remove the trailing comma and space
-            errorString.remove(errorString.length() - 2);
-        }
-        return errorString;
     }
+    bool temperatureMissing = false;
+    for (int t = 0; t < numTemperatureSensors; t++)
+    {
+        if (cellTemperature[t] == -50.000f)
+        {
+            temperatureMissing = true;
+        }
+    }
+    return (!voltageMissing) && (!temperatureMissing) && (moduleVoltage != -50.000f);
+}
+
+// Return the temperature of the coldest sensor in the module
+float BatteryModule::get_lowest_temperature()
+{
+    float lowestTemperature = 1000.0f;
+    for (int t = 0; t < numTemperatureSensors; t++)
+    {
+        if (cellTemperature[t] < lowestTemperature)
+        {
+            lowestTemperature = cellTemperature[t];
+        }
+    }
+    return lowestTemperature;
+}
+
+// Return the temperature of the hottest sensor in the module
+float BatteryModule::get_highest_temperature()
+{
+    float highestTemperature = -50;
+    for (int t = 0; t < numTemperatureSensors; t++)
+    {
+        if (cellTemperature[t] > highestTemperature)
+        {
+            highestTemperature = cellTemperature[t];
+        }
+    }
+    return highestTemperature;
+}
+
+// Check module alive cannot be in the same runable as process message. becaus ethis is only called, when a message is available.
+void BatteryModule::check_alive()
+{
+    // Statemaschine
+    switch (state)
+    {
+    case INIT:
+        break;
+    case OPERATING:
+        if ((millis() - lastUpdate) > PACK_ALIVE_TIMEOUT)
+        {
+            state = FAULT;
+            dtc |= DTC_CMU_TIMED_OUT;
+            // Serial.println(String(millis()) + ": Timed out");
+        }
+        break;
+    case FAULT:
+        break;
+    }
+}
+
+bool BatteryModule::plausibilityCheck()
+{
+    bool plausible = true;
+    if ((get_lowest_cell_voltage() < CMU_MIN_PLAUSIBLE_VOLTAGE) || (get_highest_cell_voltage() > CMU_MAX_PLAUSIBLE_VOLTAGE))
+    {
+        plausible = false;
+        dtc |= DTC_CMU_SINGLE_VOLTAGE_IMPLAUSIBLE;
+    }
+    if ((get_lowest_temperature() < CMU_MIN_PLAUSIBLE_TEMPERATURE) || (get_highest_temperature() > CMU_MAX_PLAUSIBLE_TEMPERATURE))
+    {
+        plausible = false;
+        dtc |= DTC_CMU_TEMPERATURE_IMPLAUSIBLE;
+    }
+
+    float totalVoltage = 0.0000f;
+    for (int c = 0; c < numCells; c++)
+    {
+        totalVoltage += cellVoltage[c];
+    }
+
+    if (((totalVoltage - CMU_MAX_DELTA_MODULE_CELL_VOLTAGE) > moduleVoltage) || ((totalVoltage + CMU_MAX_DELTA_MODULE_CELL_VOLTAGE) < moduleVoltage))
+    {
+        plausible = false;
+        dtc |= DTC_CMU_MODULE_VOLTAGE_IMPLAUSIBLE;
+    }
+    return plausible;
+}
+
+const char *BatteryModule::getStateString()
+{
+    switch (state)
+    {
+    case INIT:
+        return "INIT";
+    case OPERATING:
+        return "OPERATING";
+    case FAULT:
+        return "FAULT";
+    default:
+        return "UNKNOWN STATE";
+    }
+}
+
+BatteryModule::STATE_CMU BatteryModule::getState() { return state; }
+
+float BatteryModule::get_average_temperature()
+{
+    float sumTemperature = 0.0f;
+
+    for (int t = 0; t < numTemperatureSensors; t++)
+    {
+        sumTemperature += cellTemperature[t];
+    }
+
+    // Calculate the average temperature
+    float averageTemperature = sumTemperature / numTemperatureSensors;
+
+    return averageTemperature;
+}
+
+String BatteryModule::getDTCString()
+{
+    String errorString = "";
+
+    if (static_cast<uint8_t>(dtc) == 0)
+    {
+        errorString += "None";
+    }
+    else
+    {
+        if (dtc & DTC_CMU_INTERNAL_ERROR)
+        {
+            errorString += "DTC_CMU_INTERNAL_ERROR, ";
+        }
+        if (dtc & DTC_CMU_TEMPERATURE_TOO_HIGH)
+        {
+            errorString += "DTC_CMU_TEMPERATURE_TOO_HIGH, ";
+        }
+        if (dtc & DTC_CMU_SINGLE_VOLTAGE_IMPLAUSIBLE)
+        {
+            errorString += "DTC_CMU_SINGLE_VOLTAGE_IMPLAUSIBLE, ";
+        }
+        if (dtc & DTC_CMU_TEMPERATURE_IMPLAUSIBLE)
+        {
+            errorString += "DTC_CMU_TEMPERATURE_IMPLAUSIBLE, ";
+        }
+        if (dtc & DTC_CMU_TIMED_OUT)
+        {
+            errorString += "DTC_CMU_TIMED_OUT, ";
+        }
+        if (dtc & DTC_CMU_MODULE_VOLTAGE_IMPLAUSIBLE)
+        {
+            errorString += "DTC_CMU_MODULE_VOLTAGE_IMPLAUSIBLE, ";
+        }
+
+        // Remove the trailing comma and space
+        errorString.remove(errorString.length() - 2);
+    }
+    return errorString;
+}
+
+float BatteryModule::get_cell_voltage(byte cellIndex)
+{
+    // Check if the cell index is valid
+    if (cellIndex < 0 || cellIndex >= numCells)
+    {
+        // Invalid cell index, return 0.0 as an indication of an error
+        return 0.0;
+    }
+
+    // Get the voltage of the specified cell
+    return cellVoltage[cellIndex];
+}
+
+bool BatteryModule::get_is_balancing()
+{
+    for (int i = 0; i < numCells; i++)
+    {
+        if (cellBalance[i])
+        {
+            // If any cell is balancing, return true
+            return true;
+        }
+    }
+
+    // If none of the cells is balancing, return false
+    return false;
+}

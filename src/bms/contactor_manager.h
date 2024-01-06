@@ -3,7 +3,7 @@
 
 #include <Arduino.h>
 #include "settings.h"
-#include "contactor.h"
+#include "bms/contactor.h"
 
 class Contactormanager
 {

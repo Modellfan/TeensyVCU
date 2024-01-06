@@ -2,12 +2,13 @@
 #include <ACAN_T4.h>
 
 #include <TaskScheduler.h>
-#include "signalManager.h"
+#include "utils/signalManager.h"
+#include "utils/Map2D3D.h"
 
-#include <current.h>
-#include <contactor.h>
-#include "contactor_manager.h"
-#include "battery i3/pack.h"
+#include <bms/current.h>
+#include <bms/contactor.h>
+#include "bms/contactor_manager.h"
+#include "bms/battery i3/pack.h"
 
 #include "comms.h"
 
@@ -20,13 +21,18 @@ Scheduler scheduler;
 // State state;
 // StatusLight statusLight;
 
-
-int balancecount = 0;
-
-//Create all needed objects here
+// Our software components
 BatteryPack batteryPack(8, 12, 4);
 Shunt_ISA_iPace shunt;
 Contactormanager contactor_manager;
+
+// Misc global variables
+int balancecount = 0;
+
+const int16_t xs[] PROGMEM = {300, 700, 800, 900, 1500, 1800, 2100, 2500};
+const int8_t ys[] PROGMEM = {-127, -50, 127, 0, 10, -30, -50, 10};
+const byte ysb[] PROGMEM = {0, 30, 55, 89, 99, 145, 255, 10};
+const float ysfl[] PROGMEM = {-127.3, -49.9, 127.0, 0.0, 13.3, -33.0, -35.8, 10.0};
 
 // bool watchdog_keepalive(struct repeating_timer *t) {
 //     watchdog_update();
@@ -54,6 +60,18 @@ void setup()
 
   delay(100);
 
+  Map2D<8, int16_t, int8_t> test;
+  test.setXs_P(xs);
+  test.setYs_P(ys);
+
+  for (int idx = 250; idx < 2550; idx += 50)
+  {
+    int8_t val = test.f(idx);
+    Serial.print(idx);
+    Serial.print(F(": "));
+    Serial.println((int)val);
+  }
+
   Serial.println("Fct: Setup");
 
   // Setup scheduler
@@ -72,6 +90,9 @@ void setup()
   // Setup SW components
   //-- only constructors go here. No setup if initialization methods
 
+  // Brownout method here
+
+  // Startup procedure here
   enable_led_blink();
   enable_update_system_load();
   // enable_update_shunt();
@@ -80,26 +101,10 @@ void setup()
   enable_poll_battery_for_data();
 
   enable_print_debug();
-  
-  //-> Update shunt until in State = Operating . Then start initialzing contactors
-
-  //   printf("Enabling handling of inbound CAN messages from batteries\n");
-  // enable_handle_battery_CAN_messages();
-
-  // printf("Enabling module polling\n");
-  // enable_module_polling();
-
-  // printf("Enabling status print\n");
-  // enable_status_print();
-
-  // printf("Enable listen for IGNITION_ON signal\n");
-  // enable_listen_for_ignition_signal();
-
-  // printf("Enable listen for CHARGE_ENABLE signal\n");
-  // enable_listen_for_charge_enable_signal();
 }
 
 void loop()
 {
   scheduler.execute();
+  //-> Update shunt until in State = Operating . Then start initialzing contactors
 }

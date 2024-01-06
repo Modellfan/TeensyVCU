@@ -64,10 +64,16 @@ public:
     float get_voltage();
     float get_lowest_cell_voltage();
     float get_highest_cell_voltage();
+    float get_cell_voltage(byte c);
 
     // Temperature
     float get_lowest_temperature();
     float get_highest_temperature();
+    float get_average_temperature();
+
+
+    //Balancing
+    bool get_is_balancing();
 
 private:
     int id;
@@ -93,6 +99,8 @@ private:
 
     bool check_if_module_data_is_populated();
     bool plausibilityCheck();
+
+    void printFrame(CANMessage &frame);
 };
 
 #endif

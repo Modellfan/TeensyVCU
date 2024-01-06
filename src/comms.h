@@ -24,10 +24,10 @@
 #include <TaskSchedulerDeclarations.h>
 #include <settings.h>
 
-#include <current.h>
-#include <contactor.h>
-#include "contactor_manager.h"
-#include "battery i3/pack.h"
+#include <bms/current.h>
+#include <bms/contactor.h>
+#include "bms/contactor_manager.h"
+#include "bms/battery i3/pack.h"
 
 extern Scheduler scheduler;
 

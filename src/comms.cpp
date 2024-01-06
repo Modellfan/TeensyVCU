@@ -23,10 +23,12 @@
 #include "settings.h"
 #include "comms.h"
 
-#include <current.h>
-#include <contactor.h>
-#include "contactor_manager.h"
-#include "battery i3/pack.h"
+#include <bms/current.h>
+#include <bms/contactor.h>
+#include "bms/contactor_manager.h"
+#include "bms/battery i3/pack.h"
+
+#include <Watchdog.h>
 
 // #include "statemachine.h"
 // #include "battery.h"
@@ -293,7 +295,7 @@ void print_debug()
     balancecount++;
     if (balancecount == 10)
     {
-        batteryPack.set_balancing_voltage(3.9);
+        batteryPack.set_balancing_voltage(3.8);
         batteryPack.set_balancing_active(true);
     }
 }
@@ -305,6 +307,22 @@ void enable_print_debug()
     scheduler.addTask(print_debug_timer);
     print_debug_timer.enable();
     Serial.println("Print debug timer enabled.");
+}
+
+// Print debug messages
+void reset_watchdog()
+{
+watchdog.reset();
+}
+
+Task reset_watchdog_timer(100, TASK_FOREVER, &print_debug);
+
+void enable_reset_watchdog()
+{
+    watchdog.enable(WATCHDOG_TIMEOUT);
+    scheduler.addTask(print_debug_timer);
+    reset_watchdog_timer.enable();
+    Serial.println("Watchdog reset timer enabled.");
 }
 
 

@@ -1,7 +1,7 @@
 #include <Arduino.h>
 #include "settings.h"
-#include "contactor_manager.h"
-#include "contactor.h"
+#include "bms/contactor_manager.h"
+#include "bms/contactor.h"
 
 Contactormanager::Contactormanager() : _negativeContactor(CONTACTOR_NEG_OUT_PIN, CONTACTOR_NEG_IN_PIN, CONTACTOR_DEBOUNCE, CONTACTOR_TIMEOUT),
     _prechargeContactor (CONTACTOR_PRCHG_OUT_PIN, CONTACTOR_PRCHG_IN_PIN, CONTACTOR_DEBOUNCE, CONTACTOR_TIMEOUT),
