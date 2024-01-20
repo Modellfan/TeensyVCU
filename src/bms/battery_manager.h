@@ -1,4 +1,4 @@
-       
+
 #ifndef BMS_H
 #define BMS_H
 
@@ -13,143 +13,69 @@ class BMS
 {
 
 public:
-    enum STATE_BMS
-    {
-        INIT,      // pack is being initialized
-        OPERATING, // pack is in operation state
-        FAULT      // pack is in fault state
-    };
+        enum STATE_BMS
+        {
+                INIT,      // pack is being initialized
+                OPERATING, // pack is in operation state
+                FAULT      // pack is in fault state
+        };
 
-    typedef enum
-    {
-        DTC_PACK_NONE = 0,
-        DTC_PACK_CAN_SEND_ERROR = 1 << 0,
-        DTC_PACK_CAN_INIT_ERROR = 1 << 1,
-        DTC_PACK_MODULE_FAULT = 1 << 2,
-    } DTC_BMS;
+        typedef enum
+        {
+                DTC_BMS_NONE = 0,
+                DTC_BMS_CAN_SEND_ERROR = 1 << 0,
+                DTC_BMS_CAN_INIT_ERROR = 1 << 1,
+                DTC_BMS_PACK_FAULT = 1 << 2,
+        } DTC_BMS;
 
-    BMS();
-    BatteryPack(int _numModules, int _numCellsPerModule, int _numTemperatureSensorsPerModule);
+        BMS(BatteryPack &_batteryPack); // Constructor taking a reference to BatteryPack
 
-    // Runnables
-    void print();
-    void initialize();
+        // Runnables
+        void print();
+        void initialize();
 
-    void Task2Ms(); //Send out message
-    void Task10Ms(); //Poll messages
-    void Task100Ms();
+        void Task2Ms();  // Read Can messages ?
+        void Task10Ms(); // Poll messages
+        void Task100Ms();
 
-    void Monitor100Ms();
-
-
-
-    // Helper functions
-    void send_message(CANMessage *frame);      // Send out CAN message
-    uint8_t getcheck(CANMessage &msg, int id); // Calculate BMW i3 checksum
-
-    // Setter and getter
-    void set_balancing_active(bool status);
-    void set_balancing_voltage(float voltage);
-    bool get_any_module_balancing();
-
-    // Voltage
-    float get_lowest_cell_voltage();
-    float get_highest_cell_voltage();
-    float get_pack_voltage();
-    float get_delta_cell_voltage();
-    bool get_cell_voltage(byte cellIndex, float &voltage);
-
-    // Temperature
-    float get_lowest_temperature();
-    float get_highest_temperature();
-    bool get_cell_temperature(byte cell, float &temperature);
+        void Monitor100Ms();
+        void Monitor1000Ms();
 
 private:
-    int numModules;                     //
-    int numCellsPerModule;              //
-    int numTemperatureSensorsPerModule; //
-    
-    BatteryModule modules[MODULES_PER_PACK]; // The child modules that make up this BatteryPack
+        BatteryPack &batteryPack; // Reference to the BatteryPack
 
+        // Non-Volatile Variable!!
+        float watt_seconds;
 
+        // Current derating
+        void calculate_current_limits();
 
-    //sate and dtc
-    STATE_BMS state;
-    DTC_BMS dtc;
+        // Calculate balacing target
+        void calculate_balancing_target();
 
-    const char *getStateString();
-    String getDTCString();
+        // Calculate SOC
+        void calculate_soc();
+        void calculate_soc_lut();
+        void calculate_soc_ekf();
+        void calculate_soc_coulomb_counting();
+        void calculate_open_circuit_voltage();
+        void calculate_soh();
+
+        // Send CAN messages
+        void send_outgoing_messages();
+        void calculate_hmi_values();
+
+        // State maschine updating
+        void update_state_machine();
+
+        // Helper functions
+        void send_message(CANMessage *frame); // Send out CAN message
+
+        // State and DTC
+        STATE_BMS state;
+        DTC_BMS dtc;
+        const char *getStateString();
+        String getDTCString();
 };
 
 #endif
-   
-        // Charging
-        int get_max_charging_current();
-
-
-        //Thermo management
-
-        //Balancing control
-
-        //SOC estimation
-
-
-        //Event and error handling
-
-        //Derating
-
-
-        //Input Value plausibilization with error healing
-
-        // Constructor
-BMS::BMS(BatteryPack &_batteryPack) : batteryPack(_batteryPack)
-{
-    // Initialize other members if needed
-}
-
-// Private function definitions
-void BMS::calculate_current_limits()
-{
-    // Implementation
-}
-
-void BMS::calculate_soc()
-{
-    // Implementation
-}
-
-void BMS::calculate_soc_lut()
-{
-    // Implementation
-}
-
-void BMS::calculate_soc_ekf()
-{
-    // Implementation
-}
-
-void BMS::calculate_soc_coulomb_counting()
-{
-    // Implementation
-}
-
-void BMS::calculate_open_circuit_voltage()
-{
-    // Implementation
-}
-
-void BMS::update_state_machine()
-{
-    // Implementation
-}
-
-// Public function definitions
-void BMS::runnable_update()
-{
-    // Implementation
-}
-
-void BMS::runnable_send_CAN_message()
-{
-    // Implementation
-}

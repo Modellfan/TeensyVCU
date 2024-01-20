@@ -18,6 +18,9 @@ BatteryPack::BatteryPack(int _numModules, int _numCellsPerModule, int _numTemper
     numCellsPerModule = _numCellsPerModule;
     numTemperatureSensorsPerModule = _numTemperatureSensorsPerModule;
 
+    state = INIT;
+    dtc = DTC_PACK_NONE;
+
     // Initialise modules
     for (int m = 0; m < numModules; m++)
     {
@@ -28,8 +31,6 @@ BatteryPack::BatteryPack(int _numModules, int _numCellsPerModule, int _numTemper
 
 void BatteryPack::initialize()
 {
-    state = INIT;
-    dtc = DTC_PACK_NONE;
 
     // Set up CAN port
     ACAN_T4_Settings settings(500 * 1000); // 500 kbit/s
@@ -91,8 +92,6 @@ void BatteryPack::print()
     }
     Serial.println("");
 }
-
- 
 
 // Calculate the checksum for a message to be sent out.
 uint8_t BatteryPack::getcheck(CANMessage &msg, int id)
@@ -256,146 +255,146 @@ void BatteryPack::read_message()
     }
     }
 }
-    // Helper to send CAN message
-    void BatteryPack::send_message(CANMessage * frame)
+// Helper to send CAN message
+void BatteryPack::send_message(CANMessage *frame)
+{
+    if (ACAN_T4::BATTERY_CAN.tryToSend(*frame))
     {
-        if (ACAN_T4::BATTERY_CAN.tryToSend(*frame))
+        // Serial.println("Send ok");
+    }
+    else
+    {
+        dtc |= DTC_PACK_CAN_SEND_ERROR;
+    }
+}
+
+void BatteryPack::set_balancing_active(bool status)
+{
+    balanceActive = status;
+}
+
+void BatteryPack::set_balancing_voltage(float voltage)
+{
+    balanceTargetVoltage = voltage;
+}
+
+// Return the voltage of the lowest cell in the pack
+float BatteryPack::get_lowest_cell_voltage()
+{
+    float lowestCellVoltage = 10.0000f;
+    for (int m = 0; m < numModules; m++)
+    {
+        // skip modules with incomplete cell data
+        if (modules[m].getState() != BatteryModule::OPERATING)
         {
-            // Serial.println("Send ok");
+            continue;
         }
-        else
+        if (modules[m].get_lowest_cell_voltage() < lowestCellVoltage)
         {
-            dtc |= DTC_PACK_CAN_SEND_ERROR;
-        }
-    }
-
-    void BatteryPack::set_balancing_active(bool status)
-    {
-        balanceActive = status;
-    }
-
-    void BatteryPack::set_balancing_voltage(float voltage)
-    {
-        balanceTargetVoltage = voltage;
-    }
-
-    // Return the voltage of the lowest cell in the pack
-    float BatteryPack::get_lowest_cell_voltage()
-    {
-        float lowestCellVoltage = 10.0000f;
-        for (int m = 0; m < numModules; m++)
-        {
-            // skip modules with incomplete cell data
-            if (modules[m].getState() != BatteryModule::OPERATING)
-            {
-                continue;
-            }
-            if (modules[m].get_lowest_cell_voltage() < lowestCellVoltage)
-            {
-                lowestCellVoltage = modules[m].get_lowest_cell_voltage();
-            }
-        }
-        return lowestCellVoltage;
-    }
-
-    // Return the voltage of the highest cell in the pack
-    float BatteryPack::get_highest_cell_voltage()
-    {
-        float highestCellVoltage = 0.0000f;
-        for (int m = 0; m < numModules; m++)
-        {
-            // skip modules with incomplete cell data
-            if (modules[m].getState() != BatteryModule::OPERATING)
-            {
-                continue;
-            }
-            if (modules[m].get_highest_cell_voltage() > highestCellVoltage)
-            {
-                highestCellVoltage = modules[m].get_highest_cell_voltage();
-            }
-        }
-        return highestCellVoltage;
-    }
-
-    // return the temperature of the lowest sensor in the pack
-    float BatteryPack::get_lowest_temperature()
-    {
-        float lowestModuleTemperature = 1000.0f;
-        for (int m = 0; m < numModules; m++)
-        {
-            if (modules[m].getState() != BatteryModule::OPERATING)
-            {
-                continue;
-            }
-            if (modules[m].get_lowest_temperature() < lowestModuleTemperature)
-            {
-                lowestModuleTemperature = modules[m].get_lowest_temperature();
-            }
-        }
-        return lowestModuleTemperature;
-    }
-
-    // return the temperature of the highest sensor in the pack
-    float BatteryPack::get_highest_temperature()
-    {
-        float highestModuleTemperature = -50.0f;
-        for (int m = 0; m < numModules; m++)
-        {
-            if (modules[m].getState() != BatteryModule::OPERATING)
-            {
-                continue;
-            }
-            if (modules[m].get_highest_temperature() > highestModuleTemperature)
-            {
-                highestModuleTemperature = modules[m].get_highest_temperature();
-            }
-        }
-        return highestModuleTemperature;
-    }
-
-    const char *BatteryPack::getStateString()
-    {
-        switch (state)
-        {
-        case INIT:
-            return "INIT";
-        case OPERATING:
-            return "OPERATING";
-        case FAULT:
-            return "FAULT";
-        default:
-            return "UNKNOWN STATE";
+            lowestCellVoltage = modules[m].get_lowest_cell_voltage();
         }
     }
+    return lowestCellVoltage;
+}
 
-    String BatteryPack::getDTCString()
+// Return the voltage of the highest cell in the pack
+float BatteryPack::get_highest_cell_voltage()
+{
+    float highestCellVoltage = 0.0000f;
+    for (int m = 0; m < numModules; m++)
     {
-        String errorString = "";
-
-        if (static_cast<uint8_t>(dtc) == 0)
+        // skip modules with incomplete cell data
+        if (modules[m].getState() != BatteryModule::OPERATING)
         {
-            errorString += "None";
+            continue;
         }
-        else
+        if (modules[m].get_highest_cell_voltage() > highestCellVoltage)
         {
-            if (dtc & DTC_PACK_CAN_SEND_ERROR)
-            {
-                errorString += "DTC_PACK_CAN_SEND_ERROR, ";
-            }
-            if (dtc & DTC_PACK_CAN_INIT_ERROR)
-            {
-                errorString += "DTC_PACK_CAN_INIT_ERROR, ";
-            }
-            if (dtc & DTC_PACK_MODULE_FAULT)
-            {
-                errorString += "DTC_PACK_MODULE_FAULT, ";
-            }
-
-            // Remove the trailing comma and space
-            errorString.remove(errorString.length() - 2);
+            highestCellVoltage = modules[m].get_highest_cell_voltage();
         }
-        return errorString;
     }
+    return highestCellVoltage;
+}
+
+// return the temperature of the lowest sensor in the pack
+float BatteryPack::get_lowest_temperature()
+{
+    float lowestModuleTemperature = 1000.0f;
+    for (int m = 0; m < numModules; m++)
+    {
+        if (modules[m].getState() != BatteryModule::OPERATING)
+        {
+            continue;
+        }
+        if (modules[m].get_lowest_temperature() < lowestModuleTemperature)
+        {
+            lowestModuleTemperature = modules[m].get_lowest_temperature();
+        }
+    }
+    return lowestModuleTemperature;
+}
+
+// return the temperature of the highest sensor in the pack
+float BatteryPack::get_highest_temperature()
+{
+    float highestModuleTemperature = -50.0f;
+    for (int m = 0; m < numModules; m++)
+    {
+        if (modules[m].getState() != BatteryModule::OPERATING)
+        {
+            continue;
+        }
+        if (modules[m].get_highest_temperature() > highestModuleTemperature)
+        {
+            highestModuleTemperature = modules[m].get_highest_temperature();
+        }
+    }
+    return highestModuleTemperature;
+}
+
+const char *BatteryPack::getStateString()
+{
+    switch (state)
+    {
+    case INIT:
+        return "INIT";
+    case OPERATING:
+        return "OPERATING";
+    case FAULT:
+        return "FAULT";
+    default:
+        return "UNKNOWN STATE";
+    }
+}
+
+String BatteryPack::getDTCString()
+{
+    String errorString = "";
+
+    if (static_cast<uint8_t>(dtc) == 0)
+    {
+        errorString += "None";
+    }
+    else
+    {
+        if (dtc & DTC_PACK_CAN_SEND_ERROR)
+        {
+            errorString += "DTC_PACK_CAN_SEND_ERROR, ";
+        }
+        if (dtc & DTC_PACK_CAN_INIT_ERROR)
+        {
+            errorString += "DTC_PACK_CAN_INIT_ERROR, ";
+        }
+        if (dtc & DTC_PACK_MODULE_FAULT)
+        {
+            errorString += "DTC_PACK_MODULE_FAULT, ";
+        }
+
+        // Remove the trailing comma and space
+        errorString.remove(errorString.length() - 2);
+    }
+    return errorString;
+}
 
 bool BatteryPack::get_cell_voltage(byte cellIndex, float &voltage)
 {
@@ -425,7 +424,6 @@ bool BatteryPack::get_cell_voltage(byte cellIndex, float &voltage)
     }
 }
 
-
 float BatteryPack::get_delta_cell_voltage()
 {
     // Get the highest and lowest voltages of the entire pack
@@ -435,7 +433,6 @@ float BatteryPack::get_delta_cell_voltage()
     // Calculate and return the voltage difference
     return highestPackVoltage - lowestPackVoltage;
 }
-
 
 float BatteryPack::get_pack_voltage()
 {
@@ -502,5 +499,3 @@ bool BatteryPack::get_any_module_balancing()
     // If no module is balancing, return false
     return false;
 }
-
-
