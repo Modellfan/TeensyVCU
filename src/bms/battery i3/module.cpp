@@ -1,28 +1,3 @@
-/*
- * This file is part of the ev mustang bms project.
- *
- * Copyright (C) 2022 Christian Kelly <chrskly@chrskly.com>
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
-
-/*
-
-    MODULE
-
-*/
-
 #include <stdio.h>
 #include "module.h"
 #include "pack.h"
@@ -92,6 +67,7 @@ void BatteryModule::printFrame(CANMessage &frame)
     }
     Serial.println();
 }
+
 void BatteryModule::print()
 {
     // Serial.println(static_cast<uint8_t>(dtc));
@@ -275,7 +251,7 @@ void BatteryModule::process_message(CANMessage &msg)
     }
 }
 
-// Return total module voltage by summing the cell voltages
+// Return total module voltage
 float BatteryModule::get_voltage()
 {
     return moduleVoltage;
@@ -361,7 +337,7 @@ float BatteryModule::get_highest_temperature()
     return highestTemperature;
 }
 
-// Check module alive cannot be in the same runable as process message. becaus ethis is only called, when a message is available.
+// Check module alive cannot be in the same runable as process message. because this is only called, when a message is available.
 void BatteryModule::check_alive()
 {
     // Statemaschine
@@ -426,6 +402,8 @@ const char *BatteryModule::getStateString()
 }
 
 BatteryModule::STATE_CMU BatteryModule::getState() { return state; }
+
+BatteryModule::DTC_CMU BatteryModule::getDTC() { return dtc; }
 
 float BatteryModule::get_average_temperature()
 {
@@ -496,6 +474,37 @@ float BatteryModule::get_cell_voltage(byte cellIndex)
     return cellVoltage[cellIndex];
 }
 
+float BatteryModule::get_temperature(byte tempindex)
+{
+    // Check if the cell index is valid
+    if (tempindex < 0 || tempindex >= numTemperatureSensors)
+    {
+        // Invalid cell index, return 0.0 as an indication of an error
+        return 0.0;
+    }
+
+    // Get the voltage of the specified cell
+    return cellTemperature[tempindex];
+}
+
+float BatteryModule::get_internal_temperature()
+{
+    return temperatureInternal;
+}
+
+bool BatteryModule::get_balancing(byte cell)
+{
+    // Check if the cell index is valid
+    if (cell < 0 || cell >= numCells)
+    {
+        // Invalid cell index, return 0.0 as an indication of an error
+        return false;
+    }
+
+    // Get the voltage of the specified cell
+    return cellBalance[cell];
+}
+
 bool BatteryModule::get_is_balancing()
 {
     for (int i = 0; i < numCells; i++)
@@ -510,3 +519,4 @@ bool BatteryModule::get_is_balancing()
     // If none of the cells is balancing, return false
     return false;
 }
+

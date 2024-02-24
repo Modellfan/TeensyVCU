@@ -33,14 +33,15 @@ public:
     } DTC_PACK;
 
     BatteryPack();
-    BatteryPack(int _numModules, int _numCellsPerModule, int _numTemperatureSensorsPerModule);
+    BatteryPack(int _numModules);
+    BatteryModule modules[MODULES_PER_PACK]; // The child modules that make up this BatteryPack
 
     // Runnables
     void print();
     void initialize();
 
-    void request_data(); //Send out message
-    void read_message(); //Poll messages
+    void request_data(); // Send out message
+    void read_message(); // Poll messages
 
     // Helper functions
     void send_message(CANMessage *frame);      // Send out CAN message
@@ -50,6 +51,7 @@ public:
     void set_balancing_active(bool status);
     void set_balancing_voltage(float voltage);
     bool get_any_module_balancing();
+
 
     // Voltage
     float get_lowest_cell_voltage();
@@ -64,20 +66,21 @@ public:
     bool get_cell_temperature(byte cell, float &temperature);
 
 private:
-    BatteryPack &batteryPack;  // Reference to the BatteryPack
+    // Private variables
+    int numModules; //
+    float balanceTargetVoltage;
+    bool balanceActive;
 
-    // Private functions
-    void calculate_current_limits();
-    void calculate_soc();
-    void calculate_soc_lut();
-    void calculate_soc_ekf();
-    void calculate_soc_coulomb_counting();
-    void calculate_open_circuit_voltage();
-    void update_state_machine();
+    // private variables for polling
+    uint8_t pollMessageId;
+    bool initialised;
+    CRC8 crc8;
+    bool inStartup;
+    uint8_t modulePollingCycle;
+    uint8_t moduleToPoll;
+    CANMessage pollModuleFrame;
 
-    CANMessage outFrame;
-
-    //sate and dtc
+    // sate and dtc
     STATE_PACK state;
     DTC_PACK dtc;
 

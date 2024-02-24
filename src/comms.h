@@ -22,12 +22,15 @@
 
 #include <Arduino.h>
 #include <TaskSchedulerDeclarations.h>
+#include <Watchdog_t4.h>
+
 #include <settings.h>
 
 #include <bms/current.h>
 #include <bms/contactor.h>
 #include "bms/contactor_manager.h"
 #include "bms/battery i3/pack.h"
+#include "bms/battery_manager.h"
 
 extern Scheduler scheduler;
 
@@ -55,6 +58,12 @@ void enable_handle_battery_CAN_messages();
 void poll_battery_for_data();
 void enable_poll_battery_for_data();
 
+//Commands to handle the BMS software module
+extern BMS battery_manager;
+void handle_bms_CAN_messages();
+void enable_handle_bms_CAN_messages();
+void BMS_monitor_100ms();
+void enable_BMS_monitor_100ms();
 
 //Debug
 extern int balancecount;

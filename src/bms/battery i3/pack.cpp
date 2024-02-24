@@ -9,15 +9,12 @@
 
 BatteryPack::BatteryPack() {}
 
-BatteryPack::BatteryPack(int _numModules, int _numCellsPerModule, int _numTemperatureSensorsPerModule)
+BatteryPack::BatteryPack(int _numModules)
 {
 
     // printf("Initialising BatteryPack %d\n", 1);
 
     numModules = _numModules;
-    numCellsPerModule = _numCellsPerModule;
-    numTemperatureSensorsPerModule = _numTemperatureSensorsPerModule;
-
     state = INIT;
     dtc = DTC_PACK_NONE;
 
@@ -399,15 +396,15 @@ String BatteryPack::getDTCString()
 bool BatteryPack::get_cell_voltage(byte cellIndex, float &voltage)
 {
     // Check if the cell index is valid
-    if (cellIndex < 0 || cellIndex >= (numModules * numCellsPerModule))
+    if (cellIndex < 0 || cellIndex >= (numModules * CELLS_PER_MODULE))
     {
         // Invalid cell index
         return false;
     }
 
     // Calculate the module index and cell index within the module
-    int moduleIndex = cellIndex / numCellsPerModule;
-    int cellWithinModule = cellIndex % numCellsPerModule;
+    int moduleIndex = cellIndex / CELLS_PER_MODULE;
+    int cellWithinModule = cellIndex % CELLS_PER_MODULE;
 
     // Check if the module is in operating mode
     if (modules[moduleIndex].getState() == BatteryModule::OPERATING)
@@ -454,15 +451,14 @@ float BatteryPack::get_pack_voltage()
 bool BatteryPack::get_cell_temperature(byte cellIndex, float &temperature)
 {
     // Check if the cell index is valid
-    if (cellIndex < 0 || cellIndex >= (numModules * numTemperatureSensorsPerModule))
+    if (cellIndex < 0 || cellIndex >= (numModules * TEMPS_PER_MODULE))
     {
         // Invalid cell index
         return false;
     }
 
     // Calculate the module index and temperature sensor index within the module
-    int moduleIndex = cellIndex / numTemperatureSensorsPerModule;
-    int sensorWithinModule = cellIndex % numTemperatureSensorsPerModule;
+    int moduleIndex = cellIndex / TEMPS_PER_MODULE;
 
     // Check if the module is in operating mode
     if (modules[moduleIndex].getState() == BatteryModule::OPERATING)

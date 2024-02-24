@@ -19,6 +19,7 @@
 
 #include <Arduino.h>
 #include <TaskSchedulerDeclarations.h>
+#include <Watchdog_t4.h>
 
 #include "settings.h"
 #include "comms.h"
@@ -27,12 +28,7 @@
 #include <bms/contactor.h>
 #include "bms/contactor_manager.h"
 #include "bms/battery i3/pack.h"
-
-#include <Watchdog.h>
-
-// #include "statemachine.h"
-// #include "battery.h"
-// #include "pack.h"
+#include "bms/battery_manager.h"
 
 // struct repeating_timer statusPrintTimer;
 
@@ -113,8 +109,6 @@ void enable_update_system_load()
     update_system_load_timer.enable();
     Serial.println("System Load update timer enabled.");
 }
-
-// Reset Watchdog
 
 // Update the contactor manager
 void update_contactors()
@@ -309,22 +303,64 @@ void enable_print_debug()
     Serial.println("Print debug timer enabled.");
 }
 
-// Print debug messages
-void reset_watchdog()
+//---------------------------------------------------------------------------------------------------------------------------------------------
+// BMS software module runnables
+//---------------------------------------------------------------------------------------------------------------------------------------------
+void BMS_Task2ms()
 {
-watchdog.reset();
+    battery_manager.Task2Ms();
 }
 
-Task reset_watchdog_timer(100, TASK_FOREVER, &print_debug);
-
-void enable_reset_watchdog()
+void BMS_Task10ms()
 {
-    watchdog.enable(WATCHDOG_TIMEOUT);
-    scheduler.addTask(print_debug_timer);
-    reset_watchdog_timer.enable();
-    Serial.println("Watchdog reset timer enabled.");
+    battery_manager.Task10Ms();
 }
 
+void BMS_Task100ms()
+{
+    battery_manager.Task100Ms();
+}
+
+Task BMS_task2ms_timer(2, TASK_FOREVER, &BMS_Task2ms);
+Task BMS_Task10ms_timer(10, TASK_FOREVER, &BMS_Task10ms);
+Task BMS_task100ms_timer(100, TASK_FOREVER, &BMS_Task100ms);
+
+void enable_BMS_tasks()
+{
+    battery_manager.initialize();
+    scheduler.addTask(BMS_task2ms_timer);
+    BMS_task2ms_timer.enable();
+    scheduler.addTask(BMS_Task10ms_timer);
+    BMS_Task10ms_timer.enable();
+    scheduler.addTask(BMS_task100ms_timer);
+    BMS_task100ms_timer.enable();
+    Serial.println("BMS handle tasks timer enabled.");
+}
+
+void BMS_Monitor100ms()
+{
+    battery_manager.Monitor100Ms();
+}
+
+void BMS_Monitor1000ms()
+{
+    battery_manager.Monitor1000Ms();
+}
+
+Task BMS_monitor_100ms_timer(100, TASK_FOREVER, &BMS_Monitor100ms);
+Task BMS_monitor_1000ms_timer(1000, TASK_FOREVER, &BMS_Monitor1000ms);
+
+void enable_BMS_monitor()
+{
+    scheduler.addTask(BMS_monitor_100ms_timer);
+    BMS_monitor_100ms_timer.enable();
+    scheduler.addTask(BMS_monitor_1000ms_timer);
+    BMS_monitor_1000ms_timer.enable();
+    Serial.println("BMS monitor enabled.");
+}
+
+void Monitor100Ms();
+void Monitor1000Ms();
 
 // // Update the battery manager
 // void update_battery_manager()
@@ -341,7 +377,7 @@ void enable_reset_watchdog()
 //     batteryManager.setMaxTemperature(float newtemperature);
 
 //     batteryManager.setPackState();
-    
+
 //     //Set signals from current sensor
 //     batteryManager.setCurrentIntegral(float current_integral); // in mAh since last request
 //     batteryManager.setCurrentDerivative(); //mA/s change of current since last update
@@ -351,7 +387,6 @@ void enable_reset_watchdog()
 //     //Set signals from contactor manager
 //     batteryManager.setContactorManagerState();
 
-
 //     //Set signals from digital inputs
 
 //     batteryManager.update();
@@ -359,7 +394,7 @@ void enable_reset_watchdog()
 //     //Get signal for contactor manager
 //     contactor_manager.close();
 
-//     //Get signal for battery 
+//     //Get signal for battery
 //     batteryPack.set_balancing_voltage
 //     batteryPack.set_balancing_active
 
@@ -374,9 +409,8 @@ void enable_reset_watchdog()
 //     Serial.println("Update contactor manager timer enabled.");
 // }
 
+// Comms for UDS messages
 
-//Comms for UDS messages
+// Comms for error handling?
 
-//Comms for error handling?
-
-//Comms for sending out Nissan leaf messages
+// Comms for sending out Nissan leaf messages
