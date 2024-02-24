@@ -4,11 +4,13 @@
 #include <TaskScheduler.h>
 #include "utils/signalManager.h"
 #include "utils/Map2D3D.h"
+#include <Watchdog_t4.h>
 
 #include <bms/current.h>
 #include <bms/contactor.h>
 #include "bms/contactor_manager.h"
 #include "bms/battery i3/pack.h"
+#include "bms/battery_manager.h"
 
 #include "comms.h"
 
@@ -16,15 +18,24 @@
 #error "This sketch should be compiled for Teensy 4.1"
 #endif
 
-// Create a Scheduler instance
+#define DEBUG
+
+// Create system objects
 Scheduler scheduler;
-// State state;
-// StatusLight statusLight;
+WDT_T4<WDT3> wdt; // use the RTWDT which should be the safest one
+
+void wdtCallback()
+{
+  Serial.println("Watchdog was not fed. It will eat you soon. Sorry...");
+  // The callback for WDOG3 is also different from the other 2 watchdogs, it is not called earlier like a trigger,
+  // it's fired 255 cycles before the actual reset, so you have little time to collect diagnostic info before the reset happens.
+}
 
 // Our software components
-BatteryPack batteryPack(8, 12, 4);
+BatteryPack batteryPack(8);
 Shunt_ISA_iPace shunt;
 Contactormanager contactor_manager;
+BMS battery_manager(batteryPack);
 
 // Misc global variables
 int balancecount = 0;
@@ -34,17 +45,9 @@ const int8_t ys[] PROGMEM = {-127, -50, 127, 0, 10, -30, -50, 10};
 const byte ysb[] PROGMEM = {0, 30, 55, 89, 99, 145, 255, 10};
 const float ysfl[] PROGMEM = {-127.3, -49.9, 127.0, 0.0, 13.3, -33.0, -35.8, 10.0};
 
-// bool watchdog_keepalive(struct repeating_timer *t) {
-//     watchdog_update();
-//     return true;
-// }
-
-// void enable_watchdog_keepalive() {
-//     add_repeating_timer_ms(5000, watchdog_keepalive, NULL, &watchdogKeepaliveTimer);
-// }
-
 void setup()
 {
+#ifdef DEBUG
   // Setup internal LED
   pinMode(LED_BUILTIN, OUTPUT);
 
@@ -59,23 +62,25 @@ void setup()
   }
 
   delay(100);
+#endif
 
-  Map2D<8, int16_t, int8_t> test;
-  test.setXs_P(xs);
-  test.setYs_P(ys);
+  // Map2D<8, int16_t, int8_t> test;
+  // test.setXs_P(xs);
+  // test.setYs_P(ys);
 
-  for (int idx = 250; idx < 2550; idx += 50)
-  {
-    int8_t val = test.f(idx);
-    Serial.print(idx);
-    Serial.print(F(": "));
-    Serial.println((int)val);
-  }
+  // for (int idx = 250; idx < 2550; idx += 50)
+  // {
+  //   int8_t val = test.f(idx);
+  //   Serial.print(idx);
+  //   Serial.print(F(": "));
+  //   Serial.println((int)val);
+  // }
 
-  Serial.println("Fct: Setup");
+  Serial.println("Setup software modules:");
 
   // Setup scheduler
   scheduler.startNow();
+
   // scheduler.cpuLoadReset();
 
   // pinMode(28, INPUT_PULLUP);
@@ -96,15 +101,28 @@ void setup()
   enable_led_blink();
   enable_update_system_load();
   // enable_update_shunt();
+  //-> Update shunt until in State = Operating . Then start initialzing contactors
   // enable_update_contactors();
   enable_handle_battery_CAN_messages();
   enable_poll_battery_for_data();
 
-  enable_print_debug();
+  // Startup BMS module
+  enable_handle_bms_CAN_messages();
+  enable_BMS_monitor_100ms();
+
+  // enable_print_debug();
+
+  // Setup watchdog
+  // WDT_timings_t config;
+  // // GEVCU might loop very rapidly sometimes so windowing mode would be tough. Revisit later
+  // // config.window = 100; /* in milliseconds, 32ms to 522.232s, must be smaller than timeout */
+  // config.timeout = WATCHDOG_TIMEOUT; /* in milliseconds, 32ms to 522.232s */
+  // config.callback = wdtCallback;
+  // wdt.begin(config);
 }
 
 void loop()
 {
   scheduler.execute();
-  //-> Update shunt until in State = Operating . Then start initialzing contactors
+  // wdt.feed(); // must feed the watchdog every so often or it'll get angry
 }
