@@ -63,6 +63,8 @@ extern BMS battery_manager;
 void handle_bms_CAN_messages();
 void enable_handle_bms_CAN_messages();
 void BMS_monitor_100ms();
+void enable_BMS_monitor();
+void enable_BMS_tasks();
 void enable_BMS_monitor_100ms();
 
 //Debug

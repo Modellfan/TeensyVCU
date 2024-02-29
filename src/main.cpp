@@ -107,8 +107,9 @@ void setup()
   enable_poll_battery_for_data();
 
   // Startup BMS module
-  enable_handle_bms_CAN_messages();
-  enable_BMS_monitor_100ms();
+  //enable_handle_bms_CAN_messages();
+  enable_BMS_tasks();
+  enable_BMS_monitor();
 
   // enable_print_debug();
 

@@ -40,7 +40,7 @@ public:
     void Task100Ms();
 
     void Monitor100Ms();
-    void Monitor1000Ms();
+    // void Monitor1000Ms();
 
 private:
     BatteryPack &batteryPack; // Reference to the BatteryPack

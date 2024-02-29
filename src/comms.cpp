@@ -313,12 +313,12 @@ void BMS_Task2ms()
 
 void BMS_Task10ms()
 {
-    battery_manager.Task10Ms();
+    //battery_manager.Task10Ms();
 }
 
 void BMS_Task100ms()
 {
-    battery_manager.Task100Ms();
+    //battery_manager.Task100Ms();
 }
 
 Task BMS_task2ms_timer(2, TASK_FOREVER, &BMS_Task2ms);
@@ -344,7 +344,7 @@ void BMS_Monitor100ms()
 
 void BMS_Monitor1000ms()
 {
-    battery_manager.Monitor1000Ms();
+    //battery_manager.Monitor1000Ms();
 }
 
 Task BMS_monitor_100ms_timer(100, TASK_FOREVER, &BMS_Monitor100ms);
