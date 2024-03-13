@@ -95,6 +95,7 @@ void enable_update_shunt()
     Serial.println("Shunt update timer enabled.");
 }
 
+
 // Monitor CPU load
 void update_system_load()
 {
@@ -289,7 +290,7 @@ void print_debug()
     balancecount++;
     if (balancecount == 10)
     {
-        batteryPack.set_balancing_voltage(3.8);
+        batteryPack.set_balancing_voltage(3.7);
         batteryPack.set_balancing_active(true);
     }
 }

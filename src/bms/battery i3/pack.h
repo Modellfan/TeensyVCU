@@ -43,6 +43,10 @@ public:
     void request_data(); // Send out message
     void read_message(); // Poll messages
 
+    // Our state
+    STATE_PACK getState();
+    DTC_PACK getDTC();
+
     // Helper functions
     void send_message(CANMessage *frame);      // Send out CAN message
     uint8_t getcheck(CANMessage &msg, int id); // Calculate BMW i3 checksum
@@ -50,6 +54,8 @@ public:
     // Setter and getter
     void set_balancing_active(bool status);
     void set_balancing_voltage(float voltage);
+    bool get_balancing_active();
+    float get_balancing_voltage();
     bool get_any_module_balancing();
 
 

@@ -495,3 +495,10 @@ bool BatteryPack::get_any_module_balancing()
     // If no module is balancing, return false
     return false;
 }
+
+BatteryPack::STATE_PACK BatteryPack::getState() { return state; }
+
+BatteryPack::DTC_PACK BatteryPack::getDTC() { return dtc; }
+
+bool BatteryPack::get_balancing_active() { return balanceActive; }
+float BatteryPack::get_balancing_voltage() { return balanceTargetVoltage; }

@@ -9,7 +9,7 @@
 #define MODULES_PER_PACK  8                        // The number of modules in each pack
 
 //CMU Settings
-#define CMU_MAX_INTERNAL_WARNING_TEMPERATURE 65.00f
+#define CMU_MAX_INTERNAL_WARNING_TEMPERATURE 70.00f
 #define CMU_MAX_DELTA_MODULE_CELL_VOLTAGE 2.00f
 #define CMU_MIN_PLAUSIBLE_VOLTAGE 2.00f
 #define CMU_MAX_PLAUSIBLE_VOLTAGE 5.00f

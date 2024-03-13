@@ -2,6 +2,7 @@
 #include <Arduino.h>
 #include "settings.h"
 #include "current.h"
+#include "utils/can_packer.h"
 
 Shunt_ISA_iPace::Shunt_ISA_iPace()
 {
@@ -13,31 +14,6 @@ Shunt_ISA_iPace::Shunt_ISA_iPace()
     _ampere_seconds = 0.0;
     _previousMillis = 0;
     _firstUpdate = true;
-}
-
-void Shunt_ISA_iPace::printFrame(CANMessage &frame)
-{
-    // Print message
-    Serial.print("ID: ");
-    Serial.print(frame.id, HEX);
-    Serial.print(" Ext: ");
-    if (frame.ext)
-    {
-        Serial.print("Y");
-    }
-    else
-    {
-        Serial.print("N");
-    }
-    Serial.print(" Len: ");
-    Serial.print(frame.len, DEC);
-    Serial.print(" ");
-    for (int i = 0; i < frame.len; i++)
-    {
-        Serial.print(frame.data[i], HEX);
-        Serial.print(" ");
-    }
-    Serial.println();
 }
 
 void Shunt_ISA_iPace::initialise()
@@ -86,13 +62,13 @@ void Shunt_ISA_iPace::update()
     {
         // printFrame(message);
 
-        //Check for timeout of the shunt
+        // Check for timeout of the shunt
         if (_state = OPERATING)
         {
             if (_lastUpdate + ISA_SHUNT_TIMEOUT > millis())
             {
                 _state = FAULT;
-                //toDo raise fault. Present replacement value
+                // toDo raise fault. Present replacement value
             }
         }
 
@@ -137,19 +113,39 @@ void Shunt_ISA_iPace::update()
                 _current = (int32_t)(message.data[5] + (message.data[4] << 8) + (message.data[3] << 16) + (message.data[2] << 24)) / 1000.0;
                 _0x3c3_framecounter = (u_int8_t)(message.data[2] & 0x0F);
 
-                Serial.print("Current: ");
-                Serial.println(_current, 3);
+                // Serial.print("Current: ");
+                // Serial.println(_current, 3);
                 calculate_current_values();
             }
             break;
         case 0x3D2: // 100ms signal
             _temperature = (int32_t)(message.data[5] + (message.data[4] << 8) + (message.data[3] << 16) + (message.data[2] << 24)) / 10.0;
             _0x3D2_framecounter = (u_int8_t)(message.data[2] & 0x0F);
-            Serial.print("Temperature: ");
-            Serial.println(_temperature, 2);
+            // Serial.print("Temperature: ");
+            // Serial.println(_temperature, 2);
         default:
             break;
         }
+    }
+}
+
+void Shunt_ISA_iPace::monitor(SendMessageCallback callback)
+{
+    CANMessage msg;
+
+    msg.data64 = 0;
+    msg.id = 1070; // Message 0x42e shunt_state 8bits None
+    msg.len = 8;
+    pack(msg, getState(), 0, 8, false, 1, 0);                  // getState : 0|8 little_endian unsigned scale: 1, offset: 0, unit: None, None
+    pack(msg, getDTC(), 8, 8, false, 1, 0);                    // getDTC : 8|8 little_endian unsigned scale: 1, offset: 0, unit: None, None
+    pack(msg, getCurrent(), 16, 16, false, 0.1, -1000);        // getCurrent : 16|16 little_endian unsigned scale: 0.1, offset: -1000, unit: Volt, None
+    pack(msg, getTemperature(), 32, 16, false, 0.1, -40);      // getTemperature : 32|16 little_endian unsigned scale: 0.1, offset: -40, unit: None, None
+    pack(msg, getCurrentAverage(), 48, 16, false, 0.1, -1000); // getCurrentAverage : 48|16 little_endian unsigned scale: 0.1, offset: -1000, unit: None, None
+
+    // Send the CAN message using the provided callback
+    if (callback != nullptr)
+    {
+        callback(&msg);
     }
 }
 
@@ -210,3 +206,7 @@ float Shunt_ISA_iPace::getCurrentDerivative()
 {
     return _current_derivative;
 }
+
+Shunt_ISA_iPace::STATE_ISA Shunt_ISA_iPace::getState() { return _state; }
+
+Shunt_ISA_iPace::DTC_ISA Shunt_ISA_iPace::getDTC() { return _dtc; }

@@ -35,7 +35,7 @@ void wdtCallback()
 BatteryPack batteryPack(8);
 Shunt_ISA_iPace shunt;
 Contactormanager contactor_manager;
-BMS battery_manager(batteryPack);
+BMS battery_manager(batteryPack, shunt);
 
 // Misc global variables
 int balancecount = 0;
@@ -100,7 +100,7 @@ void setup()
   // Startup procedure here
   enable_led_blink();
   enable_update_system_load();
-  // enable_update_shunt();
+  enable_update_shunt();
   //-> Update shunt until in State = Operating . Then start initialzing contactors
   // enable_update_contactors();
   enable_handle_battery_CAN_messages();
@@ -111,7 +111,7 @@ void setup()
   enable_BMS_tasks();
   enable_BMS_monitor();
 
-  // enable_print_debug();
+  enable_print_debug();
 
   // Setup watchdog
   // WDT_timings_t config;

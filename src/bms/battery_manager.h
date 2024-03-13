@@ -6,6 +6,7 @@
 #include <Arduino.h>
 
 #include "bms/battery i3/pack.h"
+#include "bms/current.h"
 #include "utils/can_packer.h"
 #include "settings.h"
 
@@ -13,6 +14,8 @@ class BMS
 {
 
 public:
+    typedef void (*SendMessageCallback)(const CANMessage &);
+
     enum STATE_BMS
     {
         INIT,      // pack is being initialized
@@ -28,7 +31,7 @@ public:
         DTC_BMS_PACK_FAULT = 1 << 2,
     } DTC_BMS;
 
-    BMS(BatteryPack &_batteryPack); // Constructor taking a reference to BatteryPack
+    BMS(BatteryPack &_batteryPack, Shunt_ISA_iPace &_shunt); // Constructor taking a reference to BatteryPack
 
     // Runnables
     //         void print();
@@ -44,6 +47,7 @@ public:
 
 private:
     BatteryPack &batteryPack; // Reference to the BatteryPack
+    Shunt_ISA_iPace &shunt;
 
     //         // Non-Volatile Variable!!
     //         float watt_seconds;

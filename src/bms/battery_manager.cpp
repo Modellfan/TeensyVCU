@@ -2,22 +2,19 @@
 #include <Arduino.h>
 
 #include "bms/battery_manager.h"
+#include "bms/current.h"
 #include "utils/can_packer.h"
 #include <math.h>
+#include <functional>
 
-#define DEBUG
+//#define DEBUG
 
-BMS::BMS(BatteryPack &_batteryPack) : batteryPack(_batteryPack)
+BMS::BMS(BatteryPack &_batteryPack, Shunt_ISA_iPace &_shunt) : batteryPack(_batteryPack), shunt(_shunt)
 {
     state = INIT;
     dtc = DTC_BMS_NONE;
     moduleToBeMonitored = 0;
 }
-
-// void BMS::print()
-// {
-//     // Implementation for print method
-// }
 
 void BMS::initialize()
 {
@@ -134,26 +131,13 @@ void BMS::read_message()
     // }
 }
 
-// void BMS::Task2Ms()
-// {
-//     // Implementation for Task2Ms method
 
-//     //Decode can messages. Get Max charge state
-// }
-
-// void BMS::Task10Ms()
-// {
-//     // Implementation for Task10Ms method
-// }
-
-// void BMS::Task100Ms()
-// {
-//     // Implementation for Task100Ms method
-// }
 
 void BMS::Monitor100Ms()
 {
-    Serial.println(dtc);
+    //Serial.println(dtc);
+
+    shunt.monitor(std::bind(&BMS::send_message, this, std::placeholders::_1));
 
     CANMessage msg;
 
@@ -612,7 +596,33 @@ void BMS::Monitor100Ms()
     pack(msg, batteryPack.modules[7].get_temperature(2), 32, 16, false, 1, -40); // batteryPack__modules7__get_temperature2 : 32|16 little_endian unsigned scale: 1, offset: -40, unit: Â°C, None
     pack(msg, batteryPack.modules[7].get_temperature(3), 48, 16, false, 1, -40); // batteryPack__modules7__get_temperature3 : 48|16 little_endian unsigned scale: 1, offset: -40, unit: Â°C, None
     send_message(&msg);
-    // Serial.println(batteryPack.modules[2].get_temperature(0));
+
+    msg.data64 = 0;
+    msg.id = 1050; // Message 0x41a pack_state 8bits None
+    msg.len = 8;
+    pack(msg, batteryPack.getState(), 0, 8, false, 1, 0);                       // batteryPack__getState : 0|8 little_endian unsigned scale: 1, offset: 0, unit: None, None
+    pack(msg, batteryPack.getDTC(), 8, 8, false, 1, 0);                         // batteryPack__getDTC : 8|8 little_endian unsigned scale: 1, offset: 0, unit: None, None
+    pack(msg, batteryPack.get_balancing_voltage(), 16, 16, false, 0.001, 0);                // get_balancing_voltage : 16|16 little_endian unsigned scale: 0.001, offset: 0, unit: Volt, None
+    pack(msg, batteryPack.get_balancing_active(), 32, 1, false);     // batteryPack__modules7__get_balancing_active : 32|1 little_endian unsigned scale: 1, offset: 0, unit: None, None
+    pack(msg, batteryPack.get_any_module_balancing(), 33, 1, false); // batteryPack__modules7__get_any_module_balancing : 33|1 little_endian unsigned scale: 1, offset: 0, unit: None, None
+    send_message(&msg);
+
+    msg.data64 = 0;
+    msg.id = 1051; // Message 0x41b pack_voltage 8bits None
+    msg.len = 8;
+    pack(msg, batteryPack.get_lowest_cell_voltage(), 0, 16, false, 0.001, 0);   // batteryPack__get_lowest_cell_voltage : 0|16 little_endian unsigned scale: 0.001, offset: 0, unit: Volt, None
+    pack(msg, batteryPack.get_highest_cell_voltage(), 16, 16, false, 0.001, 0); // batteryPack__get_highest_cell_voltage : 16|16 little_endian unsigned scale: 0.001, offset: 0, unit: Volt, None
+    pack(msg, batteryPack.get_pack_voltage(), 32, 16, false, 0.001, 0);         // batteryPack__get_pack_voltage : 32|16 little_endian unsigned scale: 0.001, offset: 0, unit: Volt, None
+    pack(msg, batteryPack.get_delta_cell_voltage(), 48, 16, false, 0.001, 0);   // batteryPack__get_delta_cell_voltage : 48|16 little_endian unsigned scale: 0.001, offset: 0, unit: Volt, None
+    send_message(&msg);
+
+    msg.data64 = 0;
+    msg.id = 1052; // Message 0x41c pack_temperatures 8bits None
+    msg.len = 8;
+    pack(msg, batteryPack.get_lowest_temperature(), 0, 16, false, 1, -40);   // batteryPack__get_lowest_temperature : 0|16 little_endian unsigned scale: 1, offset: -40, unit: Â°C, None
+    pack(msg, batteryPack.get_highest_temperature(), 16, 16, false, 1, -40); // batteryPack__get_highest_temperature : 16|16 little_endian unsigned scale: 1, offset: -40, unit: Â°C, None
+    send_message(&msg);
+
 }
 
 // void BMS::Monitor1000Ms()
@@ -731,47 +741,3 @@ void BMS::send_message(CANMessage *frame)
     }
 }
 
-// const char *BatteryPack::getStateString()
-// {
-//     switch (state)
-//     {
-//     case INIT:
-//         return "INIT";
-//     case OPERATING:
-//         return "OPERATING";
-//     case FAULT:
-//         return "FAULT";
-//     default:
-//         return "UNKNOWN STATE";
-//     }
-// }
-
-// String BatteryPack::getDTCString()
-// {
-//     String errorString = "";
-
-//     if (static_cast<uint8_t>(dtc) == 0)
-//     {
-//         errorString += "None";
-//     }
-//     else
-//     {
-//         if (dtc & DTC_PACK_CAN_SEND_ERROR)
-//         {
-//             errorString += "DTC_PACK_CAN_SEND_ERROR, ";
-//         }
-//         if (dtc & DTC_PACK_CAN_INIT_ERROR)
-//         {
-//             errorString += "DTC_PACK_CAN_INIT_ERROR, ";
-//         }
-//         if (dtc & DTC_PACK_MODULE_FAULT)
-//         {
-//             errorString += "DTC_PACK_MODULE_FAULT, ";
-//         }
-
-//         // Remove the trailing comma and space
-//         errorString.remove(errorString.length() - 2);
-//     }
-
-//     return errorString;
-// }
