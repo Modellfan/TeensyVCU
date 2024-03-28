@@ -3,13 +3,13 @@
 
 #include "bms/battery_manager.h"
 #include "bms/current.h"
+#include "bms/contactor_manager.h"
 #include "utils/can_packer.h"
 #include <math.h>
-#include <functional>
 
-//#define DEBUG
+// #define DEBUG
 
-BMS::BMS(BatteryPack &_batteryPack, Shunt_ISA_iPace &_shunt) : batteryPack(_batteryPack), shunt(_shunt)
+BMS::BMS(BatteryPack &_batteryPack, Shunt_ISA_iPace &_shunt, Contactormanager &_contactorManager) : batteryPack(_batteryPack), shunt(_shunt), contactorManager(_contactorManager)
 {
     state = INIT;
     dtc = DTC_BMS_NONE;
@@ -59,11 +59,54 @@ void BMS::initialize()
         Serial.println(errorCode, HEX);
         dtc |= DTC_BMS_CAN_INIT_ERROR;
     }
+
+    contactorManager.close();
 }
 
 void BMS::Task2Ms() { read_message(); } // Read Can messages ?
-void BMS::Task10Ms() {}                 // Poll messages
-void BMS::Task100Ms() {}
+void BMS::Task10Ms()
+{
+    float _current;
+    // todo Check if current sensor state is operation
+    _current = shunt.getCurrent();
+    power = _current * batteryPack.get_pack_voltage();
+
+    float _temp;
+    _temp = shunt.getAmpereSeconds();
+    ampere_seconds += _temp;
+    watt_seconds += _temp * batteryPack.get_pack_voltage();
+
+    soc_coulomb_counting = watt_seconds / total_capacity * 100; // SOC percentage
+}
+
+void BMS::Task100Ms()
+{
+    float _temperature;
+    float _voltage;
+    float _current;
+
+    // todo Check if current sensor state is operation
+    // maybe load balance this task by doing one module every 10ms
+
+    _current = shunt.getCurrent();
+
+    for (int i = 0; i <= CELLS_PER_MODULE * CELLS_PER_MODULE; ++i)
+    {
+        if (batteryPack.get_cell_voltage(i, _voltage) == false)
+        {
+            cell_available[i] = false;
+            continue;
+        }
+        if (batteryPack.get_cell_temperature(i, _temperature) == false)
+        {
+            cell_available[i] = false;
+            continue;
+        }
+        // if cell value is fine
+        internal_resistance[i] = 1.0; // make it a better calculation. in mOhm
+        open_circuite_voltage[i] = _voltage - internal_resistance[i] * _current / 1000.0;
+    }
+}
 
 // Read messages into modules and check alive
 void BMS::read_message()
@@ -131,13 +174,17 @@ void BMS::read_message()
     // }
 }
 
-
-
 void BMS::Monitor100Ms()
 {
-    //Serial.println(dtc);
+    shunt.monitor([this](const CANMessage &frame)
+                  {
+                      this->send_message(&frame); // Capture 'this' pointer explicitly
+                  });
 
-    shunt.monitor(std::bind(&BMS::send_message, this, std::placeholders::_1));
+    contactorManager.monitor([this](const CANMessage &frame)
+                  {
+                      this->send_message(&frame); // Capture 'this' pointer explicitly
+                  });
 
     CANMessage msg;
 
@@ -600,11 +647,11 @@ void BMS::Monitor100Ms()
     msg.data64 = 0;
     msg.id = 1050; // Message 0x41a pack_state 8bits None
     msg.len = 8;
-    pack(msg, batteryPack.getState(), 0, 8, false, 1, 0);                       // batteryPack__getState : 0|8 little_endian unsigned scale: 1, offset: 0, unit: None, None
-    pack(msg, batteryPack.getDTC(), 8, 8, false, 1, 0);                         // batteryPack__getDTC : 8|8 little_endian unsigned scale: 1, offset: 0, unit: None, None
-    pack(msg, batteryPack.get_balancing_voltage(), 16, 16, false, 0.001, 0);                // get_balancing_voltage : 16|16 little_endian unsigned scale: 0.001, offset: 0, unit: Volt, None
-    pack(msg, batteryPack.get_balancing_active(), 32, 1, false);     // batteryPack__modules7__get_balancing_active : 32|1 little_endian unsigned scale: 1, offset: 0, unit: None, None
-    pack(msg, batteryPack.get_any_module_balancing(), 33, 1, false); // batteryPack__modules7__get_any_module_balancing : 33|1 little_endian unsigned scale: 1, offset: 0, unit: None, None
+    pack(msg, batteryPack.getState(), 0, 8, false, 1, 0);                    // batteryPack__getState : 0|8 little_endian unsigned scale: 1, offset: 0, unit: None, None
+    pack(msg, batteryPack.getDTC(), 8, 8, false, 1, 0);                      // batteryPack__getDTC : 8|8 little_endian unsigned scale: 1, offset: 0, unit: None, None
+    pack(msg, batteryPack.get_balancing_voltage(), 16, 16, false, 0.001, 0); // get_balancing_voltage : 16|16 little_endian unsigned scale: 0.001, offset: 0, unit: Volt, None
+    pack(msg, batteryPack.get_balancing_active(), 32, 1, false);             // batteryPack__modules7__get_balancing_active : 32|1 little_endian unsigned scale: 1, offset: 0, unit: None, None
+    pack(msg, batteryPack.get_any_module_balancing(), 33, 1, false);         // batteryPack__modules7__get_any_module_balancing : 33|1 little_endian unsigned scale: 1, offset: 0, unit: None, None
     send_message(&msg);
 
     msg.data64 = 0;
@@ -622,7 +669,6 @@ void BMS::Monitor100Ms()
     pack(msg, batteryPack.get_lowest_temperature(), 0, 16, false, 1, -40);   // batteryPack__get_lowest_temperature : 0|16 little_endian unsigned scale: 1, offset: -40, unit: Â°C, None
     pack(msg, batteryPack.get_highest_temperature(), 16, 16, false, 1, -40); // batteryPack__get_highest_temperature : 16|16 little_endian unsigned scale: 1, offset: -40, unit: Â°C, None
     send_message(&msg);
-
 }
 
 // void BMS::Monitor1000Ms()
@@ -740,4 +786,3 @@ void BMS::send_message(CANMessage *frame)
         // Serial.println("Send nok");
     }
 }
-

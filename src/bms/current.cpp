@@ -21,6 +21,7 @@ void Shunt_ISA_iPace::initialise()
     Serial.println("ISA Shunt CAN Initialize");
     ACAN_T4_Settings settings(500 * 1000); // 125 kbit/s
     const uint32_t errorCode = ACAN_T4::ISA_SHUNT_CAN.begin(settings);
+#ifdef DEBUG
     Serial.print("Bitrate prescaler: ");
     Serial.println(settings.mBitRatePrescaler);
     Serial.print("Propagation Segment: ");
@@ -44,14 +45,17 @@ void Shunt_ISA_iPace::initialise()
     Serial.print("Sample point: ");
     Serial.print(settings.samplePointFromBitStart());
     Serial.println("%");
+#endif
+
     if (0 == errorCode)
     {
-        Serial.println("ISA Shunt CAN ok");
+        Serial.println("Battery CAN ok");
     }
     else
     {
-        Serial.print("Error ISA Shunt CAN: 0x");
+        Serial.print("Error Battery CAN: 0x");
         Serial.println(errorCode, HEX);
+        _dtc |= DTC_ISA_CAN_INIT_ERROR;
     }
 }
 
@@ -68,7 +72,7 @@ void Shunt_ISA_iPace::update()
             if (_lastUpdate + ISA_SHUNT_TIMEOUT > millis())
             {
                 _state = FAULT;
-                // toDo raise fault. Present replacement value
+                _dtc = DTC_ISA_TIMED_OUT;
             }
         }
 
@@ -113,23 +117,31 @@ void Shunt_ISA_iPace::update()
                 _current = (int32_t)(message.data[5] + (message.data[4] << 8) + (message.data[3] << 16) + (message.data[2] << 24)) / 1000.0;
                 _0x3c3_framecounter = (u_int8_t)(message.data[2] & 0x0F);
 
-                // Serial.print("Current: ");
-                // Serial.println(_current, 3);
+                if (_current > BMS_MAX_DISCHARGE_PEAK_CURRENT)
+                {
+                    _state = FAULT;
+                    _dtc = DTC_ISA_MAX_CURRENT_EXCEEDED;
+                }
+
                 calculate_current_values();
             }
             break;
         case 0x3D2: // 100ms signal
             _temperature = (int32_t)(message.data[5] + (message.data[4] << 8) + (message.data[3] << 16) + (message.data[2] << 24)) / 10.0;
             _0x3D2_framecounter = (u_int8_t)(message.data[2] & 0x0F);
-            // Serial.print("Temperature: ");
-            // Serial.println(_temperature, 2);
+
+            if (_temperature > ISA_SHUNT_MAX_TEMPERATURE)
+            {
+                _state = FAULT;
+                _dtc = DTC_ISA_TEMPERATURE_TOO_HIGH;
+            }
         default:
             break;
         }
     }
 }
 
-void Shunt_ISA_iPace::monitor(SendMessageCallback callback)
+void Shunt_ISA_iPace::monitor(std::function<void(const CANMessage &)> callback)
 {
     CANMessage msg;
 
@@ -145,7 +157,7 @@ void Shunt_ISA_iPace::monitor(SendMessageCallback callback)
     // Send the CAN message using the provided callback
     if (callback != nullptr)
     {
-        callback(&msg);
+        callback(msg);
     }
 }
 

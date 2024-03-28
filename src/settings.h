@@ -3,6 +3,9 @@
 
 #define VERSION 1.0
 
+//---------------------------------------------------------------------------------------------------------------------------------------------
+//CMU and pack settings
+//---------------------------------------------------------------------------------------------------------------------------------------------
 #define NUM_PACKS         1
 #define CELLS_PER_MODULE 12                        // The number of cells in each module
 #define TEMPS_PER_MODULE  4                        // The number of temperature sensors in each module
@@ -14,24 +17,32 @@
 #define CMU_MIN_PLAUSIBLE_VOLTAGE 2.00f
 #define CMU_MAX_PLAUSIBLE_VOLTAGE 5.00f
 #define CMU_MAX_PLAUSIBLE_TEMPERATURE 80.00f
-#define CMU_MIN_PLAUSIBLE_TEMPERATURE -40.00f
-#define PACK_ALIVE_TIMEOUT 300                       
+#define CMU_MIN_PLAUSIBLE_TEMPERATURE -40.00f                    
 
 //Pack Setting
 #define BATTERY_CAN can2
 #define PACK_WAIT_FOR_NUM_MODULES 1
+#define PACK_ALIVE_TIMEOUT 300 
 
+//---------------------------------------------------------------------------------------------------------------------------------------------
 // Shunt Settings
+//---------------------------------------------------------------------------------------------------------------------------------------------
 #define ISA_SHUNT_CAN can1
 #define ISA_SHUNT_TIMEOUT 100 //Timeout in ms, when no new message is recieved 
+#define ISA_SHUNT_MAX_TEMPERATURE 70
 
+//---------------------------------------------------------------------------------------------------------------------------------------------
 // Contactor Manager Settings
+//---------------------------------------------------------------------------------------------------------------------------------------------
 #define CONTACTOR_TIMELOOP 20
 #define CONTACTOR_TIMEOUT 200
 #define CONTACTOR_DEBOUNCE 100 //Debounce should be bigger than time loop
 
+#define CONTACTOR_CLOSED_STATE LOW
+
+#define CONTACTOR_POWER_SUPPLY_IN_PIN 2
+
 #define CONTACTOR_NEG_IN_PIN 3
-#define CONTACTOR_NEG_OUT_PIN 2
 #define CONTACTOR_POS_IN_PIN 5
 #define CONTACTOR_POS_OUT_PIN 4
 #define CONTACTOR_PRCHG_IN_PIN 29
@@ -43,6 +54,8 @@
 //BMS software module settings
 //---------------------------------------------------------------------------------------------------------------------------------------------
 #define BMS_CAN can3
+
+#define BMS_TOTAL_CAPACITY 345 * 3600 * CELLS_PER_MODULE; //Num modules missing 345Wh 3600 s/H 12 Cells. Unit: Ws
 
 //BMW i3 Specs from Samsung SDI document
 #define BMS_SOC_WARNING_LIMIT 0.8 //Below this limit, max current values are not allowed anymore

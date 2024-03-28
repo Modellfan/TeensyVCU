@@ -2,8 +2,6 @@
 #include "contactor.h"
 #include "settings.h"
 
-#define CONTACTOR_CLOSED_STATE LOW
-
 Contactor::Contactor(int outputPin, int inputPin, int debounce_ms, int timeout_ms)
     : _outputPin(outputPin),
       _inputPin(inputPin),
@@ -69,11 +67,17 @@ Contactor::State Contactor::getState()
     return _currentState;
 }
 
+bool Contactor::getInputPin()
+{
+
+    return (digitalRead(_inputPin) == CONTACTOR_CLOSED_STATE);
+}
+
 void Contactor::update()
 {
-    PLOT("Contactor Input",digitalRead(_inputPin));
-    PLOT("Contactor Output",digitalRead(_outputPin));
-    
+    // PLOT("Contactor Input",digitalRead(_inputPin));
+    // PLOT("Contactor Output",digitalRead(_outputPin));
+
     switch (_currentState)
     {
     case INIT:
@@ -141,5 +145,5 @@ void Contactor::update()
         break;
     }
 
-    PLOT("Contactor State",_currentState);
+    // PLOT("Contactor State",_currentState);
 }

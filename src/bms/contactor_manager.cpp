@@ -1,28 +1,65 @@
 #include <Arduino.h>
 #include "settings.h"
+#include <ACAN_T4.h>
 #include "bms/contactor_manager.h"
 #include "bms/contactor.h"
+#include "utils/can_packer.h"
 
-Contactormanager::Contactormanager() : _negativeContactor(CONTACTOR_NEG_OUT_PIN, CONTACTOR_NEG_IN_PIN, CONTACTOR_DEBOUNCE, CONTACTOR_TIMEOUT),
-    _prechargeContactor (CONTACTOR_PRCHG_OUT_PIN, CONTACTOR_PRCHG_IN_PIN, CONTACTOR_DEBOUNCE, CONTACTOR_TIMEOUT),
-    _positiveContactor (CONTACTOR_POS_OUT_PIN, CONTACTOR_POS_IN_PIN, CONTACTOR_DEBOUNCE, CONTACTOR_TIMEOUT)
+Contactormanager::Contactormanager() : _prechargeContactor(CONTACTOR_PRCHG_OUT_PIN, CONTACTOR_PRCHG_IN_PIN, CONTACTOR_DEBOUNCE, CONTACTOR_TIMEOUT),
+                                       _positiveContactor(CONTACTOR_POS_OUT_PIN, CONTACTOR_POS_IN_PIN, CONTACTOR_DEBOUNCE, CONTACTOR_TIMEOUT)
 {
     _currentState = INIT;
-
 }
 
 void Contactormanager::initialise()
 {
-    _negativeContactor.initialise();
+    pinMode(CONTACTOR_POWER_SUPPLY_IN_PIN, INPUT_PULLUP);
+    pinMode(CONTACTOR_NEG_IN_PIN, INPUT_PULLUP);
+
+    _negativeContactor_closed = (digitalRead(CONTACTOR_NEG_IN_PIN) == CONTACTOR_CLOSED_STATE);
+    _contactorVoltage_available = (digitalRead(CONTACTOR_POWER_SUPPLY_IN_PIN) == CONTACTOR_CLOSED_STATE);
+
     _prechargeContactor.initialise();
     _positiveContactor.initialise();
-    if (_negativeContactor.getState() == Contactor::FAULT ||
-        _prechargeContactor.getState() == Contactor::FAULT ||
-        _positiveContactor.getState() == Contactor::FAULT)
+
+    if (_positiveContactor.getState() == Contactor::FAULT)
     {
+        // If any contactor is in fault state, put all contactors in open state and set manager state to fault
+        _positiveContactor.open();
+        _prechargeContactor.open();
+        _dtc = DTC_COM_POSITIVE_CONTACTOR_FAULT;
         _currentState = FAULT;
     }
-    else
+
+    if (_prechargeContactor.getState() == Contactor::FAULT)
+    {
+        // If any contactor is in fault state, put all contactors in open state and set manager state to fault
+        _positiveContactor.open();
+        _prechargeContactor.open();
+        _dtc = DTC_COM_PRECHARGE_CONTACTOR_FAULT;
+        _currentState = FAULT;
+    }
+
+    if (_negativeContactor_closed == false)
+    {
+        // If any contactor is in fault state, put all contactors in open state and set manager state to fault
+        _positiveContactor.open();
+        _prechargeContactor.open();
+        _dtc = DTC_COM_NEGATIVE_CONTACTOR_FAULT;
+        _currentState = FAULT;
+    }
+
+    if (_contactorVoltage_available == false)
+    {
+        // If any contactor is in fault state, put all contactors in open state and set manager state to fault
+        _positiveContactor.open();
+        _prechargeContactor.open();
+        _dtc = DTC_COM_NO_CONTACTOR_POWER_SUPPLY;
+        _currentState = FAULT;
+    }
+
+    if (_currentState == INIT) // If no fault state set until here
+
     {
         _currentState = OPEN;
     }
@@ -48,17 +85,43 @@ void Contactormanager::update()
     // Update state of each contactor
     _positiveContactor.update(); // In case of an fault eg timeout we want to keep the opening order
     _prechargeContactor.update();
-    _negativeContactor.update();
+    _negativeContactor_closed = (digitalRead(CONTACTOR_NEG_IN_PIN) == CONTACTOR_CLOSED_STATE);
+    _contactorVoltage_available = (digitalRead(CONTACTOR_POWER_SUPPLY_IN_PIN) == CONTACTOR_CLOSED_STATE);
 
     // Determine state based on state of individual contactors
-    if (_positiveContactor.getState() == Contactor::FAULT ||
-        _prechargeContactor.getState() == Contactor::FAULT ||
-        _negativeContactor.getState() == Contactor::FAULT)
+    if (_positiveContactor.getState() == Contactor::FAULT)
     {
         // If any contactor is in fault state, put all contactors in open state and set manager state to fault
         _positiveContactor.open();
         _prechargeContactor.open();
-        _negativeContactor.open();
+        _dtc = DTC_COM_POSITIVE_CONTACTOR_FAULT;
+        _currentState = FAULT;
+    }
+
+    if (_prechargeContactor.getState() == Contactor::FAULT)
+    {
+        // If any contactor is in fault state, put all contactors in open state and set manager state to fault
+        _positiveContactor.open();
+        _prechargeContactor.open();
+        _dtc = DTC_COM_PRECHARGE_CONTACTOR_FAULT;
+        _currentState = FAULT;
+    }
+
+    if (_negativeContactor_closed == false)
+    {
+        // If any contactor is in fault state, put all contactors in open state and set manager state to fault
+        _positiveContactor.open();
+        _prechargeContactor.open();
+        _dtc = DTC_COM_NEGATIVE_CONTACTOR_FAULT;
+        _currentState = FAULT;
+    }
+
+    if (_contactorVoltage_available == false)
+    {
+        // If any contactor is in fault state, put all contactors in open state and set manager state to fault
+        _positiveContactor.open();
+        _prechargeContactor.open();
+        _dtc = DTC_COM_NO_CONTACTOR_POWER_SUPPLY;
         _currentState = FAULT;
     }
 
@@ -70,27 +133,11 @@ void Contactormanager::update()
     case OPEN:
         if (_targetState == CLOSED)
         {
-            _negativeContactor.close();
-            _currentState = CLOSING_NEGATIVE;
+            _prechargeContactor.close();
+            _currentState = CLOSING_PRECHARGE;
         }
         else if (_targetState == OPEN)
         {
-        }
-        break;
-
-    case CLOSING_NEGATIVE:
-        if (_targetState == CLOSED)
-        {
-            if (_negativeContactor.getState() == Contactor::CLOSED)
-            {
-                _prechargeContactor.close();
-                _currentState = CLOSING_PRECHARGE;
-            }
-        }
-        else if (_targetState == OPEN)
-        {
-            _negativeContactor.open();
-            _currentState = OPENING_NEGATIVE;
         }
         break;
 
@@ -168,19 +215,6 @@ void Contactormanager::update()
 
             if (_prechargeContactor.getState() == Contactor::OPEN)
             {
-                _currentState = OPENING_NEGATIVE;
-            }
-        }
-        break;
-    case OPENING_NEGATIVE:
-        if (_targetState == CLOSED)
-        {
-            // Opening procedure is never interrupted for closing again
-        }
-        else if (_targetState == OPEN)
-        {
-            if (_negativeContactor.getState() == Contactor::OPEN)
-            {
                 _currentState = OPEN;
             }
         }
@@ -188,7 +222,28 @@ void Contactormanager::update()
     case FAULT:
         _positiveContactor.open();
         _prechargeContactor.open();
-        _negativeContactor.open();
         break;
     }
 }
+
+void Contactormanager::monitor(std::function<void(const CANMessage &)> callback)
+{
+    CANMessage msg;
+
+    msg.data64 = 0;
+    msg.id = 1080; // Message 0x438 contactor_manager_state 8bits None
+    msg.len = 8;
+    pack(msg, getState(), 0, 8, false, 1, 0);                   // getState : 0|8 little_endian unsigned scale: 1, offset: 0, unit: None, None
+    pack(msg, getDTC(), 8, 8, false, 1, 0);                     // getDTC : 8|8 little_endian unsigned scale: 1, offset: 0, unit: None, None
+    pack(msg, _negativeContactor_closed, 16, 1, false);         // negative_contactor_input : 16|1 little_endian unsigned scale: 1, offset: 0, unit: None, None
+    pack(msg, _positiveContactor.getInputPin(), 17, 1, false);  // positive_contactor_input : 17|1 little_endian unsigned scale: 1, offset: 0, unit: None, None
+    pack(msg, _prechargeContactor.getInputPin(), 18, 1, false); // precharge_contactor_input : 18|1 little_endian unsigned scale: 1, offset: 0, unit: None, None
+    pack(msg, _contactorVoltage_available, 19, 1, false);       // contactor_supply_voltage_input : 19|1 little_endian unsigned scale: 1, offset: 0, unit: None, None
+
+    if (callback != nullptr)
+    {
+        callback(msg);
+    }
+}
+
+Contactormanager::DTC_COM Contactormanager::getDTC() { return _dtc; }

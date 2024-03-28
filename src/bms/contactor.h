@@ -23,6 +23,7 @@ public:
     void close();
     void open();
     State getState();
+    bool getInputPin();
     void update();
 
 private:

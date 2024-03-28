@@ -7,15 +7,15 @@
 
 #include "bms/battery i3/pack.h"
 #include "bms/current.h"
+#include "bms/contactor_manager.h"
 #include "utils/can_packer.h"
 #include "settings.h"
 
+typedef void (*SendMessageCallback)(const CANMessage &);
+
 class BMS
 {
-
 public:
-    typedef void (*SendMessageCallback)(const CANMessage &);
-
     enum STATE_BMS
     {
         INIT,      // pack is being initialized
@@ -31,7 +31,7 @@ public:
         DTC_BMS_PACK_FAULT = 1 << 2,
     } DTC_BMS;
 
-    BMS(BatteryPack &_batteryPack, Shunt_ISA_iPace &_shunt); // Constructor taking a reference to BatteryPack
+    BMS(BatteryPack &_batteryPack, Shunt_ISA_iPace &_shunt, Contactormanager &_contactorManager); // Constructor taking a reference to BatteryPack
 
     // Runnables
     //         void print();
@@ -48,9 +48,24 @@ public:
 private:
     BatteryPack &batteryPack; // Reference to the BatteryPack
     Shunt_ISA_iPace &shunt;
+    Contactormanager &contactorManager;
+    
 
-    //         // Non-Volatile Variable!!
-    //         float watt_seconds;
+    bool cell_available[CELLS_PER_MODULE * CELLS_PER_MODULE];
+    float internal_resistance[CELLS_PER_MODULE * CELLS_PER_MODULE];
+    float open_circuite_voltage[CELLS_PER_MODULE * CELLS_PER_MODULE];
+
+    float power; // in Ws
+
+    //SOC
+    float soc_coulomb_counting;
+
+    // Non-Volatile Variable!!
+    float watt_seconds;
+    float ampere_seconds;
+    float total_capacity = BMS_TOTAL_CAPACITY;
+
+
 
     //         // Current derating
     //         void calculate_current_limits();

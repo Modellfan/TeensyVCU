@@ -4,13 +4,14 @@
 #include <ACAN_T4.h>
 #include <Arduino.h>
 #include "settings.h"
+#include <functional> // Add this line to include the <functional> header
+
 
 class Shunt_ISA_iPace
 {
 
 public:
-    typedef void (*SendMessageCallback)(const CANMessage &);
-
+   
     enum STATE_ISA
     {
         INIT,      // CMU is being initialized
@@ -21,12 +22,10 @@ public:
     typedef enum
     {
         DTC_ISA_NONE = 0,
-        DTC_ISA_INTERNAL_ERROR = 1 << 0,
+        DTC_ISA_CAN_INIT_ERROR = 1 << 0,
         DTC_ISA_TEMPERATURE_TOO_HIGH = 1 << 1,
-        DTC_ISA_SINGLE_VOLTAGE_IMPLAUSIBLE = 1 << 2,
-        DTC_ISA_TEMPERATURE_IMPLAUSIBLE = 1 << 3,
-        DTC_ISA_TIMED_OUT = 1 << 4,
-        DTC_ISA_MODULE_VOLTAGE_IMPLAUSIBLE = 1 << 5
+        DTC_ISA_MAX_CURRENT_EXCEEDED = 1 << 2,
+        DTC_ISA_TIMED_OUT = 1 << 3,
     } DTC_ISA;
 
     // Constructor
@@ -35,7 +34,7 @@ public:
     // Runnables
     void initialise(); // For blocking singular initialize
     void update();     // Polls the can bus assigned in settings and saves the result. 10ms time slice.
-    void monitor(SendMessageCallback callback);
+    void monitor(std::function<void(const CANMessage &)> callback);
 
     // Our state
     STATE_ISA getState();
