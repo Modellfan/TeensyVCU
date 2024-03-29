@@ -183,7 +183,6 @@ void enable_BMS_tasks()
 
 void BMS_Monitor100ms()
 {
-    battery_manager.initialize();
     battery_manager.Monitor100Ms();
 }
 
@@ -197,6 +196,7 @@ Task BMS_monitor_1000ms_timer(1000, TASK_FOREVER, &BMS_Monitor1000ms);
 
 void enable_BMS_monitor()
 {
+    battery_manager.initialize();
     scheduler.addTask(BMS_monitor_100ms_timer);
     BMS_monitor_100ms_timer.enable();
     scheduler.addTask(BMS_monitor_1000ms_timer);

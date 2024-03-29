@@ -18,6 +18,9 @@ Shunt_ISA_iPace::Shunt_ISA_iPace()
 
 void Shunt_ISA_iPace::initialise()
 {
+    _state = INIT;
+    _dtc = DTC_ISA_NONE;
+    
     Serial.println("ISA Shunt CAN Initialize");
     ACAN_T4_Settings settings(500 * 1000); // 125 kbit/s
     const uint32_t errorCode = ACAN_T4::ISA_SHUNT_CAN.begin(settings);
@@ -49,14 +52,16 @@ void Shunt_ISA_iPace::initialise()
 
     if (0 == errorCode)
     {
-        Serial.println("Battery CAN ok");
+        Serial.println("Shunt CAN ok");
     }
     else
     {
-        Serial.print("Error Battery CAN: 0x");
+        Serial.print("Error Shunt CAN: 0x");
         Serial.println(errorCode, HEX);
         _dtc |= DTC_ISA_CAN_INIT_ERROR;
     }
+
+
 }
 
 void Shunt_ISA_iPace::update()
@@ -67,12 +72,13 @@ void Shunt_ISA_iPace::update()
         // printFrame(message);
 
         // Check for timeout of the shunt
-        if (_state = OPERATING)
+        if (_state == OPERATING)
         {
-            if (_lastUpdate + ISA_SHUNT_TIMEOUT > millis())
+            if ((millis()-_lastUpdate) > ISA_SHUNT_TIMEOUT)
             {
                 _state = FAULT;
                 _dtc = DTC_ISA_TIMED_OUT;
+                //Serial.println(millis()-_lastUpdate);
             }
         }
 
@@ -105,17 +111,19 @@ void Shunt_ISA_iPace::update()
         case 0x3c0: // Signal send on startup
             break;
         case 0x3c3: // 10ms signal
-            _last_status_bits = (u_int8_t)(message.data[2] & 0xF0) >> 4;
-            if (_last_status_bits = 0)
+
+            _last_status_bits = (u_int8_t)(message.data[1] & 0xF0) >> 4;
+            //Serial.println(_last_status_bits);
+            if (_last_status_bits == 0)
             {
-                if (_state = INIT) // First time we recieve a valid frame we put the shunt in operating state.
+                if (_state == INIT) // First time we recieve a valid frame we put the shunt in operating state.
                 {
                     _state = OPERATING;
                 }
                 _lastUpdate = millis();
 
                 _current = (int32_t)(message.data[5] + (message.data[4] << 8) + (message.data[3] << 16) + (message.data[2] << 24)) / 1000.0;
-                _0x3c3_framecounter = (u_int8_t)(message.data[2] & 0x0F);
+                _0x3c3_framecounter = (u_int8_t)(message.data[1] & 0x0F);
 
                 if (_current > BMS_MAX_DISCHARGE_PEAK_CURRENT)
                 {
@@ -128,7 +136,7 @@ void Shunt_ISA_iPace::update()
             break;
         case 0x3D2: // 100ms signal
             _temperature = (int32_t)(message.data[5] + (message.data[4] << 8) + (message.data[3] << 16) + (message.data[2] << 24)) / 10.0;
-            _0x3D2_framecounter = (u_int8_t)(message.data[2] & 0x0F);
+            _0x3D2_framecounter = (u_int8_t)(message.data[1] & 0x0F);
 
             if (_temperature > ISA_SHUNT_MAX_TEMPERATURE)
             {
@@ -159,6 +167,7 @@ void Shunt_ISA_iPace::monitor(std::function<void(const CANMessage &)> callback)
     {
         callback(msg);
     }
+
 }
 
 void Shunt_ISA_iPace::calculate_current_values()

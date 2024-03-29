@@ -23,20 +23,20 @@ void Contactor::initialise()
         if (digitalRead(_inputPin) == CONTACTOR_CLOSED_STATE)
         {
             _currentState = FAULT;
-            Serial.println("State: Fault");
+            //Serial.println("State: Fault");
             digitalWrite(_outputPin, LOW);
-            Serial.println("Fault: input signal high at init");
+            //Serial.println("Fault: input signal high at init");
         }
         else
         {
             _currentState = OPEN;
-            Serial.println("State: Open");
+            //Serial.println("State: Open");
             _lastStateChange = millis();
         }
     }
     else
     {
-        Serial.println("Fault: Contactor was already initialized. A second initialize is not possible.");
+        //Serial.println("Fault: Contactor was already initialized. A second initialize is not possible.");
     }
 }
 
@@ -45,7 +45,7 @@ void Contactor::close()
     if (_currentState == OPEN || _currentState == OPENING)
     {
         _currentState = CLOSING;
-        Serial.println("State: Closing");
+        //Serial.println("State: Closing");
         _lastStateChange = millis();
         digitalWrite(_outputPin, HIGH);
     }
@@ -56,7 +56,7 @@ void Contactor::open()
     if (_currentState == CLOSED || _currentState == CLOSING)
     {
         _currentState = OPENING;
-        Serial.println("State: Opening");
+        //Serial.println("State: Opening");
         _lastStateChange = millis();
         digitalWrite(_outputPin, LOW);
     }
@@ -86,7 +86,7 @@ void Contactor::update()
         if (digitalRead(_inputPin) == CONTACTOR_CLOSED_STATE)
         {
             _currentState = FAULT;
-            Serial.println("State: Fault");
+            //Serial.println("State: Fault");
             digitalWrite(_outputPin, LOW);
         }
         break;
@@ -94,7 +94,7 @@ void Contactor::update()
         if (digitalRead(_inputPin) != CONTACTOR_CLOSED_STATE)
         {
             _currentState = FAULT;
-            Serial.println("State: Fault");
+            ///Serial.println("State: Fault");
             digitalWrite(_outputPin, LOW);
         }
         break;
@@ -102,7 +102,7 @@ void Contactor::update()
         if ((millis() - _lastStateChange) > _timeout_ms)
         {
             _currentState = FAULT;
-            Serial.println("State: Fault");
+            //Serial.println("State: Fault");
             digitalWrite(_outputPin, LOW);
         }
         else
@@ -112,7 +112,7 @@ void Contactor::update()
                 if (digitalRead(_inputPin) != CONTACTOR_CLOSED_STATE)
                 {
                     _currentState = OPEN;
-                    Serial.println("State: Open");
+                    //Serial.println("State: Open");
                     _lastStateChange = millis();
                 }
             }
@@ -122,9 +122,9 @@ void Contactor::update()
         if ((millis() - _lastStateChange) > _timeout_ms)
         {
             _currentState = FAULT;
-            Serial.println(millis());
-            Serial.println(_lastStateChange);
-            Serial.println("State: Fault");
+            //Serial.println(millis());
+            //Serial.println(_lastStateChange);
+            //Serial.println("State: Fault");
             digitalWrite(_outputPin, LOW);
         }
         else
@@ -134,7 +134,7 @@ void Contactor::update()
                 if (digitalRead(_inputPin) == CONTACTOR_CLOSED_STATE)
                 {
                     _currentState = CLOSED;
-                    Serial.println("State: Closed");
+                    //Serial.println("State: Closed");
                     _lastStateChange = millis();
                 }
             }
