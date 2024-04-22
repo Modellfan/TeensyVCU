@@ -6,19 +6,22 @@
 #include "utils/Map2D3D.h"
 #include <Watchdog_t4.h>
 
+#ifndef __IMXRT1062__
+#error "This sketch should be compiled for Teensy 4.1"
+#endif
+
+#define DEBUG
+#define MAIN_VCU
+
+#ifdef BMS_VCU
+
 #include <bms/current.h>
 #include <bms/contactor.h>
 #include "bms/contactor_manager.h"
 #include "bms/battery i3/pack.h"
 #include "bms/battery_manager.h"
 
-#include "comms.h"
-
-#ifndef __IMXRT1062__
-#error "This sketch should be compiled for Teensy 4.1"
-#endif
-
-#define DEBUG
+#include "comms_bms.h"
 
 // Create system objects
 Scheduler scheduler;
@@ -64,7 +67,6 @@ void setup()
   delay(100);
 #endif
 
-
   Serial.println("Setup software modules:");
 
   // Setup SW components
@@ -93,7 +95,7 @@ void setup()
 
   // Main module startup
   enable_BMS_tasks();
-  //enable_print_debug();
+  // enable_print_debug();
 
   // Watchdog startup
   // WDT_timings_t config;
@@ -110,15 +112,62 @@ void loop()
   // wdt.feed(); // must feed the watchdog every so often or it'll get angry
 }
 
+// Map2D<8, int16_t, int8_t> test;
+// test.setXs_P(xs);
+// test.setYs_P(ys);
 
-  // Map2D<8, int16_t, int8_t> test;
-  // test.setXs_P(xs);
-  // test.setYs_P(ys);
+// for (int idx = 250; idx < 2550; idx += 50)
+// {
+//   int8_t val = test.f(idx);
+//   Serial.print(idx);
+//   Serial.print(F(": "));
+//   Serial.println((int)val);
+// }
 
-  // for (int idx = 250; idx < 2550; idx += 50)
-  // {
-  //   int8_t val = test.f(idx);
-  //   Serial.print(idx);
-  //   Serial.print(F(": "));
-  //   Serial.println((int)val);
-  // }
+#endif
+
+#ifdef MAIN_VCU
+
+#include "comms_main.h"
+#include <main/NissanPDM.h>
+// Create system objects
+Scheduler scheduler;
+WDT_T4<WDT3> wdt; // use the RTWDT which should be the safest one
+
+// Our software components
+NissanPDM charger;
+
+void setup()
+{
+#ifdef DEBUG
+  // Setup internal LED
+  pinMode(LED_BUILTIN, OUTPUT);
+
+  // Setup serial port
+  Serial.begin(500000);
+  SerialUSB1.begin(1000000);
+  SignalManager::setStream(SerialUSB1);
+  while (!Serial)
+  {
+    delay(50);
+    digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
+  }
+
+  delay(100);
+#endif
+
+  Serial.println("Setup software modules:");
+  // System functions startup
+  scheduler.startNow();
+  enable_led_blink();
+
+  enable_PDM_monitor();
+  enable_PDM_tasks();
+  
+}
+
+void loop()
+{
+  scheduler.execute();
+}
+#endif

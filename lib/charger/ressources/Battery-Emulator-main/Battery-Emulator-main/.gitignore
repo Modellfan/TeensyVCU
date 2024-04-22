@@ -1,0 +1,9 @@
+# Ignore any .vscode folder
+*.vscode/
+
+# Ignore any files in any build folder
+*build/
+
+# Ignore .exe (unit tests)
+*.exe
+**/.DS_Store

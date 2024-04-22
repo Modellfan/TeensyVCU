@@ -13,6 +13,7 @@
         "sstream": "cpp",
         "streambuf": "cpp",
         "system_error": "cpp",
-        "tuple": "cpp"
+        "tuple": "cpp",
+        "string_view": "cpp"
     }
 }
