@@ -17,6 +17,18 @@ void NissanPDM::initialize()
     _state = INIT;
     _dtc = DTC_PDM_NONE;
 
+    _OBCPowerSetpoint = 0.0; // Calculated by following values
+
+    _batteryCurrent = 50.5;
+    _batteryVoltage = 350.4;
+
+    _batteryCurrentSetpoint = 40.0;
+    _batteryVoltageSetpoint = 401.0;
+    _allowChargingBMS = true;
+
+    _maxAcPowerSetpoint = 2000.0;
+    _activateCharging = true;
+
     // Set up CAN port
     ACAN_T4_Settings settings(500 * 1000); // 125 kbit/s
     const uint32_t errorCode = ACAN_T4::PDM_CAN.begin(settings);
@@ -61,18 +73,17 @@ void NissanPDM::initialize()
 
 void NissanPDM::print()
 {
-    // Serial.printf("Pack: %3.2fV : %dmV : %s : %s\n", voltage, cellDelta, this->getStateString(), this->getDTCString().c_str());
-    // for (int m = 0; m < numModules; m++)
-    // {
-    //     modules[m].print();
-    // }
-    // Serial.println("");
+    Serial.printf("PDM: Awake %d, Charge Status %d, Plug inserted %d, AC Voltage %d, Charge Power %f\n", _OBCwake, _OBC_Charge_Status, _plugInserted, _OBC_Status_AC_Voltage, _OBC_Charge_Power);
+    Serial.printf("     Battery Voltage %f, Battery Current %f, Voltage Setpoint %f, Current Setpoint %f, Allow Charging %d\n", _batteryVoltage, _batteryCurrent, _batteryVoltageSetpoint, _batteryCurrentSetpoint, _allowChargingBMS);
+    Serial.printf("     AC Power Setpoint %f, Activate Charging %d, OBC Power Setpoint %f, Limit Reason %s\n", _maxAcPowerSetpoint, _activateCharging, _OBCPowerSetpoint, this->getChargeLimitingReasonString());
+    Serial.printf("     State %s, DTC %s\n", this->getStateString(), this->getDTCString().c_str());
+    Serial.println();
 }
 
 // Helper to send CAN message
 void NissanPDM::send_message(CANMessage *frame)
 {
-    if (ACAN_T4::BATTERY_CAN.tryToSend(*frame))
+    if (ACAN_T4::PDM_CAN.tryToSend(*frame))
     {
         // Serial.println("Send ok");
     }
@@ -126,6 +137,29 @@ String NissanPDM::getDTCString()
     return errorString;
 }
 
+const char *NissanPDM::getChargeLimitingReasonString()
+{
+    switch (_limitReason)
+    {
+    case LIMITED_BY_HARDWARE:
+        return "LIMITED BY HARDWARE";
+    case PLUG_NOT_CONNECTED:
+        return "PLUG NOT CONNECTED";
+    case CHARGER_NOT_ENABLED:
+        return "CHARGER NOT ENABLED";
+    case AC_POWER_LIMIT:
+        return "AC POWER LIMIT";
+    case DC_CURRENT_LIMIT:
+        return "DC CURRENT LIMIT";
+    case BATTERY_VOLTAGE_LEVEL:
+        return "BATTERY VOLTAGE LEVEL";
+    case BMS_CHARGING_NOT_ALLOWED:
+        return "BMS CHARGING NOT ALLOWED";
+    default:
+        return "UNKNOWN REASON";
+    }
+}
+
 /*Info on running Leaf Gen 2,3 PDM
 IDs required :
 0x1D4
@@ -169,9 +203,11 @@ QC CAN----------------------PDM EV CAN
 
 void NissanPDM::Task2Ms()
 {
+    // ToDo Implement timeout here
+
     CANMessage msg;
 
-    if (ACAN_T4::BATTERY_CAN.receive(msg))
+    if (ACAN_T4::PDM_CAN.receive(msg))
     {
         switch (msg.id)
         {
@@ -215,78 +251,59 @@ void NissanPDM::Task2Ms()
 
 void NissanPDM::Task10Ms()
 {
-}
-
-void NissanPDM::Monitor100Ms()
-{
-}
-
-void NissanPDM::Monitor1000Ms()
-{
-    print();
-}
-
-/* void NissanPDM::Task10Ms()
-{
-    int opmode = Param::GetInt(Param::opmode);
-
-    uint8_t bytes[8];
+    CANMessage msg;
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
     // CAN Message 0x1DB
+    // BO_ 475 x1DB: 8 HVBAT
+    // SG_ LB_Current : 7|11@0- (0.5,0) [-400|200] "A" Vector__XXX
+    // SG_ LB_Relay_Cut_Request : 11|2@1+ (1,0) [0|0] "MODEMASK" Vector__XXX
+    //    0x00 no req
+    //    0x01,0x02,0x03 main relay off req
+    // SG_ LB_Failsafe_Status : 8|3@1+ (1,0) [0|0] "MODEMASK" Vector__XXX
+    //    0x00 Normal start req. seems to stay on this value most of the time
+    //    0x01 Normal stop req
+    //    0x02 Charge stop req
+    //    0x03 Charge and normal stop req. Other values call for a caution lamp which we don't need
+    // SG_ LB_Total_Voltage : 23|10@0+ (0.5,0) [0|450] "V" Vector__XXX
+    // SG_ LB_MainRelayOn_flag : 29|1@1+ (1,0) [0|0] "MODEMASK" Vector__XXX
+    // SG_ LB_Full_CHARGE_flag : 28|1@1+ (1,0) [0|0] "" Vector__XXX
+    // SG_ LB_INTER_LOCK : 27|1@1+ (1,0) [0|0] "MODEMASK" Vector__XXX
+    // SG_ LB_Discharge_Power_Status : 25|2@1+ (1,0) [0|0] "MODEMASK" Vector__XXX
+    // SG_ LB_Voltage_Latch_Flag : 24|1@1+ (1,0) [0|0] "MODEMASK" Vector__XXX
+    // SG_ LB_Usable_SOC : 32|7@1+ (1,0) [0|0] "" Vector__XXX
+    // SG_ LB_PRUN_1DB : 48|2@1+ (1,0) [0|0] "" Vector__XXX
+    // SG_ CRC_1DB : 56|8@1+ (1,0) [0|0] "CRC" Vector__XXX
+    /////////////////////////////////////////////////////////////////////////////////////////////////
 
-    // We need to send 0x1db here with voltage measured by inverter
-    // Zero seems to work also on my gen1
-    ////////////////////////////////////////////////////////////////
-    //    BO_ 475 x1DB: 8 HVBAT
-    //  SG_ LB_Current : 7|11@0- (0.5,0) [-400|200] "A" Vector__XXX
-    //  SG_ LB_Relay_Cut_Request : 11|2@1+ (1,0) [0|0] "MODEMASK" Vector__XXX
-    //  SG_ LB_Failsafe_Status : 8|3@1+ (1,0) [0|0] "MODEMASK" Vector__XXX
-    //  SG_ LB_Total_Voltage : 23|10@0+ (0.5,0) [0|450] "V" Vector__XXX
-    //  SG_ LB_MainRelayOn_flag : 29|1@1+ (1,0) [0|0] "MODEMASK" Vector__XXX
-    //  SG_ LB_Full_CHARGE_flag : 28|1@1+ (1,0) [0|0] "" Vector__XXX
-    //  SG_ LB_INTER_LOCK : 27|1@1+ (1,0) [0|0] "MODEMASK" Vector__XXX
-    //  SG_ LB_Discharge_Power_Status : 25|2@1+ (1,0) [0|0] "MODEMASK" Vector__XXX
-    //  SG_ LB_Voltage_Latch_Flag : 24|1@1+ (1,0) [0|0] "MODEMASK" Vector__XXX
-    //  SG_ LB_Usable_SOC : 32|7@1+ (1,0) [0|0] "" Vector__XXX
-    //  SG_ LB_PRUN_1DB : 48|2@1+ (1,0) [0|0] "" Vector__XXX
-    //  SG_ CRC_1DB : 56|8@1+ (1,0) [0|0] "CRC" Vector__XXX
+    int16_t _batteryCurrentInt = static_cast<int16_t>(_batteryCurrent * 2);
+    int16_t _batteryVoltageInt = static_cast<int16_t>(_batteryVoltage * 2);
 
-    // Byte 1 bits 8-10 LB Failsafe Status
-    // 0x00 Normal start req. seems to stay on this value most of the time
-    // 0x01 Normal stop req
-    // 0x02 Charge stop req
-    // 0x03 Charge and normal stop req. Other values call for a caution lamp which we don't need
-    // bits 11-12 LB relay cut req
-    // 0x00 no req
-    // 0x01,0x02,0x03 main relay off req
-    s16fp TMP_battI = (Param::Get(Param::idc)) * 2;
-    s16fp TMP_battV = (Param::Get(Param::udc)) * 4;
-    bytes[0] = TMP_battI >> 8;   // MSB current. 11 bit signed MSBit first
-    bytes[1] = TMP_battI & 0xE0; // LSB current bits 7-5. Dont need to mess with bits 0-4 for now as 0 works.
-    bytes[2] = TMP_battV >> 8;
-    bytes[3] = ((TMP_battV & 0xC0) | (0x2b)); // 0x2b should give no cut req, main rly on permission,normal p limit.
-    bytes[4] = 0x40;                          // SOC for dash in Leaf. fixed val.
-    bytes[5] = 0x00;
-    bytes[6] = counter_1db;
-
+    msg.id = 0x1DB;
+    msg.len = 8;
+    msg.data[0] = _batteryCurrentInt >> 3;
+    msg.data[1] = _batteryCurrentInt & 0xE0;
+    msg.data[2] = _batteryVoltageInt >> 2;
+    msg.data[3] = ((_batteryVoltageInt & 0xC0) | (0x2b)); // 0x2b should give no cut req, main rly on permission,normal p limit.
+    msg.data[4] = 0x40;
+    msg.data[5] = 0x00;
+    msg.data[6] = _counter_1db;
     // Extra CRC in byte 7
-    nissan_crc(bytes, 0x85);
+    nissan_crc(msg.data, 0x85);
 
-    counter_1db++;
-    if (counter_1db >= 4)
-        counter_1db = 0;
+    _counter_1db++;
+    if (_counter_1db >= 4)
+        _counter_1db = 0;
 
-    can->Send(0x1DB, (uint32_t *)bytes, 8);
+    send_message(&msg);
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
     // CAN Message 0x50B - 10ms
-    /////////////////////////////////////////////////////////////////////////////////////////////////
-
     //  BO_ 1291 x50B: 7 VCM
     //  SG_ DiagMuxOn_VCM : 18|1@1+ (1,0) [0|0] "" Vector__XXX
     //  SG_ HCM_WakeUpSleepCmd : 30|2@1+ (1,0) [0|0] "" Vector__XXX
     //  SG_ Batt_Heater_Mail_Send_OK : 53|1@1+ (1,0) [0|0] "" Vector__XXX
+    /////////////////////////////////////////////////////////////////////////////////////////////////
 
     // Statistics from 2016 capture:
     //     10 00000000000000
@@ -296,16 +313,17 @@ void NissanPDM::Monitor1000Ms()
 
     // Let's just send the most common one all the time
     // FIXME: This is a very sloppy implementation. Thanks. I try:)
-    bytes[0] = 0x00;
-    bytes[1] = 0x00;
-    bytes[2] = 0x06;
-    bytes[3] = 0xc0;
-    bytes[4] = 0x00;
-    bytes[5] = 0x00;
-    bytes[6] = 0x00;
+    msg.id = 0x50B;
+    msg.len = 7;
+    msg.data[0] = 0x00;
+    msg.data[1] = 0x00;
+    msg.data[2] = 0x06;
+    msg.data[3] = 0xc0;
+    msg.data[4] = 0x00;
+    msg.data[5] = 0x00;
+    msg.data[6] = 0x00;
 
-    // possible problem here as 0x50B is DLC 7....
-    can->Send(0x50B, (uint32_t *)bytes, 7);
+    send_message(&msg);
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
     // CAN Message 0x1DC:
@@ -323,25 +341,27 @@ void NissanPDM::Monitor1000Ms()
     // 0x1dc from lbc. Contains chg power lims and disch power lims.
     // Disch power lim in byte 0 and byte 1 bits 6-7. Just set to max for now.
     // Max charging power in bits 13-20. 10 bit unsigned scale 0.25.Byte 1 limit in kw.
-    bytes[0] = 0x6E;
-    bytes[1] = 0x0A;
-    bytes[2] = 0x05;
-    bytes[3] = 0xD5;
-    bytes[4] = 0x00; // may not need pairing code crap here...and we don't:)
-    bytes[5] = 0x00;
-    bytes[6] = counter_1dc;
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+
+    msg.id = 0x1DC;
+    msg.len = 8;
+    msg.data[0] = 0x6E;
+    msg.data[1] = 0x0A;
+    msg.data[2] = 0x05;
+    msg.data[3] = 0xD5;
+    msg.data[4] = 0x00;
+    msg.data[5] = 0x00;
+    msg.data[6] = _counter_1dc;
     // Extra CRC in byte 7
-    nissan_crc(bytes, 0x85);
+    nissan_crc(msg.data, 0x85);
 
-    counter_1dc++;
-    if (counter_1dc >= 4)
-        counter_1dc = 0;
-
-    can->Send(0x1DC, (uint32_t *)bytes, 8);
+    _counter_1dc++;
+    if (_counter_1dc >= 4)
+        _counter_1dc = 0;
+    send_message(&msg);
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
     // CAN Message 0x1F2: Charge Power and DC/DC Converter Control
-
     //  BO_ 498 x1F2: 8 VCM
     //  SG_ CommandedChargePower : 1|10@0+ (1,0) [0|0] "" Vector__XXX
     //  SG_ TargetCharge_SOC : 7|1@1+ (1,0) [0|0] "modemask" Vector__XXX
@@ -353,64 +373,94 @@ void NissanPDM::Monitor1000Ms()
     //  SG_ CSUM_498 : 56|4@1+ (1,0) [0|0] "" Vector__XXX
 
     // convert power setpoint to PDM format:
-    //    0x70 = 3 amps ish
-    //    0x6a = 1.4A
-    //    0x66 = 0.5A
-    //    0x65 = 0.3A
-    //    0x64 = no chg
+    //    0xA0 = 15A (60x) =3500W
+    //    0x70 = 3 amps ish (12x)
+    //    0x6a = 1.4A (6x)
+    //    0x66 = 0.5A (2x)
+    //    0x65 = 0.3A (1x)
+    //    0x64 = no chg = 0W
     //    so 0x64=100. 0xA0=160. so 60 decimal steps. 1 step=100W???
+    //    3500W = 60 -> 58
     /////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    // get actual voltage and voltage setpoints
-    Vbatt = Param::GetInt(Param::udc);
-    VbattSP = Param::GetInt(Param::Voltspnt);
-    calcBMSpwr = (Vbatt * Param::GetInt(Param::BMS_ChargeLim)); // BMS charge current limit but needs to be power for most AC charger types.
+    // This line controls if power should flow or not
+    _OBCPowerSetpoint = 10000; // Start with a high initial value. Actually 6.6kw
+    _limitReason = LIMITED_BY_HARDWARE;
 
-    OBCpwrSP = (MIN(Param::GetInt(Param::Pwrspnt), calcBMSpwr) / 100) + 0x64;
-
-    if (opmode == MOD_CHARGE && Param::GetInt(Param::Chgctrl) == ChargeControl::Enable)
+    // Plug is not inserted
+    if (!_plugInserted)
     {
-        // clamp min and max values
-        if (OBCpwrSP > 0xA0)
-            OBCpwrSP = 0xA0;
-        else if (OBCpwrSP < 0x64)
-            OBCpwrSP = 0x64;
-
-        // if measured vbatt is less than setpoint got to max power from web ui
-        if (Vbatt < VbattSP)
-            OBCpwr = OBCpwrSP;
-
-        // decrement charger power if volt setpoint is reached
-        if (Vbatt >= VbattSP)
-            OBCpwr--;
+        _limitReason = PLUG_NOT_CONNECTED;
+        _OBCPowerSetpoint = 0;
     }
-    else
+
+    // User deactivated charging in UI
+    if (!_activateCharging)
     {
-        // set power to 0 if charge control is set to off or not in charge mode
-        OBCpwr = 0x64;
+        _limitReason = CHARGER_NOT_ENABLED;
+        _OBCPowerSetpoint = 0;
+    }
+
+    // BMS does not allow for charging
+    if (!_allowChargingBMS)
+    {
+        _limitReason = BMS_CHARGING_NOT_ALLOWED;
+        _OBCPowerSetpoint = 0;
+    }
+
+    // Current Setpoint is limiting reason
+    float bmsPowerSetpoint = _batteryVoltage * _batteryCurrentSetpoint;
+    if (bmsPowerSetpoint < _OBCPowerSetpoint)
+    {
+        _OBCPowerSetpoint = bmsPowerSetpoint;
+        _limitReason = DC_CURRENT_LIMIT;
+    }
+
+    // AC Power Limit in User Interface
+    if (_maxAcPowerSetpoint < _OBCPowerSetpoint)
+    {
+        _OBCPowerSetpoint = _maxAcPowerSetpoint;
+        _limitReason = AC_POWER_LIMIT;
+    }
+
+    // FOr additional safety check for voltage level. This should never kick, because BMS should trottle current before reaching max voltage
+    if (_batteryVoltage >= _batteryVoltageSetpoint)
+    {
+        _OBCPowerSetpoint = 0;
+        _limitReason = BATTERY_VOLTAGE_LEVEL;
+    }
+
+    // Convert power setpoint to PDM scale and clamp to min and max value
+    u_int8_t _OBCPowerSetpointInt = _OBCPowerSetpoint / 58 + 0x64;
+    if (_OBCPowerSetpointInt > 0xA0)
+    { // 15A TODO, raise once cofirmed how to map bits into frame0 and frame1
+        _OBCPowerSetpointInt = 0xA0;
+    }
+    else if (_OBCPowerSetpointInt <= 0x64)
+    {
+        _OBCPowerSetpointInt = 0x64; // 100W? stuck at 100 in drive mode (no charging)
     }
 
     // Commanded chg power in byte 1 and byte 0 bits 0-1. 10 bit number.
     // byte 1=0x64 and byte 0=0x00 at 0 power.
     // 0x00 chg 0ff dcdc on.
-    bytes[0] = 0x30; // msg is muxed but pdm doesn't seem to care.
-    bytes[1] = OBCpwr;
-    bytes[2] = 0x20; // 0x20=Normal Charge
-    bytes[3] = 0xAC;
-    bytes[4] = 0x00;
-    bytes[5] = 0x3C;
-    bytes[6] = counter_1f2;
-    bytes[7] = 0x8F; // may not need checksum here?
+    msg.id = 0x1F2;
+    msg.len = 8;
+    msg.data[0] = 0x30;
+    msg.data[1] = _OBCPowerSetpointInt;
+    msg.data[2] = 0x20;
+    msg.data[3] = 0xAC;
+    msg.data[4] = 0x00;
+    msg.data[5] = 0x3C;
+    msg.data[6] = _counter_1f2;
+    // Extra CRC in byte 7
+    nissan_crc(msg.data, 0x85);
 
-    counter_1f2++;
-    if (counter_1f2 >= 4)
-    {
-        counter_1f2 = 0;
-    }
-
-    can->Send(0x1F2, (uint32_t *)bytes, 8);
+    _counter_1f2++;
+    if (_counter_1f2 >= 4)
+        _counter_1f2 = 0;
+    send_message(&msg);
 }
- */
 
 void NissanPDM::Task100Ms()
 {
@@ -496,6 +546,15 @@ void NissanPDM::Task100Ms()
     msg.data[7] = 0x32;
 
     send_message(&msg);
+}
+
+void NissanPDM::Monitor100Ms()
+{
+}
+
+void NissanPDM::Monitor1000Ms()
+{
+    print();
 }
 
 int8_t NissanPDM::fahrenheit_to_celsius(uint16_t fahrenheit)

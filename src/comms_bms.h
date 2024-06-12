@@ -1,3 +1,4 @@
+//#define BMS_VCU
 #ifdef BMS_VCU
 #ifndef COMMS_BMS_H
 #define COMMS_BMS_H

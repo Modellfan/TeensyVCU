@@ -145,8 +145,7 @@ void setup()
 
   // Setup serial port
   Serial.begin(500000);
-  SerialUSB1.begin(1000000);
-  SignalManager::setStream(SerialUSB1);
+    
   while (!Serial)
   {
     delay(50);

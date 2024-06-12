@@ -24,6 +24,17 @@ public:
         DTC_PDM_MODULE_FAULT = 1 << 2,
     } DTC_PDM;
 
+    typedef enum
+    {
+        LIMITED_BY_HARDWARE = 0,
+        PLUG_NOT_CONNECTED = 1 << 0,
+        CHARGER_NOT_ENABLED = 1 << 1,
+        AC_POWER_LIMIT = 1 << 2,
+        DC_CURRENT_LIMIT = 1 << 3,
+        BATTERY_VOLTAGE_LEVEL = 1 << 4,
+        BMS_CHARGING_NOT_ALLOWED = 1 << 5,
+    } CHARGE_CURRENT_LIMITING_REASON_PDM;
+
     //Constructor
     NissanPDM();
 
@@ -47,40 +58,37 @@ private:
     void send_message(CANMessage *frame); // Send out CAN message
 
     const char *getStateString();
+    const char *getChargeLimitingReasonString();
     String getDTCString();
-
+    
+    //Charger status signals
     bool _OBCwake;                  // Monitor if the OBC is awake
     bool _plugInserted;             // Monitor if the plug is inserted
     uint8_t _OBC_Charge_Status;     // Status of OBC
     uint8_t _OBC_Status_AC_Voltage; // Status of applied AC voltage
     float _OBC_Charge_Power;        // Current charge power
 
-    float _batteryCurrent;
-    float _batteryVoltage;
-    float _maxChargeCurrent;
-    float _targetVoltageSetpoint;
+    //External control signals
+    float _OBCPowerSetpoint = 0.0; //Calculated by following values
 
-    uint8_t _counter_55b; // Framecounter for PRUN
+    float _batteryCurrent = 0.0; //from BMS
+    float _batteryVoltage = 0.0; //from BMS
+
+    float _batteryCurrentSetpoint= 0.0; //from BMS
+    float _batteryVoltageSetpoint= 0.0; //from BMS
+    bool _allowChargingBMS = false;    //Only charging, when BMS allows it
+
+    float _maxAcPowerSetpoint = 0.0; //from User Interface. Protect the socket.
+    bool _activateCharging = false;    //from User Interface
+    
+    uint8_t _counter_55b = 0; // Framecounter for PRUN
     uint8_t _counter_1db = 0;
     uint8_t _counter_1dc = 0;
     uint8_t _counter_1f2 = 0;
 
+    CHARGE_CURRENT_LIMITING_REASON_PDM _limitReason;
     STATE_PDM _state;
     DTC_PDM _dtc;
 };
-
-static uint16_t Vbatt = 0;
-static uint16_t VbattSP = 0;
-static uint8_t counter_1db = 0;
-static uint8_t counter_1dc = 0;
-static uint8_t counter_1f2 = 0;
-static uint8_t counter_55b = 0;
-static uint8_t OBCpwrSP = 0;
-static uint8_t OBCpwr = 0;
-static bool OBCwake = false;
-static bool PPStat = false;
-static uint8_t OBCVoltStat = 0;
-static uint8_t PlugStat = 0;
-static uint16_t calcBMSpwr = 0;
 
 #endif // NISSANPDM_H

@@ -1,3 +1,5 @@
+//#define BMS_VCU
+
 #ifdef BMS_VCU
 #include <Arduino.h>
 #include <TaskSchedulerDeclarations.h>
