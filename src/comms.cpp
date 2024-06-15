@@ -134,7 +134,7 @@ void print_debug()
     balancecount++;
     if (balancecount == 10)
     {
-        batteryPack.set_balancing_voltage(3.7);
+        batteryPack.set_balancing_voltage(3.54);
         batteryPack.set_balancing_active(true);
     }
 }

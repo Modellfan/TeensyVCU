@@ -93,7 +93,7 @@ void setup()
 
   // Main module startup
   enable_BMS_tasks();
-  //enable_print_debug();
+  enable_print_debug();
 
   // Watchdog startup
   // WDT_timings_t config;

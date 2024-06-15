@@ -21,7 +21,7 @@
 
 //Pack Setting
 #define BATTERY_CAN can2
-#define PACK_WAIT_FOR_NUM_MODULES 1
+#define PACK_WAIT_FOR_NUM_MODULES 8
 #define PACK_ALIVE_TIMEOUT 300 
 
 //---------------------------------------------------------------------------------------------------------------------------------------------

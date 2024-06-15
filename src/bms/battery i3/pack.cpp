@@ -82,7 +82,7 @@ void BatteryPack::initialize()
 
 void BatteryPack::print()
 {
-    Serial.printf("Pack: %3.2fV; Balancing Target: %3.2fV; Balancing Activated: %d; Any Module Balancing %d; State: %s; DTC : %s\n", get_pack_voltage(), balanceTargetVoltage, balanceActive, this->get_any_module_balancing(), this->getStateString(), this->getDTCString().c_str());
+    Serial.printf("Pack: %3.2fV; Lowest Cell: %3.2fV; Highest Cell: %3.2fV; Balancing Target: %3.2fV; Balancing Activated: %d; Any Module Balancing %d; State: %s; DTC : %s\n", get_pack_voltage(), get_lowest_cell_voltage(), get_highest_cell_voltage(), balanceTargetVoltage, balanceActive, this->get_any_module_balancing(), this->getStateString(), this->getDTCString().c_str());
     for (int m = 0; m < numModules; m++)
     {
         modules[m].print();

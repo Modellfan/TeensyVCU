@@ -71,7 +71,7 @@ void BatteryModule::printFrame(CANMessage &frame)
 void BatteryModule::print()
 {
     // Serial.println(static_cast<uint8_t>(dtc));
-    Serial.printf("Module id: %d (state: %s; DTC: %s; Module Voltage %fV)\n", id, getStateString(), getDTCString().c_str(), moduleVoltage);
+    Serial.printf("Module id: %d (state: %s; DTC: %s; Module Voltage %fV; Lowest Cell %fV; Highest Cell %fV)\n", id, getStateString(), getDTCString().c_str(), moduleVoltage, get_lowest_cell_voltage(), get_highest_cell_voltage());
     Serial.printf("        Cell Voltages : ");
     for (int c = 0; c < numCells; c++)
     {
@@ -203,6 +203,7 @@ void BatteryModule::process_message(CANMessage &msg)
             state = OPERATING;
             // Serial.println(String(millis()) + ": Now in operation");
         }
+
         // if (cmuError)
         // { // CMU Error is normal on startup before receiving the right messages
         //     state = FAULT;
@@ -519,4 +520,3 @@ bool BatteryModule::get_is_balancing()
     // If none of the cells is balancing, return false
     return false;
 }
-
