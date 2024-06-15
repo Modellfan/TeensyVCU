@@ -1,0 +1,253 @@
+#include "SMA-CAN.h"
+#include "../lib/miwagner-ESP32-Arduino-CAN/CAN_config.h"
+#include "../lib/miwagner-ESP32-Arduino-CAN/ESP32CAN.h"
+
+/* TODO: Map error bits in 0x158 */
+
+/* Do not change code below unless you are sure what you are doing */
+static unsigned long previousMillis100ms = 0;  // will store last time a 100ms CAN Message was send
+
+//Actual content messages
+static const CAN_frame_t SMA_558 = {
+    .FIR = {.B =
+                {
+                    .DLC = 8,
+                    .FF = CAN_frame_std,
+                }},
+    .MsgID = 0x558,
+    .data = {0x03, 0x12, 0x00, 0x04, 0x00, 0x59, 0x07, 0x07}};  //7x BYD modules, Vendor ID 7 BYD
+static const CAN_frame_t SMA_598 = {
+    .FIR = {.B =
+                {
+                    .DLC = 8,
+                    .FF = CAN_frame_std,
+                }},
+    .MsgID = 0x598,
+    .data = {0x00, 0x00, 0x12, 0x34, 0x5A, 0xDE, 0x07, 0x4F}};  //B0-4 Serial, rest unknown
+static const CAN_frame_t SMA_5D8 = {.FIR = {.B =
+                                                {
+                                                    .DLC = 8,
+                                                    .FF = CAN_frame_std,
+                                                }},
+                                    .MsgID = 0x5D8,
+                                    .data = {0x00, 0x42, 0x59, 0x44, 0x00, 0x00, 0x00, 0x00}};  //B Y D
+static const CAN_frame_t SMA_618_1 = {.FIR = {.B =
+                                                  {
+                                                      .DLC = 8,
+                                                      .FF = CAN_frame_std,
+                                                  }},
+                                      .MsgID = 0x618,
+                                      .data = {0x00, 0x42, 0x61, 0x74, 0x74, 0x65, 0x72, 0x79}};  //0 B A T T E R Y
+static const CAN_frame_t SMA_618_2 = {.FIR = {.B =
+                                                  {
+                                                      .DLC = 8,
+                                                      .FF = CAN_frame_std,
+                                                  }},
+                                      .MsgID = 0x618,
+                                      .data = {0x01, 0x2D, 0x42, 0x6F, 0x78, 0x20, 0x48, 0x39}};  //1 - B O X   H
+static const CAN_frame_t SMA_618_3 = {.FIR = {.B =
+                                                  {
+                                                      .DLC = 8,
+                                                      .FF = CAN_frame_std,
+                                                  }},
+                                      .MsgID = 0x618,
+                                      .data = {0x02, 0x2E, 0x30, 0x00, 0x00, 0x00, 0x00, 0x00}};  //2 - 0
+CAN_frame_t SMA_358 = {.FIR = {.B =
+                                   {
+                                       .DLC = 8,
+                                       .FF = CAN_frame_std,
+                                   }},
+                       .MsgID = 0x358,
+                       .data = {0x0F, 0x6C, 0x06, 0x20, 0x00, 0x00, 0x00, 0x00}};
+CAN_frame_t SMA_3D8 = {.FIR = {.B =
+                                   {
+                                       .DLC = 8,
+                                       .FF = CAN_frame_std,
+                                   }},
+                       .MsgID = 0x3D8,
+                       .data = {0x04, 0x10, 0x27, 0x10, 0x00, 0x18, 0xF9, 0x00}};
+CAN_frame_t SMA_458 = {.FIR = {.B =
+                                   {
+                                       .DLC = 8,
+                                       .FF = CAN_frame_std,
+                                   }},
+                       .MsgID = 0x458,
+                       .data = {0x00, 0x00, 0x06, 0x75, 0x00, 0x00, 0x05, 0xD6}};
+CAN_frame_t SMA_518 = {.FIR = {.B =
+                                   {
+                                       .DLC = 8,
+                                       .FF = CAN_frame_std,
+                                   }},
+                       .MsgID = 0x518,
+                       .data = {0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFF}};
+CAN_frame_t SMA_4D8 = {.FIR = {.B =
+                                   {
+                                       .DLC = 8,
+                                       .FF = CAN_frame_std,
+                                   }},
+                       .MsgID = 0x4D8,
+                       .data = {0x09, 0xFD, 0x00, 0x00, 0x00, 0xA8, 0x02, 0x08}};
+CAN_frame_t SMA_158 = {.FIR = {.B =
+                                   {
+                                       .DLC = 8,
+                                       .FF = CAN_frame_std,
+                                   }},
+                       .MsgID = 0x158,
+                       .data = {0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0x6A, 0xAA, 0xAA}};
+
+static int16_t discharge_current = 0;
+static int16_t charge_current = 0;
+static int16_t temperature_average = 0;
+static uint16_t ampere_hours_remaining = 0;
+
+void update_values_can_sma() {  //This function maps all the values fetched from battery CAN to the correct CAN messages
+  //Calculate values
+  charge_current = ((system_max_charge_power_W * 10) /
+                    system_max_design_voltage_dV);  //Charge power in W , max volt in V+1decimal (P=UI, solve for I)
+  //The above calculation results in (30 000*10)/3700=81A
+  charge_current = (charge_current * 10);  //Value needs a decimal before getting sent to inverter (81.0A)
+
+  discharge_current = ((system_max_discharge_power_W * 10) /
+                       system_max_design_voltage_dV);  //Charge power in W , max volt in V+1decimal (P=UI, solve for I)
+  //The above calculation results in (30 000*10)/3700=81A
+  discharge_current = (discharge_current * 10);  //Value needs a decimal before getting sent to inverter (81.0A)
+
+  temperature_average = ((system_temperature_max_dC + system_temperature_min_dC) / 2);
+
+  ampere_hours_remaining =
+      ((system_remaining_capacity_Wh / system_battery_voltage_dV) * 100);  //(WH[10000] * V+1[3600])*100 = 270 (27.0Ah)
+
+  //Map values to CAN messages
+  //Maxvoltage (eg 400.0V = 4000 , 16bits long)
+  SMA_358.data.u8[0] = (system_max_design_voltage_dV >> 8);
+  SMA_358.data.u8[1] = (system_max_design_voltage_dV & 0x00FF);
+  //Minvoltage (eg 300.0V = 3000 , 16bits long)
+  SMA_358.data.u8[2] =
+      (system_min_design_voltage_dV >> 8);  //Minvoltage behaves strange on SMA, cuts out at 56% of the set value?
+  SMA_358.data.u8[3] = (system_min_design_voltage_dV & 0x00FF);
+  //Discharge limited current, 500 = 50A, (0.1, A)
+  SMA_358.data.u8[4] = (discharge_current >> 8);
+  SMA_358.data.u8[5] = (discharge_current & 0x00FF);
+  //Charge limited current, 125 =12.5A (0.1, A)
+  SMA_358.data.u8[6] = (charge_current >> 8);
+  SMA_358.data.u8[7] = (charge_current & 0x00FF);
+
+  //SOC (100.00%)
+  SMA_3D8.data.u8[0] = (system_scaled_SOC_pptt >> 8);
+  SMA_3D8.data.u8[1] = (system_scaled_SOC_pptt & 0x00FF);
+  //StateOfHealth (100.00%)
+  SMA_3D8.data.u8[2] = (system_SOH_pptt >> 8);
+  SMA_3D8.data.u8[3] = (system_SOH_pptt & 0x00FF);
+  //State of charge (AH, 0.1)
+  SMA_3D8.data.u8[4] = (ampere_hours_remaining >> 8);
+  SMA_3D8.data.u8[5] = (ampere_hours_remaining & 0x00FF);
+
+  //Voltage (370.0)
+  SMA_4D8.data.u8[0] = (system_battery_voltage_dV >> 8);
+  SMA_4D8.data.u8[1] = (system_battery_voltage_dV & 0x00FF);
+  //Current (TODO: signed OK?)
+  SMA_4D8.data.u8[2] = (system_battery_current_dA >> 8);
+  SMA_4D8.data.u8[3] = (system_battery_current_dA & 0x00FF);
+  //Temperature average
+  SMA_4D8.data.u8[4] = (temperature_average >> 8);
+  SMA_4D8.data.u8[5] = (temperature_average & 0x00FF);
+  //Battery ready
+  if (system_bms_status == ACTIVE) {
+    SMA_4D8.data.u8[6] = READY_STATE;
+  } else {
+    SMA_4D8.data.u8[6] = STOP_STATE;
+  }
+
+  //Error bits
+  /*
+  //SMA_158.data.u8[0] = //bit12 Fault high temperature, bit34Battery cellundervoltage, bit56 Battery cell overvoltage, bit78 batterysystemdefect
+  //TODO: add all error bits. Sending message with all 0xAA until that.
+
+  0x158 can be used to send error messages or warnings.
+
+  Each message is defined of two bits:  
+  01=message triggered  
+  10=no message triggered  
+  0xA9=10101001, triggers first message  
+  0xA6=10100110, triggers second message  
+  0x9A=10011010, triggers third message  
+  0x6A=01101010, triggers forth message  
+  bX defines the byte
+
+  b0 A9   Battery system defect
+  b0 A6   Battery cell overvoltage fault
+  b0 9A   Battery cell undervoltage fault
+  b0 6A   Battery high temperature fault
+  b1 A9   Battery low temperature fault
+  b1 A6   Battery high temperature fault
+  b1 9A   Battery low temperature fault
+  b1 6A   Overload (reboot required)
+  b2 A9   Overload (reboot required)
+  b2 A6   Incorrect switch position for the battery disconnection point
+  b2 9A   Battery system short circuit
+  b2 6A   Internal battery hardware fault
+  b3 A9   Battery imbalancing fault
+  b3 A6   Battery service life expiry
+  b3 9A   Battery system thermal management defective
+  b3 6A   Internal battery hardware fault
+  b4 A9   Battery system defect (warning)
+  b4 A6   Battery cell overvoltage fault (warning)
+  b4 9A   Battery cell undervoltage fault (warning)
+  b4 6A   Battery high temperature fault (warning)
+  b5 A9   Battery low temperature fault (warning)
+  b5 A6   Battery high temperature fault (warning)
+  b5 9A   Battery low temperature fault (warning)
+  b5 6A   Self-diagnosis (warning)
+  b6 A9   Self-diagnosis (warning)
+  b6 A6   Incorrect switch position for the battery disconnection point (warning)
+  b6 9A   Battery system short circuit (warning)
+  b6 6A   Internal battery hardware fault (warning)
+  b7 A9   Battery imbalancing fault (warning)
+  b7 A6   Battery service life expiry (warning)
+  b7 9A   Battery system thermal management defective (warning)
+  b7 6A   Internal battery hardware fault (warning)
+
+*/
+}
+
+void receive_can_sma(CAN_frame_t rx_frame) {
+  switch (rx_frame.MsgID) {
+    case 0x360:  //Message originating from SMA inverter - Voltage and current
+      //Frame0-1 Voltage
+      //Frame2-3 Current
+      break;
+    case 0x420:  //Message originating from SMA inverter - Timestamp
+      //Frame0-3 Timestamp
+      break;
+    case 0x3E0:  //Message originating from SMA inverter - ?
+      break;
+    case 0x5E0:  //Message originating from SMA inverter - String
+      break;
+    case 0x560:  //Message originating from SMA inverter - Init
+      break;
+    default:
+      break;
+  }
+}
+
+void send_can_sma() {
+  unsigned long currentMillis = millis();
+
+  // Send CAN Message every 100ms
+  if (currentMillis - previousMillis100ms >= INTERVAL_100_MS) {
+    previousMillis100ms = currentMillis;
+
+    ESP32Can.CANWriteFrame(&SMA_558);
+    ESP32Can.CANWriteFrame(&SMA_598);
+    ESP32Can.CANWriteFrame(&SMA_5D8);
+    ESP32Can.CANWriteFrame(&SMA_618_1);  // TODO, should these 3x
+    ESP32Can.CANWriteFrame(&SMA_618_2);  // be sent as batch?
+    ESP32Can.CANWriteFrame(&SMA_618_3);  // or alternate on each send?
+    ESP32Can.CANWriteFrame(&SMA_358);
+    ESP32Can.CANWriteFrame(&SMA_3D8);
+    ESP32Can.CANWriteFrame(&SMA_458);
+    ESP32Can.CANWriteFrame(&SMA_518);
+    ESP32Can.CANWriteFrame(&SMA_4D8);
+    ESP32Can.CANWriteFrame(&SMA_158);
+  }
+}
