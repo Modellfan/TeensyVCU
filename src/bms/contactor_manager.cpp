@@ -11,6 +11,13 @@ Contactormanager::Contactormanager() : _prechargeContactor(CONTACTOR_PRCHG_OUT_P
     _currentState = INIT;
 }
 
+void Contactormanager::print()
+{
+    Serial.println("Contactor manager:");
+    Serial.printf("    Pack: %3.2fV; Lowest Cell: %3.2fV; Highest Cell: %3.2fV; Balancing Target: %3.2fV; Balancing Activated: %d; Any Module Balancing %d; State: %s; DTC : %s\n", get_pack_voltage(), get_lowest_cell_voltage(), get_highest_cell_voltage(), balanceTargetVoltage, balanceActive, this->get_any_module_balancing(), this->getStateString(), this->getDTCString().c_str());
+    Serial.println("");
+}
+
 void Contactormanager::initialise()
 {
     pinMode(CONTACTOR_POWER_SUPPLY_IN_PIN, INPUT_PULLUP);

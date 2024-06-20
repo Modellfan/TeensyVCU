@@ -1,4 +1,4 @@
-//#define BMS_VCU
+#define BMS_VCU
 
 #ifdef BMS_VCU
 #include <Arduino.h>
@@ -115,12 +115,14 @@ void print_debug()
 {
     extern BatteryPack batteryPack;
     batteryPack.print();
-    balancecount++;
-    if (balancecount == 10)
-    {
-        batteryPack.set_balancing_voltage(3.54);
-        batteryPack.set_balancing_active(true);
-    }
+    // balancecount++;
+    // if (balancecount == 10)
+    // {
+    //     batteryPack.set_balancing_voltage(3.54);
+    //     batteryPack.set_balancing_active(true);
+    // }
+
+    
 }
 
 Task print_debug_timer(1000, TASK_FOREVER, &print_debug);
