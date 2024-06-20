@@ -6,12 +6,10 @@
 #include "settings.h"
 #include <functional> // Add this line to include the <functional> header
 
-
 class Shunt_ISA_iPace
 {
 
 public:
-   
     enum STATE_ISA
     {
         INIT,      // CMU is being initialized
@@ -35,6 +33,7 @@ public:
     void initialise(); // For blocking singular initialize
     void update();     // Polls the can bus assigned in settings and saves the result. 10ms time slice.
     void monitor(std::function<void(const CANMessage &)> callback);
+    void print();
 
     // Our state
     STATE_ISA getState();
@@ -48,6 +47,9 @@ public:
     float getCurrentDerivative();
 
 private:
+    const char *getStateString();
+    String getDTCString();
+
     STATE_ISA _state;
     DTC_ISA _dtc;
 

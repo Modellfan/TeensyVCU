@@ -43,9 +43,14 @@ public:
     State getState();
     DTC_COM getDTC();
     void update();
+    void print();
     void monitor(std::function<void(const CANMessage &)> callback);
 
 private:
+    const char *getCurrentStateString();
+    const char *getTargetStateString();
+    String getDTCString();
+
     Contactor _positiveContactor;
     Contactor _prechargeContactor;
     unsigned long _lastPreChangeTime;
