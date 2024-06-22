@@ -16,6 +16,13 @@ Shunt_ISA_iPace::Shunt_ISA_iPace()
     _firstUpdate = true;
 }
 
+void Shunt_ISA_iPace::print() 
+{
+    Serial.println("ISA shunt:");
+    Serial.printf("    State %d, DTC %d, Current %f A, Temperature %f °C, Current Average %f A\n", this->getState(), this->getDTCString().c_str(), getCurrent(), getTemperature(), getCurrentAverage());
+    Serial.println();
+}
+
 void Shunt_ISA_iPace::initialise()
 {
     _state = INIT;
@@ -231,3 +238,60 @@ float Shunt_ISA_iPace::getCurrentDerivative()
 Shunt_ISA_iPace::STATE_ISA Shunt_ISA_iPace::getState() { return _state; }
 
 Shunt_ISA_iPace::DTC_ISA Shunt_ISA_iPace::getDTC() { return _dtc; }
+
+const char *Shunt_ISA_iPace::getStateString()
+{
+    switch (_state)
+    {
+    case INIT:
+        return "INIT";
+    case OPERATING:
+        return "OPERATING";
+    case FAULT:
+        return "FAULT";
+    default:
+        return "UNKNOWN STATE";
+    }
+}
+
+String Shunt_ISA_iPace::getDTCString()
+{
+    String errorString = "";
+
+    if (_dtc == DTC_ISA_NONE)
+    {
+        errorString = "None";
+    }
+    else
+    {
+        bool hasError = false;
+
+        if (_dtc & DTC_ISA_CAN_INIT_ERROR)
+        {
+            errorString += "DTC_ISA_CAN_INIT_ERROR, ";
+            hasError = true;
+        }
+        if (_dtc & DTC_ISA_TEMPERATURE_TOO_HIGH)
+        {
+            errorString += "DTC_ISA_TEMPERATURE_TOO_HIGH, ";
+            hasError = true;
+        }
+        if (_dtc & DTC_ISA_MAX_CURRENT_EXCEEDED)
+        {
+            errorString += "DTC_ISA_MAX_CURRENT_EXCEEDED, ";
+            hasError = true;
+        }
+        if (_dtc & DTC_ISA_TIMED_OUT)
+        {
+            errorString += "DTC_ISA_TIMED_OUT, ";
+            hasError = true;
+        }
+
+        if (hasError)
+        {
+            // Remove the trailing comma and space
+            errorString.remove(errorString.length() - 2);
+        }
+    }
+    return errorString;
+}

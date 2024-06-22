@@ -14,7 +14,7 @@ Contactormanager::Contactormanager() : _prechargeContactor(CONTACTOR_PRCHG_OUT_P
 void Contactormanager::print()
 {
     Serial.println("Contactor manager:");
-    Serial.printf("    Pack: %3.2fV; Lowest Cell: %3.2fV; Highest Cell: %3.2fV; Balancing Target: %3.2fV; Balancing Activated: %d; Any Module Balancing %d; State: %s; DTC : %s\n", get_pack_voltage(), get_lowest_cell_voltage(), get_highest_cell_voltage(), balanceTargetVoltage, balanceActive, this->get_any_module_balancing(), this->getStateString(), this->getDTCString().c_str());
+    Serial.printf("    Current state: %s; Target state: %s; DTC : %s; Neg. closed %d; Pos. closed %d; Pre. closed %d; Cont. voltage %d\n", this->getCurrentStateString(), this->getTargetStateString(), this->getDTCString().c_str(), _negativeContactor_closed, _positiveContactor.getInputPin(), _prechargeContactor.getInputPin(), _contactorVoltage_available);
     Serial.println("");
 }
 
@@ -251,6 +251,98 @@ void Contactormanager::monitor(std::function<void(const CANMessage &)> callback)
     {
         callback(msg);
     }
+}
+
+const char *Contactormanager::getCurrentStateString()
+{
+    switch (_currentState)
+    {
+    case INIT:
+        return "INIT";
+    case OPEN:
+        return "OPEN";
+    case CLOSING_PRECHARGE:
+        return "CLOSING_PRECHARGE";
+    case CLOSING_POSITIVE:
+        return "CLOSING_POSITIVE";
+    case CLOSED:
+        return "CLOSED";
+    case OPENING_POSITIVE:
+        return "OPENING_POSITIVE";
+    case OPENING_PRECHARGE:
+        return "OPENING_PRECHARGE";
+    case FAULT:
+        return "FAULT";
+    default:
+        return "UNKNOWN STATE";
+    }
+}
+
+const char *Contactormanager::getTargetStateString()
+{
+    switch (_targetState)
+    {
+    case INIT:
+        return "INIT";
+    case OPEN:
+        return "OPEN";
+    case CLOSING_PRECHARGE:
+        return "CLOSING_PRECHARGE";
+    case CLOSING_POSITIVE:
+        return "CLOSING_POSITIVE";
+    case CLOSED:
+        return "CLOSED";
+    case OPENING_POSITIVE:
+        return "OPENING_POSITIVE";
+    case OPENING_PRECHARGE:
+        return "OPENING_PRECHARGE";
+    case FAULT:
+        return "FAULT";
+    default:
+        return "UNKNOWN STATE";
+    }
+}
+
+String Contactormanager::getDTCString()
+{
+    String errorString = "";
+
+    if (_dtc == DTC_COM_NONE)
+    {
+        errorString = "None";
+    }
+    else
+    {
+        bool hasError = false;
+
+        if (_dtc & DTC_COM_NO_CONTACTOR_POWER_SUPPLY)
+        {
+            errorString += "DTC_COM_NO_CONTACTOR_POWER_SUPPLY, ";
+            hasError = true;
+        }
+        if (_dtc & DTC_COM_NEGATIVE_CONTACTOR_FAULT)
+        {
+            errorString += "DTC_COM_NEGATIVE_CONTACTOR_FAULT, ";
+            hasError = true;
+        }
+        if (_dtc & DTC_COM_PRECHARGE_CONTACTOR_FAULT)
+        {
+            errorString += "DTC_COM_PRECHARGE_CONTACTOR_FAULT, ";
+            hasError = true;
+        }
+        if (_dtc & DTC_COM_POSITIVE_CONTACTOR_FAULT)
+        {
+            errorString += "DTC_COM_POSITIVE_CONTACTOR_FAULT, ";
+            hasError = true;
+        }
+
+        if (hasError)
+        {
+            // Remove the trailing comma and space
+            errorString.remove(errorString.length() - 2);
+        }
+    }
+    return errorString;
 }
 
 Contactormanager::DTC_COM Contactormanager::getDTC() { return _dtc; }

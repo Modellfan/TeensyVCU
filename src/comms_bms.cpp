@@ -10,6 +10,7 @@
 
 #include <bms/current.h>
 #include <bms/contactor.h>
+#include "bms/current.h"
 #include "bms/contactor_manager.h"
 #include "bms/battery i3/pack.h"
 #include "bms/battery_manager.h"
@@ -115,6 +116,12 @@ void print_debug()
 {
     extern BatteryPack batteryPack;
     batteryPack.print();
+
+    extern Contactormanager contactor_manager;
+    contactor_manager.print();
+
+    extern Shunt_ISA_iPace shunt;
+    shunt.print();
     // balancecount++;
     // if (balancecount == 10)
     // {
