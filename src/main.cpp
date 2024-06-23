@@ -11,8 +11,8 @@
 #endif
 
 #define DEBUG
-//#define MAIN_VCU
-#define BMS_VCU
+#define MAIN_VCU
+//#define BMS_VCU
 
 #ifdef BMS_VCU
 

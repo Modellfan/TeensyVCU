@@ -279,12 +279,24 @@ void NissanPDM::Task10Ms()
     int16_t _batteryCurrentInt = static_cast<int16_t>(_batteryCurrent * 2);
     int16_t _batteryVoltageInt = static_cast<int16_t>(_batteryVoltage * 2);
 
+    // msg.id = 0x1DB;
+    // msg.len = 8;
+    // msg.data[0] = _batteryCurrentInt >> 3;
+    // msg.data[1] = _batteryCurrentInt & 0xE0;
+    // msg.data[2] = _batteryVoltageInt >> 2;
+    // msg.data[3] = ((_batteryVoltageInt & 0xC0) | (0x2b)); // 0x2b should give no cut req, main rly on permission,normal p limit.
+    // msg.data[4] = 0x40;
+    // msg.data[5] = 0x00;
+    // msg.data[6] = _counter_1db;
+    // // Extra CRC in byte 7
+    // nissan_crc(msg.data, 0x85);
+
     msg.id = 0x1DB;
     msg.len = 8;
-    msg.data[0] = _batteryCurrentInt >> 3;
-    msg.data[1] = _batteryCurrentInt & 0xE0;
-    msg.data[2] = _batteryVoltageInt >> 2;
-    msg.data[3] = ((_batteryVoltageInt & 0xC0) | (0x2b)); // 0x2b should give no cut req, main rly on permission,normal p limit.
+    msg.data[0] = 0x00;
+    msg.data[1] = 0x00;
+    msg.data[2] = 0x00;
+    msg.data[3] = 0x00;
     msg.data[4] = 0x40;
     msg.data[5] = 0x00;
     msg.data[6] = _counter_1db;

@@ -1,4 +1,4 @@
-//#define MAIN_VCU
+#define MAIN_VCU
 #ifdef MAIN_VCU
 #ifndef COMMS_BMS_H
 #define COMMS_BMS_H

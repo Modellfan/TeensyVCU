@@ -1,4 +1,4 @@
-#define BMS_VCU
+//#define BMS_VCU
 
 #ifdef BMS_VCU
 #include <Arduino.h>

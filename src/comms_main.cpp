@@ -1,4 +1,4 @@
-//#define MAIN_VCU
+#define MAIN_VCU
 #ifdef MAIN_VCU
 #include <Arduino.h>
 #include <TaskSchedulerDeclarations.h>
