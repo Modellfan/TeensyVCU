@@ -19,8 +19,8 @@ void NissanPDM::initialize()
 
     _OBCPowerSetpoint = 0.0; // Calculated by following values
 
-    _batteryCurrent = 50.5;
-    _batteryVoltage = 350.4;
+    _batteryCurrent = 0.0;
+    _batteryVoltage = 290.4;
 
     _batteryCurrentSetpoint = 40.0;
     _batteryVoltageSetpoint = 401.0;
@@ -254,6 +254,55 @@ void NissanPDM::Task10Ms()
     CANMessage msg;
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
+    // BO_ 468 x1D4: 8 VCM
+    //  SG_ MotorAmpTorqueRequest : 23|12@0- (0.25,0) [0|1024] "Nm" Vector__XXX
+    //  SG_ HCM_CLOCK : 38|2@1+ (1,0) [0|3] "-" Vector__XXX
+    //  SG_ StatusOfHighVoltagePowerSupply : 34|1@1+ (1,0) [0|0] "-" Vector__XXX
+    //  SG_ Relay_Plus_Output_Status : 46|1@1+ (1,0) [0|0] "-" Vector__XXX
+    //  SG_ CRC_1D4 : 56|8@1+ (1,0) [0|255] "" Vector__XXX
+    //  SG_ ChargeStatus : 48|8@1+ (1,0) [0|255] "MODEMASK" Vector__XXX
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+
+    msg.id = 0x1D4;
+    msg.len = 8;
+    msg.data[0] = 0x6E;
+    msg.data[1] = 0x6E;
+    msg.data[2] = 0x00;
+    msg.data[3] = 0x00;
+    msg.data[4] = 0x02 | (_counter_1d4 << 6);
+    ;
+    msg.data[5] = 0x06;
+    msg.data[6] = 0xE0;
+    // Extra CRC in byte 7
+    nissan_crc(msg.data, 0x85);
+
+    _counter_1d4++;
+    if (_counter_1d4 >= 4)
+        _counter_1d4 = 0;
+
+    send_message(&msg);
+
+    // Byte 4 could have variations
+    // Peter
+    //  byte message1d4_0[8] = {0x6E, 0x6E, 0x00, 0x00, 0x42, 0x06, 0xE0, 0x0D};
+    //  byte message1d4_1[8] = {0x6E, 0x6E, 0x00, 0x00, 0xb2, 0x06, 0xE0, 0xC1};
+    //  byte message1d4_2[8] = {0x6E, 0x6E, 0x00, 0x00, 0xC2, 0x06, 0xE0, 0xD6};
+    //  byte message1d4_3[8] = {0x6E, 0x6E, 0x00, 0x00, 0x02, 0x06, 0xE0, 0xCA};
+
+    // Damien
+    //  MSB nibble: Runs through the sequence 0, 4, 8, C
+    // LSB nibble: Precharge report (precedes actual precharge
+    //             control)
+    //   0: Discharging (5%)
+    //   2: Precharge not started (1.4%)
+    //   3: Precharging (0.4%)
+    //   5: Starting discharge (3x10ms) (2.0%)
+    //   7: Precharged (93%)
+    // bytes[4] = 0x07 | (counter_1d4 << 6);
+    // bytes[4] = 0x02 | (counter_1d4 << 6);
+    // Bit 2 is HV status. 0x00 No HV, 0x01 HV On.
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////
     // CAN Message 0x1DB
     // BO_ 475 x1DB: 8 HVBAT
     // SG_ LB_Current : 7|11@0- (0.5,0) [-400|200] "A" Vector__XXX
@@ -459,7 +508,7 @@ void NissanPDM::Task10Ms()
     msg.id = 0x1F2;
     msg.len = 8;
     msg.data[0] = 0x30;
-    msg.data[1] = _OBCPowerSetpointInt;
+    msg.data[1] = 0xA0; //_OBCPowerSetpointInt;
     msg.data[2] = 0x20;
     msg.data[3] = 0xAC;
     msg.data[4] = 0x00;

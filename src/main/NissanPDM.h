@@ -85,6 +85,7 @@ private:
     uint8_t _counter_1db = 0;
     uint8_t _counter_1dc = 0;
     uint8_t _counter_1f2 = 0;
+    uint8_t _counter_1d4 = 0;
 
     CHARGE_CURRENT_LIMITING_REASON_PDM _limitReason;
     STATE_PDM _state;
