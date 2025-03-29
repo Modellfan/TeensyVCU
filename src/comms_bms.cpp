@@ -1,5 +1,4 @@
 #include "settings.h"
-#ifdef BMS_VCU
 #include <Arduino.h>
 #include <TaskSchedulerDeclarations.h>
 #include <Watchdog_t4.h>
@@ -195,4 +194,3 @@ void enable_update_system_load()
     Serial.println("System Load update timer enabled.");
 }
 
-#endif

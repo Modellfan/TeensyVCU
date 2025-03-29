@@ -1,5 +1,4 @@
 #include "settings.h"
-#ifdef BMS_VCU
 #ifndef COMMS_BMS_H
 #define COMMS_BMS_H
 
@@ -53,5 +52,4 @@ extern int balancecount;
 void print_debug();
 void enable_print_debug();
 
-#endif
 #endif

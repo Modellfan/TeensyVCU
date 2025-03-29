@@ -1,4 +1,0 @@
-F23 pin out table
-f23 connector diagram
-Stand alone OBC block diagram
-Wire colour codes

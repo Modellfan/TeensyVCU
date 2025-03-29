@@ -76,6 +76,8 @@ void BMS::Task10Ms()
     ampere_seconds += _temp;
     watt_seconds += _temp * batteryPack.get_pack_voltage();
 
+    //todo calculate from internal resistance the internal watt seconds
+
     soc_coulomb_counting = watt_seconds / total_capacity * 100; // SOC percentage
 
 }

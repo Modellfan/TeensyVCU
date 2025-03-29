@@ -87,15 +87,15 @@ void BatteryModule::print()
 
     // SignalManager::logSignal("sg_mod" + String(id) + "_alive", module_is_alive());
     //  SignalManager::logSignal("sg_mod" + String(id) + "_populated", all_module_data_populated());
-    for (int c = 0; c < numCells; c++)
-    {
-        SignalManager::logSignal("sg_mod" + String(id) + "_cell" + String(c) + "_voltage", cellVoltage[c]);
-        SignalManager::logSignal("sg_mod" + String(id) + "_cell" + String(c) + "_balancing", cellBalance[c]);
-    }
-    for (int t = 0; t < numTemperatureSensors; t++)
-    {
-        SignalManager::logSignal("sg_mod" + String(id) + "_temperature" + String(t), cellTemperature[t]);
-    }
+    // for (int c = 0; c < numCells; c++)
+    // {
+    //     SignalManager::logSignal("sg_mod" + String(id) + "_cell" + String(c) + "_voltage", cellVoltage[c]);
+    //     SignalManager::logSignal("sg_mod" + String(id) + "_cell" + String(c) + "_balancing", cellBalance[c]);
+    // }
+    // for (int t = 0; t < numTemperatureSensors; t++)
+    // {
+    //     SignalManager::logSignal("sg_mod" + String(id) + "_temperature" + String(t), cellTemperature[t]);
+    // }
 }
 
 void BatteryModule::process_message(CANMessage &msg)

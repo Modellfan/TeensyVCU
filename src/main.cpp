@@ -2,27 +2,19 @@
 #include <ACAN_T4.h>
 
 #include <TaskScheduler.h>
-#include "utils/signalManager.h"
 #include "utils/Map2D3D.h"
 #include <Watchdog_t4.h>
 #include "settings.h"
-
-#ifndef __IMXRT1062__
-#error "This sketch should be compiled for Teensy 4.1"
-#endif
-
-
-
-
-#ifdef BMS_VCU
-
 #include <bms/current.h>
 #include <bms/contactor.h>
 #include "bms/contactor_manager.h"
 #include "bms/battery i3/pack.h"
 #include "bms/battery_manager.h"
-
 #include "comms_bms.h"
+
+#ifndef __IMXRT1062__
+#error "This sketch should be compiled for Teensy 4.1"
+#endif
 
 // Create system objects
 Scheduler scheduler;
@@ -58,7 +50,7 @@ void setup()
   // Setup serial port
   Serial.begin(500000);
   SerialUSB1.begin(1000000);
-  SignalManager::setStream(SerialUSB1);
+  //SignalManager::setStream(SerialUSB1);
   while (!Serial)
   {
     delay(50);
@@ -125,49 +117,3 @@ void loop()
 //   Serial.println((int)val);
 // }
 
-#endif
-
-#ifdef MAIN_VCU
-
-#include "comms_main.h"
-#include <main/NissanPDM.h>
-// Create system objects
-Scheduler scheduler;
-WDT_T4<WDT3> wdt; // use the RTWDT which should be the safest one
-
-// Our software components
-NissanPDM charger;
-
-void setup()
-{
-#ifdef DEBUG
-  // Setup internal LED
-  pinMode(LED_BUILTIN, OUTPUT);
-
-  // Setup serial port
-  Serial.begin(500000);
-    
-  while (!Serial)
-  {
-    delay(50);
-    digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
-  }
-
-  delay(100);
-#endif
-
-  Serial.println("Setup software modules:");
-  // System functions startup
-  scheduler.startNow();
-  enable_led_blink();
-
-  enable_PDM_monitor();
-  enable_PDM_tasks();
-  
-}
-
-void loop()
-{
-  scheduler.execute();
-}
-#endif
