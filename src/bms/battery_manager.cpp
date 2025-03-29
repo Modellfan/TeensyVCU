@@ -77,6 +77,7 @@ void BMS::Task10Ms()
     watt_seconds += _temp * batteryPack.get_pack_voltage();
 
     soc_coulomb_counting = watt_seconds / total_capacity * 100; // SOC percentage
+
 }
 
 void BMS::Task100Ms()
@@ -115,63 +116,12 @@ void BMS::read_message()
 
     if (ACAN_T4::BMS_CAN.receive(msg))
     {
-        //
+        //Incoming from Main
+        //  Energy state - struct
+        //  Close contactor manually/ open boolean
     }
 
-    // for (int i = 0; i < numModules; i++)
-    // {
-    //     modules[i].check_alive();
-    // }
 
-    // switch (this->state)
-    // {
-    // case INIT: // Wait for all modules to go into init
-    // {
-    //     byte numModulesOperating = 0;
-    //     for (int i = 0; i < numModules; i++)
-    //     {
-    //         float v = modules[i].get_voltage();
-    //         if (modules[i].getState() == BatteryModule::OPERATING)
-    //         {
-    //             numModulesOperating++;
-    //         }
-    //         if (modules[i].getState() == BatteryModule::FAULT)
-    //         {
-    //             dtc |= DTC_PACK_MODULE_FAULT;
-    //         }
-    //     }
-
-    //     if (numModulesOperating == PACK_WAIT_FOR_NUM_MODULES)
-    //     {
-    //         state = OPERATING;
-    //     }
-    //     if (dtc > 0)
-    //     {
-    //         state = FAULT;
-    //     }
-    //     break;
-    // }
-    // case OPERATING: // Check if no module fault is popping up
-    // {
-    //     for (int i = 0; i < numModules; i++)
-    //     {
-    //         if (modules[i].getState() == BatteryModule::FAULT)
-    //         {
-    //             dtc |= DTC_PACK_MODULE_FAULT;
-    //         }
-    //     }
-    //     if (dtc > 0)
-    //     {
-    //         state = FAULT;
-    //     }
-    //     break;
-    // }
-    // case FAULT:
-    // {
-    //     // Additional fault handling logic can be added here if needed
-    //     break;
-    // }
-    // }
 }
 
 void BMS::Monitor100Ms()
@@ -747,17 +697,32 @@ void BMS::Monitor100Ms()
 //     // Implementation for calculate_soh method
 // }
 
-// void BMS::send_outgoing_messages()
-// {
-//     // Implementation for send_outgoing_messages method
+void BMS::send_battery_status_message()
+{
+    // Implementation for send_outgoing_messages method
 
-//     //Messages to charger
-//     //-min current
-//     //Messages to inverter
-//     //-max current
-//     //-min current
-//     //-bms bollean failiure
-// }
+    //Messages to charger
+    //-min current
+    //Messages to inverter
+    //-max current
+    //-min current
+    //-bms bollean failiure
+
+    //HMI & Main VCU
+        //max temp °C
+        //min temp °C
+        //delimiting temp °C
+        //soc %
+        //soh %
+        //remaining capacity Wh
+        //total capacity Wh
+        //Battery Voltage V
+        //Battery Current A
+        //Min Current A
+        //Max Current A
+        //Error State
+
+}
 
 // void BMS::calculate_hmi_values()
 // {
@@ -770,8 +735,61 @@ void BMS::Monitor100Ms()
 
 // void BMS::update_state_machine()
 // {
-//     // Implementation for update_state_machine method
-//     //-open contcator when in charge mode failiure
+
+        // for (int i = 0; i < numModules; i++)
+    // {
+    //     modules[i].check_alive();
+    // }
+
+    // switch (this->state)
+    // {
+    // case INIT: // Wait for all modules to go into init
+    // {
+    //     byte numModulesOperating = 0;
+    //     for (int i = 0; i < numModules; i++)
+    //     {
+    //         float v = modules[i].get_voltage();
+    //         if (modules[i].getState() == BatteryModule::OPERATING)
+    //         {
+    //             numModulesOperating++;
+    //         }
+    //         if (modules[i].getState() == BatteryModule::FAULT)
+    //         {
+    //             dtc |= DTC_PACK_MODULE_FAULT;
+    //         }
+    //     }
+
+    //     if (numModulesOperating == PACK_WAIT_FOR_NUM_MODULES)
+    //     {
+    //         state = OPERATING;
+    //     }
+    //     if (dtc > 0)
+    //     {
+    //         state = FAULT;
+    //     }
+    //     break;
+    // }
+    // case OPERATING: // Check if no module fault is popping up
+    // {
+    //     for (int i = 0; i < numModules; i++)
+    //     {
+    //         if (modules[i].getState() == BatteryModule::FAULT)
+    //         {
+    //             dtc |= DTC_PACK_MODULE_FAULT;
+    //         }
+    //     }
+    //     if (dtc > 0)
+    //     {
+    //         state = FAULT;
+    //     }
+    //     break;
+    // }
+    // case FAULT:
+    // {
+    //     // Additional fault handling logic can be added here if needed
+    //     break;
+    // }
+    // }
 // }
 
 void BMS::send_message(CANMessage *frame)

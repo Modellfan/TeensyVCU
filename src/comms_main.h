@@ -1,4 +1,4 @@
-#define MAIN_VCU
+#include "settings.h"
 #ifdef MAIN_VCU
 #ifndef COMMS_BMS_H
 #define COMMS_BMS_H
@@ -7,7 +7,6 @@
 #include <TaskSchedulerDeclarations.h>
 #include <Watchdog_t4.h>
 
-#include <settings.h>
 #include <main/NissanPDM.h>
 
 extern Scheduler scheduler;

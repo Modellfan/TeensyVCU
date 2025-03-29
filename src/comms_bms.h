@@ -1,4 +1,4 @@
-//#define BMS_VCU
+#include "settings.h"
 #ifdef BMS_VCU
 #ifndef COMMS_BMS_H
 #define COMMS_BMS_H
@@ -6,8 +6,6 @@
 #include <Arduino.h>
 #include <TaskSchedulerDeclarations.h>
 #include <Watchdog_t4.h>
-
-#include <settings.h>
 
 #include <bms/current.h>
 #include <bms/contactor.h>

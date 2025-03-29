@@ -1,11 +1,9 @@
-//#define BMS_VCU
-
+#include "settings.h"
 #ifdef BMS_VCU
 #include <Arduino.h>
 #include <TaskSchedulerDeclarations.h>
 #include <Watchdog_t4.h>
 
-#include "settings.h"
 #include "comms_bms.h"
 
 #include <bms/current.h>
@@ -15,23 +13,9 @@
 #include "bms/battery i3/pack.h"
 #include "bms/battery_manager.h"
 
-// Blink the built in led to visualize main state
-void led_blink()
-{
-    digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
-    // Serial.println("Serial Alive");
-}
-
-Task led_blink_timer(1000, TASK_FOREVER, &led_blink);
-
-void enable_led_blink()
-{
-    scheduler.addTask(led_blink_timer);
-    led_blink_timer.enable();
-    Serial.println("Led blink enabled.");
-}
-
-// Poll the Jaguar iPace Shunt
+//---------------------------------------------------------------------------------------------------------------------------------------------
+//IPace ISA Shunt Software Component
+//---------------------------------------------------------------------------------------------------------------------------------------------
 void update_shunt()
 {
     shunt.update();
@@ -47,23 +31,9 @@ void enable_update_shunt()
     Serial.println("Shunt update timer enabled.");
 }
 
-
-// Monitor CPU load
-void update_system_load()
-{
-    // Serial.print("Monitor");
-}
-
-Task update_system_load_timer(100, TASK_FOREVER, &update_system_load);
-
-void enable_update_system_load()
-{
-    scheduler.addTask(update_system_load_timer);
-    update_system_load_timer.enable();
-    Serial.println("System Load update timer enabled.");
-}
-
-// Update the contactor manager
+//---------------------------------------------------------------------------------------------------------------------------------------------
+//Contactor Manager Software Component
+//---------------------------------------------------------------------------------------------------------------------------------------------
 void update_contactors()
 {
     contactor_manager.update();
@@ -79,7 +49,9 @@ void enable_update_contactors()
     Serial.println("Contactors update timer enabled.");
 }
 
-
+//---------------------------------------------------------------------------------------------------------------------------------------------
+// BMW i3 Battery Software Component
+//---------------------------------------------------------------------------------------------------------------------------------------------
 void handle_battery_CAN_messages()
 {
     extern BatteryPack batteryPack;
@@ -102,7 +74,7 @@ void poll_battery_for_data()
     batteryPack.request_data();
 }
 
-Task poll_battery_for_data_timer(13, TASK_FOREVER, &poll_battery_for_data); // Orginal BMW i3 polls each pack at 100ms at 8 modules 13 ms comes to approx 100ms
+Task poll_battery_for_data_timer(13, TASK_FOREVER, &poll_battery_for_data); // Original BMW i3 polls each pack at 100ms at 8 modules 13 ms comes to approx 100ms
 
 void enable_poll_battery_for_data()
 {
@@ -111,38 +83,8 @@ void enable_poll_battery_for_data()
     Serial.println("Battery poll timer enabled.");
 }
 
-// Print debug messages
-void print_debug()
-{
-    extern BatteryPack batteryPack;
-    batteryPack.print();
-
-    extern Contactormanager contactor_manager;
-    contactor_manager.print();
-
-    extern Shunt_ISA_iPace shunt;
-    shunt.print();
-    // balancecount++;
-    // if (balancecount == 10)
-    // {
-    //     batteryPack.set_balancing_voltage(3.54);
-    //     batteryPack.set_balancing_active(true);
-    // }
-
-    
-}
-
-Task print_debug_timer(1000, TASK_FOREVER, &print_debug);
-
-void enable_print_debug()
-{
-    scheduler.addTask(print_debug_timer);
-    print_debug_timer.enable();
-    Serial.println("Print debug timer enabled.");
-}
-
 //---------------------------------------------------------------------------------------------------------------------------------------------
-// BMS software module runnables
+// Main Battery Manager Software Component
 //---------------------------------------------------------------------------------------------------------------------------------------------
 void BMS_Task2ms()
 {
@@ -197,12 +139,60 @@ void enable_BMS_monitor()
     Serial.println("BMS monitor enabled.");
 }
 
+//---------------------------------------------------------------------------------------------------------------------------------------------
+// Monitoring & Debug printing
+//---------------------------------------------------------------------------------------------------------------------------------------------
+void print_debug()
+{
+    extern BatteryPack batteryPack;
+    batteryPack.print();
 
+    extern Contactormanager contactor_manager;
+    contactor_manager.print();
 
+    extern Shunt_ISA_iPace shunt;
+    shunt.print();   
+}
 
-// Comms for UDS messages
+Task print_debug_timer(1000, TASK_FOREVER, &print_debug);
 
-// Comms for error handling?
+void enable_print_debug()
+{
+    scheduler.addTask(print_debug_timer);
+    print_debug_timer.enable();
+    Serial.println("Print debug timer enabled.");
+}
 
-// Comms for sending out Nissan leaf messages
+void led_blink()
+{
+    digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
+    // Serial.println("Serial Alive");
+}
+
+Task led_blink_timer(1000, TASK_FOREVER, &led_blink);
+
+void enable_led_blink()
+{
+    scheduler.addTask(led_blink_timer);
+    led_blink_timer.enable();
+    Serial.println("Led blink enabled.");
+}
+
+//---------------------------------------------------------------------------------------------------------------------------------------------
+//CPU Load Monitoring
+//---------------------------------------------------------------------------------------------------------------------------------------------
+void update_system_load()
+{
+    // Serial.print("Monitor");
+}
+
+Task update_system_load_timer(100, TASK_FOREVER, &update_system_load);
+
+void enable_update_system_load()
+{
+    scheduler.addTask(update_system_load_timer);
+    update_system_load_timer.enable();
+    Serial.println("System Load update timer enabled.");
+}
+
 #endif

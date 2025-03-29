@@ -82,7 +82,7 @@ private:
     //         void calculate_soh();
 
     // // Send CAN messages
-    // void send_outgoing_messages();
+    void send_battery_status_message();
     //         void calculate_hmi_values();
 
     //         // State maschine updating

@@ -1,10 +1,9 @@
-#define MAIN_VCU
+#include "settings.h"
 #ifdef MAIN_VCU
 #include <Arduino.h>
 #include <TaskSchedulerDeclarations.h>
 #include <Watchdog_t4.h>
 
-#include "settings.h"
 #include "comms_main.h"
 #include <main/NissanPDM.h>
 

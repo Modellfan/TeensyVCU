@@ -5,14 +5,14 @@
 #include "utils/signalManager.h"
 #include "utils/Map2D3D.h"
 #include <Watchdog_t4.h>
+#include "settings.h"
 
 #ifndef __IMXRT1062__
 #error "This sketch should be compiled for Teensy 4.1"
 #endif
 
-#define DEBUG
-#define MAIN_VCU
-//#define BMS_VCU
+
+
 
 #ifdef BMS_VCU
 
