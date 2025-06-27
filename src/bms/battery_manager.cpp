@@ -93,7 +93,7 @@ void BMS::Task100Ms()
 
     _current = shunt.getCurrent();
 
-    for (int i = 0; i <= CELLS_PER_MODULE * CELLS_PER_MODULE; ++i)
+    for (int i = 0; i < CELLS_PER_MODULE * MODULES_PER_PACK; ++i)
     {
         if (batteryPack.get_cell_voltage(i, _voltage) == false)
         {

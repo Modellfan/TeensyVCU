@@ -102,15 +102,15 @@ public:
 
     void setXs(const X *xss) { memcpy(xs, xss, S * sizeof(X)); }
 
-    int getXInt(int i) { return 0 <= i < S ? static_cast<int>(xs[i]) : 0; }
+    int getXInt(int i) { return (i >= 0 && i < S) ? static_cast<int>(xs[i]) : 0; }
 
-    float getXFloat(int i) { return 0 <= i < S ? static_cast<float>(xs[i]) : 0; }
+    float getXFloat(int i) { return (i >= 0 && i < S) ? static_cast<float>(xs[i]) : 0; }
 
     void setYs(const Y *yss) { memcpy(ys, yss, S * sizeof(Y)); }
 
-    int getYInt(int i) { return 0 <= i < S ? static_cast<int>(ys[i]) : 0; }
+    int getYInt(int i) { return (i >= 0 && i < S) ? static_cast<int>(ys[i]) : 0; }
 
-    float getYFloat(int i) { return 0 <= i < S ? static_cast<float>(ys[i]) : 0; }
+    float getYFloat(int i) { return (i >= 0 && i < S) ? static_cast<float>(ys[i]) : 0; }
 
 #ifdef ARDUINO // Initialization from array in PROGMEM
 
@@ -192,11 +192,11 @@ public:
         memcpy(x2s, x2ss, C * sizeof(X));
     }
 
-    int getX1Int(int i) { return 0 <= i < R ? static_cast<int>(x1s[i]) : 0; }
-    int getX2Int(int i) { return 0 <= i < C ? static_cast<int>(x2s[i]) : 0; }
+    int getX1Int(int i) { return (i >= 0 && i < R) ? static_cast<int>(x1s[i]) : 0; }
+    int getX2Int(int i) { return (i >= 0 && i < C) ? static_cast<int>(x2s[i]) : 0; }
 
-    float getX1Float(int i) { return 0 <= i < R ? static_cast<float>(x1s[i]) : 0; }
-    float getX2Float(int i) { return 0 <= i < C ? static_cast<float>(x2s[i]) : 0; }
+    float getX1Float(int i) { return (i >= 0 && i < R) ? static_cast<float>(x1s[i]) : 0; }
+    float getX2Float(int i) { return (i >= 0 && i < C) ? static_cast<float>(x2s[i]) : 0; }
 
     void setYs(const Y *yss)
     {
@@ -205,12 +205,12 @@ public:
 
     int getYInt(int i, int j)
     {
-        return 0 <= i < R && 0 <= j < C ? static_cast<int>(ys[i][j]) : 0;
+        return (i >= 0 && i < R && j >= 0 && j < C) ? static_cast<int>(ys[i][j]) : 0;
     }
 
     float getYFloat(int i, int j)
     {
-        return 0 <= i < R && 0 <= j < C ? static_cast<float>(ys[i][j]) : 0;
+        return (i >= 0 && i < R && j >= 0 && j < C) ? static_cast<float>(ys[i][j]) : 0;
     }
 
 #ifdef ARDUINO // Initialize from array in PROGMEM

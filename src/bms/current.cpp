@@ -19,7 +19,9 @@ Shunt_ISA_iPace::Shunt_ISA_iPace()
 void Shunt_ISA_iPace::print() 
 {
     Serial.println("ISA shunt:");
-    Serial.printf("    State %d, DTC %d, Current %f A, Temperature %f °C, Current Average %f A\n", this->getState(), this->getDTCString().c_str(), getCurrent(), getTemperature(), getCurrentAverage());
+    Serial.printf("    State %d, DTC %s, Current %f A, Temperature %f \xC2\xB0C, Current Average %f A\n",
+                  this->getState(), this->getDTCString().c_str(), getCurrent(),
+                  getTemperature(), getCurrentAverage());
     Serial.println();
 }
 
