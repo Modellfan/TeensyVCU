@@ -159,7 +159,7 @@ void BatteryPack::request_data()
         }
     }
 
-    // Byte 5: is alsways 0x00
+    // Byte 5: is always 0x00
     pollModuleFrame.data[5] = 0x00;
 
     // Byte 6: has the frame counter in the higher nibble. One bit is set at the end of startup.

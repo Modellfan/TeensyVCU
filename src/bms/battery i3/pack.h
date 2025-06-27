@@ -78,15 +78,13 @@ private:
     bool balanceActive;
 
     // private variables for polling
-    uint8_t pollMessageId;
-    bool initialised;
     CRC8 crc8;
     bool inStartup;
     uint8_t modulePollingCycle;
     uint8_t moduleToPoll;
     CANMessage pollModuleFrame;
 
-    // sate and dtc
+    // state and dtc
     STATE_PACK state;
     DTC_PACK dtc;
 

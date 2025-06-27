@@ -327,7 +327,7 @@ float BatteryModule::get_lowest_temperature()
 // Return the temperature of the hottest sensor in the module
 float BatteryModule::get_highest_temperature()
 {
-    float highestTemperature = -50;
+    float highestTemperature = -50.0;
     for (int t = 0; t < numTemperatureSensors; t++)
     {
         if (cellTemperature[t] > highestTemperature)
