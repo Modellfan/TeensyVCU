@@ -1,6 +1,6 @@
 <mxfile host="65bd71144e">
     <diagram id="q9v7ea3e_IRq_OBUJfN8" name="Page-1">
-        <mxGraphModel dx="814" dy="563" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1654" pageHeight="1169" math="0" shadow="0">
+        <mxGraphModel dx="1163" dy="646" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1654" pageHeight="1169" math="0" shadow="0">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
@@ -304,7 +304,7 @@
                 <mxCell id="80" style="shape=tableRow;horizontal=0;startSize=0;swimlaneHead=0;swimlaneBody=0;top=0;left=0;bottom=0;right=0;collapsible=0;dropTarget=0;fillColor=none;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="55" vertex="1">
                     <mxGeometry y="170" width="540" height="40" as="geometry"/>
                 </mxCell>
-                <mxCell id="81" value="Charger &amp;amp; DCDC" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;fillColor=none;top=0;left=0;bottom=0;right=0;overflow=hidden;" parent="80" vertex="1">
+                <mxCell id="81" value="Charger" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;fillColor=none;top=0;left=0;bottom=0;right=0;overflow=hidden;" parent="80" vertex="1">
                     <mxGeometry width="60" height="40" as="geometry">
                         <mxRectangle width="60" height="40" as="alternateBounds"/>
                     </mxGeometry>
@@ -592,7 +592,7 @@
                 <mxCell id="156" style="shape=tableRow;horizontal=0;startSize=0;swimlaneHead=0;swimlaneBody=0;top=0;left=0;bottom=0;right=0;collapsible=0;dropTarget=0;fillColor=none;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="55" vertex="1">
                     <mxGeometry y="410" width="540" height="40" as="geometry"/>
                 </mxCell>
-                <mxCell id="157" value="AC compressor" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;fillColor=none;top=0;left=0;bottom=0;right=0;overflow=hidden;" parent="156" vertex="1">
+                <mxCell id="157" value="Charge Manager" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;fillColor=none;top=0;left=0;bottom=0;right=0;overflow=hidden;" parent="156" vertex="1">
                     <mxGeometry width="60" height="40" as="geometry">
                         <mxRectangle width="60" height="40" as="alternateBounds"/>
                     </mxGeometry>
@@ -832,12 +832,12 @@
                 <mxCell id="206" style="shape=tableRow;horizontal=0;startSize=0;swimlaneHead=0;swimlaneBody=0;top=0;left=0;bottom=0;right=0;collapsible=0;dropTarget=0;fillColor=none;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="55" vertex="1">
                     <mxGeometry y="610" width="540" height="40" as="geometry"/>
                 </mxCell>
-                <mxCell id="207" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;fillColor=none;top=0;left=0;bottom=0;right=0;overflow=hidden;" parent="206" vertex="1">
+                <mxCell id="207" value="DCDC" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;fillColor=none;top=0;left=0;bottom=0;right=0;overflow=hidden;" parent="206" vertex="1">
                     <mxGeometry width="60" height="40" as="geometry">
                         <mxRectangle width="60" height="40" as="alternateBounds"/>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="208" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;fillColor=none;top=0;left=0;bottom=0;right=0;overflow=hidden;" parent="206" vertex="1">
+                <mxCell id="208" value="10 A" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;fillColor=none;top=0;left=0;bottom=0;right=0;overflow=hidden;" parent="206" vertex="1">
                     <mxGeometry x="60" width="60" height="40" as="geometry">
                         <mxRectangle width="60" height="40" as="alternateBounds"/>
                     </mxGeometry>
