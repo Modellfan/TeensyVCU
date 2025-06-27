@@ -21,13 +21,32 @@ Runnables are declared in `pack.h` lines 39‑44.
 
 ### Input Signals
 
-- CAN frames from battery modules handled in `read_message()`.
-- Balancing commands via `set_balancing_active(bool)` and `set_balancing_voltage(float)`.
+| Signal Name | Description |
+|-------------|-------------|
+| `read_message()` | Receives CAN frames from battery modules and updates their data |
+| `set_balancing_active(bool)` | Enable or disable cell balancing |
+| `set_balancing_voltage(float)` | Set the target voltage for balancing |
 
 ### Output Signals
 
-- Polling frames sent with `request_data()`/`send_message()`.
-- Getter methods for voltages, temperatures, balancing status, state, and diagnostic codes.
+| Signal Name | Description |
+|-------------|-------------|
+| `request_data()` | Sends CAN polling frames to query module measurements |
+| `send_message(CANMessage *)` | Low level helper used to transmit a CAN frame |
+| `get_balancing_active()` | Indicates whether balancing is active |
+| `get_balancing_voltage()` | Returns the configured balancing target voltage |
+| `get_any_module_balancing()` | Checks if any module is currently balancing |
+| `get_lowest_cell_voltage()` | Lowest cell voltage across all modules |
+| `get_highest_cell_voltage()` | Highest cell voltage across all modules |
+| `get_pack_voltage()` | Current total pack voltage |
+| `get_delta_cell_voltage()` | Difference between highest and lowest cell voltage |
+| `get_cell_voltage(byte, float &)` | Retrieves the voltage for a specific cell |
+| `get_lowest_temperature()` | Lowest module temperature |
+| `get_highest_temperature()` | Highest module temperature |
+| `get_cell_temperature(byte, float &)` | Retrieves the temperature for a specific cell |
+| `getState()` | Current pack state enumeration |
+| `getDTC()` | Current diagnostic trouble code |
+| `print()` | Debug printout of pack and module status |
 
 ## 4. Configuration Parameters
 
