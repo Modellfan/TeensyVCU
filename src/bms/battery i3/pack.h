@@ -45,6 +45,7 @@ public:
 
     // Our state
     STATE_PACK getState();
+    bool get_state_operating();
     DTC_PACK getDTC();
 
     // Helper functions
