@@ -143,9 +143,6 @@ void enable_BMS_monitor()
 //---------------------------------------------------------------------------------------------------------------------------------------------
 void print_debug()
 {
-    extern BatteryPack batteryPack;
-    batteryPack.print();
-
     extern Contactormanager contactor_manager;
     contactor_manager.print();
 

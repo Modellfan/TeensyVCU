@@ -11,13 +11,6 @@ Contactormanager::Contactormanager() : _prechargeContactor(CONTACTOR_PRCHG_OUT_P
     _currentState = INIT;
 }
 
-void Contactormanager::print()
-{
-    Serial.println("Contactor manager:");
-    Serial.printf("    Current state: %s; Target state: %s; DTC : %s; Neg. closed %d; Pos. closed %d; Pre. closed %d; Cont. voltage %d\n", this->getCurrentStateString(), this->getTargetStateString(), this->getDTCString().c_str(), _negativeContactor_closed, _positiveContactor.getInputPin(), _prechargeContactor.getInputPin(), _contactorVoltage_available);
-    Serial.println("");
-}
-
 void Contactormanager::initialise()
 {
     pinMode(CONTACTOR_POWER_SUPPLY_IN_PIN, INPUT_PULLUP);
@@ -230,26 +223,6 @@ void Contactormanager::update()
         _positiveContactor.open();
         _prechargeContactor.open();
         break;
-    }
-}
-
-void Contactormanager::monitor(std::function<void(const CANMessage &)> callback)
-{
-    CANMessage msg;
-
-    msg.data64 = 0;
-    msg.id = 1080; // Message 0x438 contactor_manager_state 8bits None
-    msg.len = 8;
-    pack(msg, getState(), 0, 8, false, 1, 0);                   // getState : 0|8 little_endian unsigned scale: 1, offset: 0, unit: None, None
-    pack(msg, getDTC(), 8, 8, false, 1, 0);                     // getDTC : 8|8 little_endian unsigned scale: 1, offset: 0, unit: None, None
-    pack(msg, _negativeContactor_closed, 16, 1, false);         // negative_contactor_input : 16|1 little_endian unsigned scale: 1, offset: 0, unit: None, None
-    pack(msg, _positiveContactor.getInputPin(), 17, 1, false);  // positive_contactor_input : 17|1 little_endian unsigned scale: 1, offset: 0, unit: None, None
-    pack(msg, _prechargeContactor.getInputPin(), 18, 1, false); // precharge_contactor_input : 18|1 little_endian unsigned scale: 1, offset: 0, unit: None, None
-    pack(msg, _contactorVoltage_available, 19, 1, false);       // contactor_supply_voltage_input : 19|1 little_endian unsigned scale: 1, offset: 0, unit: None, None
-
-    if (callback != nullptr)
-    {
-        callback(msg);
     }
 }
 

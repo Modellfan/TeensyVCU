@@ -42,61 +42,6 @@ BatteryModule::BatteryModule(int _id, BatteryPack *_pack)
     lastUpdate = millis();
 }
 
-void BatteryModule::printFrame(CANMessage &frame)
-{
-    // Print message
-    Serial.print("ID: ");
-    Serial.print(frame.id, HEX);
-    Serial.print(" Ext: ");
-    if (frame.ext)
-    {
-        Serial.print("Y");
-    }
-    else
-    {
-        Serial.print("N");
-    }
-    Serial.print(" Len: ");
-    Serial.print(frame.len, DEC);
-    Serial.print(" ");
-    for (int i = 0; i < frame.len; i++)
-    {
-        Serial.print(frame.data[i], HEX);
-        Serial.print(" ");
-    }
-    Serial.println();
-}
-
-void BatteryModule::print()
-{
-    // Serial.println(static_cast<uint8_t>(dtc));
-    Serial.printf("Module id: %d (state: %s; DTC: %s; Module Voltage %fV; Lowest Cell %fV; Highest Cell %fV)\n", id, getStateString(), getDTCString().c_str(), moduleVoltage, get_lowest_cell_voltage(), get_highest_cell_voltage());
-    Serial.printf("        Cell Voltages : ");
-    for (int c = 0; c < numCells; c++)
-    {
-        Serial.printf("%d:%1.3fV B%d ", c, cellVoltage[c], cellBalance[c]);
-    }
-    Serial.printf("\n");
-    Serial.printf("        Temperatures : ");
-    for (int t = 0; t < numTemperatureSensors; t++)
-    {
-        Serial.printf("%d:%3.2fC ", t, cellTemperature[t]);
-    }
-    Serial.printf("\n");
-
-    // SignalManager::logSignal("sg_mod" + String(id) + "_alive", module_is_alive());
-    //  SignalManager::logSignal("sg_mod" + String(id) + "_populated", all_module_data_populated());
-    // for (int c = 0; c < numCells; c++)
-    // {
-    //     SignalManager::logSignal("sg_mod" + String(id) + "_cell" + String(c) + "_voltage", cellVoltage[c]);
-    //     SignalManager::logSignal("sg_mod" + String(id) + "_cell" + String(c) + "_balancing", cellBalance[c]);
-    // }
-    // for (int t = 0; t < numTemperatureSensors; t++)
-    // {
-    //     SignalManager::logSignal("sg_mod" + String(id) + "_temperature" + String(t), cellTemperature[t]);
-    // }
-}
-
 void BatteryModule::process_message(CANMessage &msg)
 {
     if ((msg.id & 0x00F) != id) // check if module id belongs to this module

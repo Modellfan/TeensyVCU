@@ -32,8 +32,6 @@ public:
     // Runnables
     void initialise(); // For blocking singular initialize
     void update();     // Polls the can bus assigned in settings and saves the result. 10ms time slice.
-    void monitor(std::function<void(const CANMessage &)> callback);
-    void print();
 
     // Our state
     STATE_ISA getState();

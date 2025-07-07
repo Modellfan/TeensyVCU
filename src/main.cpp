@@ -95,6 +95,8 @@ void setup()
 void loop()
 {
   scheduler.execute();
+  //Poll can buses
+  
   // wdt.feed(); // must feed the watchdog every so often or it'll get angry
 }
 

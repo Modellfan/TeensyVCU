@@ -37,7 +37,6 @@ public:
     BatteryModule modules[MODULES_PER_PACK]; // The child modules that make up this BatteryPack
 
     // Runnables
-    void print();
     void initialize();
 
     void request_data(); // Send out message
