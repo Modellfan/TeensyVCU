@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include "module.h"
 #include "pack.h"
-#include "utils/signalManager.h"
 #include "utils/can_packer.h"
 #include <ACAN_T4.h>
 

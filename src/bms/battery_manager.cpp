@@ -806,3 +806,23 @@ void BMS::send_message(CANMessage *frame)
         // Serial.println("Send nok");
     }
 }
+
+
+//Interpolation
+
+// Map2D<8, int16_t, int8_t> test;
+// test.setXs_P(xs);
+// test.setYs_P(ys);
+
+// for (int idx = 250; idx < 2550; idx += 50)
+// {
+//   int8_t val = test.f(idx);
+//   Serial.print(idx);
+//   Serial.print(F(": "));
+//   Serial.println((int)val);
+// }
+
+// const int16_t xs[] PROGMEM = {300, 700, 800, 900, 1500, 1800, 2100, 2500};
+// const int8_t ys[] PROGMEM = {-127, -50, 127, 0, 10, -30, -50, 10};
+// const byte ysb[] PROGMEM = {0, 30, 55, 89, 99, 145, 255, 10};
+// const float ysfl[] PROGMEM = {-127.3, -49.9, 127.0, 0.0, 13.3, -33.0, -35.8, 10.0};

@@ -2,7 +2,7 @@
 #define SETTINGS_H
 
 #define VERSION 1.0
-#define DEBUG
+//#define DEBUG
 
 //---------------------------------------------------------------------------------------------------------------------------------------------
 //CMU and pack settings
@@ -10,7 +10,7 @@
 #define NUM_PACKS         1
 #define CELLS_PER_MODULE 12                        // The number of cells in each module
 #define TEMPS_PER_MODULE  4                        // The number of temperature sensors in each module
-#define MODULES_PER_PACK  8                        // The number of modules in each pack
+#define MODULES_PER_PACK  8                        // The number of possible  modules in each pack
 
 //CMU Settings
 #define CMU_MAX_INTERNAL_WARNING_TEMPERATURE 70.00f
@@ -22,7 +22,7 @@
 
 //Pack Setting
 #define BATTERY_CAN can2
-#define PACK_WAIT_FOR_NUM_MODULES 8
+#define PACK_WAIT_FOR_NUM_MODULES 7
 #define PACK_ALIVE_TIMEOUT 300 
 
 //---------------------------------------------------------------------------------------------------------------------------------------------

@@ -52,21 +52,21 @@ public:
     uint8_t getcheck(CANMessage &msg, int id); // Calculate BMW i3 checksum
 
     // Setter and getter
+    //   Balancing
     void set_balancing_active(bool status);
     void set_balancing_voltage(float voltage);
     bool get_balancing_active();
     float get_balancing_voltage();
     bool get_any_module_balancing();
-
-
-    // Voltage
+    
+    //   Voltage
     float get_lowest_cell_voltage();
     float get_highest_cell_voltage();
     float get_pack_voltage();
     float get_delta_cell_voltage();
     bool get_cell_voltage(byte cellIndex, float &voltage);
 
-    // Temperature
+    //   Temperature
     float get_lowest_temperature();
     float get_highest_temperature();
     bool get_cell_temperature(byte cell, float &temperature);

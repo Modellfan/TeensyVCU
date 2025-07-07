@@ -28,35 +28,28 @@ void wdtCallback()
 }
 
 // Our software components
-BatteryPack batteryPack(8);
+BatteryPack batteryPack(MODULES_PER_PACK);
 Shunt_ISA_iPace shunt;
 Contactormanager contactor_manager;
 BMS battery_manager(batteryPack, shunt, contactor_manager);
 
 // Misc global variables
-int balancecount = 0;
-
-const int16_t xs[] PROGMEM = {300, 700, 800, 900, 1500, 1800, 2100, 2500};
-const int8_t ys[] PROGMEM = {-127, -50, 127, 0, 10, -30, -50, 10};
-const byte ysb[] PROGMEM = {0, 30, 55, 89, 99, 145, 255, 10};
-const float ysfl[] PROGMEM = {-127.3, -49.9, 127.0, 0.0, 13.3, -33.0, -35.8, 10.0};
+// int balancecount = 0;
 
 void setup()
 {
+  Serial.begin(500000);
 #ifdef DEBUG
   // Setup internal LED
   pinMode(LED_BUILTIN, OUTPUT);
-
   // Setup serial port
-  Serial.begin(500000);
   SerialUSB1.begin(1000000);
-  //SignalManager::setStream(SerialUSB1);
+  // SignalManager::setStream(SerialUSB1);
   while (!Serial)
   {
     delay(50);
     digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
   }
-
   delay(100);
 #endif
 
@@ -104,16 +97,4 @@ void loop()
   scheduler.execute();
   // wdt.feed(); // must feed the watchdog every so often or it'll get angry
 }
-
-// Map2D<8, int16_t, int8_t> test;
-// test.setXs_P(xs);
-// test.setYs_P(ys);
-
-// for (int idx = 250; idx < 2550; idx += 50)
-// {
-//   int8_t val = test.f(idx);
-//   Serial.print(idx);
-//   Serial.print(F(": "));
-//   Serial.println((int)val);
-// }
 
