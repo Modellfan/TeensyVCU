@@ -35,10 +35,6 @@ void print_module_status(int index) {
     batteryPack.modules[index].print();
 }
 
-void enable_serial_console() {
-    // Print available commands at startup
-    print_console_help();
-}
 
 void serial_console() {
     while (Serial.available()) {
