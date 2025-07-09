@@ -161,12 +161,12 @@ void BatteryModule::process_message(CANMessage &msg)
         if (cmuError)
         {
             state = FAULT;
-            dtc |= DTC_CMU_INTERNAL_ERROR;
+            dtc = static_cast<DTC_CMU>(dtc | DTC_CMU_INTERNAL_ERROR);
         }
         if (temperatureInternal > CMU_MAX_INTERNAL_WARNING_TEMPERATURE)
         {
             state = FAULT;
-            dtc |= DTC_CMU_TEMPERATURE_TOO_HIGH;
+            dtc = static_cast<DTC_CMU>(dtc | DTC_CMU_TEMPERATURE_TOO_HIGH);
         }
         if (plausibilityCheck() == false)
         {
@@ -180,12 +180,12 @@ void BatteryModule::process_message(CANMessage &msg)
         if (cmuError)
         {
             state = FAULT;
-            dtc |= DTC_CMU_INTERNAL_ERROR;
+            dtc = static_cast<DTC_CMU>(dtc | DTC_CMU_INTERNAL_ERROR);
         }
         if (temperatureInternal > CMU_MAX_INTERNAL_WARNING_TEMPERATURE)
         {
             state = FAULT;
-            dtc |= DTC_CMU_TEMPERATURE_TOO_HIGH;
+            dtc = static_cast<DTC_CMU>(dtc | DTC_CMU_TEMPERATURE_TOO_HIGH);
         }
         if (plausibilityCheck() == false)
         {
@@ -294,7 +294,7 @@ void BatteryModule::check_alive()
         if ((millis() - lastUpdate) > PACK_ALIVE_TIMEOUT)
         {
             state = FAULT;
-            dtc |= DTC_CMU_TIMED_OUT;
+            dtc = static_cast<DTC_CMU>(dtc | DTC_CMU_TIMED_OUT);
             // Serial.println(String(millis()) + ": Timed out");
         }
         break;
@@ -309,12 +309,12 @@ bool BatteryModule::plausibilityCheck()
     if ((get_lowest_cell_voltage() < CMU_MIN_PLAUSIBLE_VOLTAGE) || (get_highest_cell_voltage() > CMU_MAX_PLAUSIBLE_VOLTAGE))
     {
         plausible = false;
-        dtc |= DTC_CMU_SINGLE_VOLTAGE_IMPLAUSIBLE;
+        dtc = static_cast<DTC_CMU>(dtc | DTC_CMU_SINGLE_VOLTAGE_IMPLAUSIBLE);
     }
     if ((get_lowest_temperature() < CMU_MIN_PLAUSIBLE_TEMPERATURE) || (get_highest_temperature() > CMU_MAX_PLAUSIBLE_TEMPERATURE))
     {
         plausible = false;
-        dtc |= DTC_CMU_TEMPERATURE_IMPLAUSIBLE;
+        dtc = static_cast<DTC_CMU>(dtc | DTC_CMU_TEMPERATURE_IMPLAUSIBLE);
     }
 
     float totalVoltage = 0.0000f;
@@ -326,7 +326,7 @@ bool BatteryModule::plausibilityCheck()
     if (((totalVoltage - CMU_MAX_DELTA_MODULE_CELL_VOLTAGE) > moduleVoltage) || ((totalVoltage + CMU_MAX_DELTA_MODULE_CELL_VOLTAGE) < moduleVoltage))
     {
         plausible = false;
-        dtc |= DTC_CMU_MODULE_VOLTAGE_IMPLAUSIBLE;
+        dtc = static_cast<DTC_CMU>(dtc | DTC_CMU_MODULE_VOLTAGE_IMPLAUSIBLE);
     }
     return plausible;
 }
