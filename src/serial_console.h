@@ -10,5 +10,6 @@ void serial_console();
 void print_console_help();
 void print_pack_status();
 void print_module_status(int index);
+void print_contactor_status();
 
 #endif // SERIAL_CONSOLE_H
