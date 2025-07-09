@@ -27,12 +27,109 @@ void print_pack_status() {
                    batteryPack.getDTC());
 }
 
+static const char *contactor_state_to_string(Contactormanager::State state) {
+    switch (state) {
+        case Contactormanager::INIT: return "INIT";
+        case Contactormanager::OPEN: return "OPEN";
+        case Contactormanager::CLOSING_PRECHARGE: return "CLOS_PRE";
+        case Contactormanager::CLOSING_POSITIVE: return "CLOS_POS";
+        case Contactormanager::CLOSED: return "CLOSED";
+        case Contactormanager::OPENING_POSITIVE: return "OPEN_POS";
+        case Contactormanager::OPENING_PRECHARGE: return "OPEN_PRE";
+        case Contactormanager::FAULT: return "FAULT";
+        default: return "UNKNOWN";
+    }
+}
+
+static String contactor_dtc_to_string(Contactormanager::DTC_COM dtc) {
+    String errorString = "";
+    if (dtc == Contactormanager::DTC_COM_NONE) {
+        errorString = "None";
+    } else {
+        bool hasError = false;
+        if (dtc & Contactormanager::DTC_COM_NO_CONTACTOR_POWER_SUPPLY) {
+            errorString += "NO_POWER, ";
+            hasError = true;
+        }
+        if (dtc & Contactormanager::DTC_COM_NEGATIVE_CONTACTOR_FAULT) {
+            errorString += "NEG_FAULT, ";
+            hasError = true;
+        }
+        if (dtc & Contactormanager::DTC_COM_PRECHARGE_CONTACTOR_FAULT) {
+            errorString += "PRECHARGE_FAULT, ";
+            hasError = true;
+        }
+        if (dtc & Contactormanager::DTC_COM_POSITIVE_CONTACTOR_FAULT) {
+            errorString += "POSITIVE_FAULT, ";
+            hasError = true;
+        }
+        if (hasError) {
+            errorString.remove(errorString.length() - 2);
+        }
+    }
+    return errorString;
+}
+
+static const char *module_state_to_string(BatteryModule::STATE_CMU state) {
+    switch (state) {
+        case BatteryModule::INIT: return "INIT";
+        case BatteryModule::OPERATING: return "OPERATING";
+        case BatteryModule::FAULT: return "FAULT";
+        default: return "UNKNOWN";
+    }
+}
+
+static String module_dtc_to_string(BatteryModule::DTC_CMU dtc) {
+    String errorString = "";
+    if (static_cast<uint8_t>(dtc) == 0) {
+        errorString = "None";
+    } else {
+        if (dtc & BatteryModule::DTC_CMU_INTERNAL_ERROR) {
+            errorString += "INTERNAL_ERROR, ";
+        }
+        if (dtc & BatteryModule::DTC_CMU_TEMPERATURE_TOO_HIGH) {
+            errorString += "TEMP_TOO_HIGH, ";
+        }
+        if (dtc & BatteryModule::DTC_CMU_SINGLE_VOLTAGE_IMPLAUSIBLE) {
+            errorString += "VOLT_IMPLAUSIBLE, ";
+        }
+        if (dtc & BatteryModule::DTC_CMU_TEMPERATURE_IMPLAUSIBLE) {
+            errorString += "TEMP_IMPLAUSIBLE, ";
+        }
+        if (dtc & BatteryModule::DTC_CMU_TIMED_OUT) {
+            errorString += "TIMED_OUT, ";
+        }
+        if (dtc & BatteryModule::DTC_CMU_MODULE_VOLTAGE_IMPLAUSIBLE) {
+            errorString += "MODULE_VOLT_IMPLAUSIBLE, ";
+        }
+        errorString.remove(errorString.length() - 2);
+    }
+    return errorString;
+}
+
 void print_module_status(int index) {
     if (index < 0 || index >= MODULES_PER_PACK) {
         console.println("Invalid module index");
         return;
     }
-    batteryPack.modules[index].print();
+    BatteryModule &mod = batteryPack.modules[index];
+    console.printf("Module %d\n", index);
+    console.printf("  State: %s\n", module_state_to_string(mod.getState()));
+    console.printf("  DTC: %s\n", module_dtc_to_string(mod.getDTC()).c_str());
+    console.printf("  Voltage: %3.3fV\n", mod.get_voltage());
+    console.printf("  Lowest Cell: %3.3fV, Highest Cell: %3.3fV\n",
+                   mod.get_lowest_cell_voltage(), mod.get_highest_cell_voltage());
+    console.printf("  Lowest Temp: %.1fC, Highest Temp: %.1fC, Avg Temp: %.1fC\n",
+                   mod.get_lowest_temperature(), mod.get_highest_temperature(),
+                   mod.get_average_temperature());
+    console.printf("  Balancing: %d\n", mod.get_is_balancing());
+}
+
+void print_contactor_status() {
+    console.printf("Contactor State: %s\n",
+                   contactor_state_to_string(contactor_manager.getState()));
+    console.printf("Contactor DTC: %s\n",
+                   contactor_dtc_to_string(contactor_manager.getDTC()).c_str());
 }
 
 void enable_serial_console() {
@@ -53,7 +150,7 @@ void serial_console() {
                 contactor_manager.open();
                 break;
             case 's':
-                contactor_manager.print();
+                print_contactor_status();
                 break;
             case 'p':
                 print_pack_status();
