@@ -11,6 +11,7 @@
 #include "bms/battery i3/pack.h"
 #include "bms/battery_manager.h"
 #include "comms_bms.h"
+#include "serial_console.h"
 
 #ifndef __IMXRT1062__
 #error "This sketch should be compiled for Teensy 4.1"
@@ -82,6 +83,7 @@ void setup()
   // Main module startup
   enable_BMS_tasks();
   enable_print_debug();
+  enable_serial_console();
 
   // Watchdog startup
   // WDT_timings_t config;
@@ -95,6 +97,7 @@ void setup()
 void loop()
 {
   scheduler.execute();
+  serial_console();
   // wdt.feed(); // must feed the watchdog every so often or it'll get angry
 }
 
