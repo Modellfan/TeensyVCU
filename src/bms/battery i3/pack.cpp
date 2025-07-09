@@ -11,9 +11,6 @@ BatteryPack::BatteryPack() {}
 
 BatteryPack::BatteryPack(int _numModules)
 {
-
-    // printf("Initialising BatteryPack %d\n", 1);
-
     numModules = _numModules;
     state = INIT;
     dtc = DTC_PACK_NONE;
@@ -21,7 +18,6 @@ BatteryPack::BatteryPack(int _numModules)
     // Initialise modules
     for (int m = 0; m < numModules; m++)
     {
-        // printf("Creating module %d (cpm:%d, tpm:%d)\n", m, numCellsPerModule, numTemperatureSensorsPerModule);
         modules[m] = BatteryModule(m, this);
     }
 }
@@ -67,7 +63,7 @@ void BatteryPack::initialize()
     {
         Serial.print("Error Battery CAN: 0x");
         Serial.println(errorCode, HEX);
-        dtc |= DTC_PACK_CAN_INIT_ERROR;
+        dtc = static_cast<DTC_PACK>(dtc | DTC_PACK_CAN_INIT_ERROR);
     }
 
     inStartup = true;
@@ -78,16 +74,6 @@ void BatteryPack::initialize()
     balanceTargetVoltage = 4.27;
 
     crc8.begin();
-}
-
-void BatteryPack::print()
-{
-    Serial.printf("Pack: %3.2fV; Lowest Cell: %3.2fV; Highest Cell: %3.2fV; Balancing Target: %3.2fV; Balancing Activated: %d; Any Module Balancing %d; State: %s; DTC : %s\n", get_pack_voltage(), get_lowest_cell_voltage(), get_highest_cell_voltage(), balanceTargetVoltage, balanceActive, this->get_any_module_balancing(), this->getStateString(), this->getDTCString().c_str());
-    for (int m = 0; m < numModules; m++)
-    {
-        modules[m].print();
-    }
-    Serial.println("");
 }
 
 // Calculate the checksum for a message to be sent out.
@@ -159,7 +145,7 @@ void BatteryPack::request_data()
         }
     }
 
-    // Byte 5: is alsways 0x00
+    // Byte 5: is always 0x00
     pollModuleFrame.data[5] = 0x00;
 
     // Byte 6: has the frame counter in the higher nibble. One bit is set at the end of startup.
@@ -209,14 +195,13 @@ void BatteryPack::read_message()
         byte numModulesOperating = 0;
         for (int i = 0; i < numModules; i++)
         {
-            float v = modules[i].get_voltage();
             if (modules[i].getState() == BatteryModule::OPERATING)
             {
                 numModulesOperating++;
             }
             if (modules[i].getState() == BatteryModule::FAULT)
             {
-                dtc |= DTC_PACK_MODULE_FAULT;
+                dtc = static_cast<DTC_PACK>(dtc | DTC_PACK_MODULE_FAULT);
             }
         }
 
@@ -236,7 +221,7 @@ void BatteryPack::read_message()
         {
             if (modules[i].getState() == BatteryModule::FAULT)
             {
-                dtc |= DTC_PACK_MODULE_FAULT;
+                dtc = static_cast<DTC_PACK>(dtc | DTC_PACK_MODULE_FAULT);
             }
         }
         if (dtc > 0)
@@ -261,7 +246,7 @@ void BatteryPack::send_message(CANMessage *frame)
     }
     else
     {
-        dtc |= DTC_PACK_CAN_SEND_ERROR;
+        dtc = static_cast<DTC_PACK>(dtc | DTC_PACK_CAN_SEND_ERROR);
     }
 }
 
@@ -451,14 +436,14 @@ float BatteryPack::get_pack_voltage()
 bool BatteryPack::get_cell_temperature(byte cellIndex, float &temperature)
 {
     // Check if the cell index is valid
-    if (cellIndex < 0 || cellIndex >= (numModules * TEMPS_PER_MODULE))
+    if (cellIndex < 0 || cellIndex >= (numModules * CELLS_PER_MODULE))
     {
         // Invalid cell index
         return false;
     }
 
     // Calculate the module index and temperature sensor index within the module
-    int moduleIndex = cellIndex / TEMPS_PER_MODULE;
+    int moduleIndex = cellIndex / CELLS_PER_MODULE;
 
     // Check if the module is in operating mode
     if (modules[moduleIndex].getState() == BatteryModule::OPERATING)
@@ -497,6 +482,8 @@ bool BatteryPack::get_any_module_balancing()
 }
 
 BatteryPack::STATE_PACK BatteryPack::getState() { return state; }
+
+bool BatteryPack::get_state_operating() { return state == OPERATING; }
 
 BatteryPack::DTC_PACK BatteryPack::getDTC() { return dtc; }
 

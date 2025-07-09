@@ -42,61 +42,6 @@ BatteryModule::BatteryModule(int _id, BatteryPack *_pack)
     lastUpdate = millis();
 }
 
-void BatteryModule::printFrame(CANMessage &frame)
-{
-    // Print message
-    Serial.print("ID: ");
-    Serial.print(frame.id, HEX);
-    Serial.print(" Ext: ");
-    if (frame.ext)
-    {
-        Serial.print("Y");
-    }
-    else
-    {
-        Serial.print("N");
-    }
-    Serial.print(" Len: ");
-    Serial.print(frame.len, DEC);
-    Serial.print(" ");
-    for (int i = 0; i < frame.len; i++)
-    {
-        Serial.print(frame.data[i], HEX);
-        Serial.print(" ");
-    }
-    Serial.println();
-}
-
-void BatteryModule::print()
-{
-    // Serial.println(static_cast<uint8_t>(dtc));
-    Serial.printf("Module id: %d (state: %s; DTC: %s; Module Voltage %fV; Lowest Cell %fV; Highest Cell %fV)\n", id, getStateString(), getDTCString().c_str(), moduleVoltage, get_lowest_cell_voltage(), get_highest_cell_voltage());
-    Serial.printf("        Cell Voltages : ");
-    for (int c = 0; c < numCells; c++)
-    {
-        Serial.printf("%d:%1.3fV B%d ", c, cellVoltage[c], cellBalance[c]);
-    }
-    Serial.printf("\n");
-    Serial.printf("        Temperatures : ");
-    for (int t = 0; t < numTemperatureSensors; t++)
-    {
-        Serial.printf("%d:%3.2fC ", t, cellTemperature[t]);
-    }
-    Serial.printf("\n");
-
-    // SignalManager::logSignal("sg_mod" + String(id) + "_alive", module_is_alive());
-    //  SignalManager::logSignal("sg_mod" + String(id) + "_populated", all_module_data_populated());
-    // for (int c = 0; c < numCells; c++)
-    // {
-    //     SignalManager::logSignal("sg_mod" + String(id) + "_cell" + String(c) + "_voltage", cellVoltage[c]);
-    //     SignalManager::logSignal("sg_mod" + String(id) + "_cell" + String(c) + "_balancing", cellBalance[c]);
-    // }
-    // for (int t = 0; t < numTemperatureSensors; t++)
-    // {
-    //     SignalManager::logSignal("sg_mod" + String(id) + "_temperature" + String(t), cellTemperature[t]);
-    // }
-}
-
 void BatteryModule::process_message(CANMessage &msg)
 {
     if ((msg.id & 0x00F) != id) // check if module id belongs to this module
@@ -216,12 +161,12 @@ void BatteryModule::process_message(CANMessage &msg)
         if (cmuError)
         {
             state = FAULT;
-            dtc |= DTC_CMU_INTERNAL_ERROR;
+            dtc = static_cast<DTC_CMU>(dtc | DTC_CMU_INTERNAL_ERROR);
         }
         if (temperatureInternal > CMU_MAX_INTERNAL_WARNING_TEMPERATURE)
         {
             state = FAULT;
-            dtc |= DTC_CMU_TEMPERATURE_TOO_HIGH;
+            dtc = static_cast<DTC_CMU>(dtc | DTC_CMU_TEMPERATURE_TOO_HIGH);
         }
         if (plausibilityCheck() == false)
         {
@@ -235,12 +180,12 @@ void BatteryModule::process_message(CANMessage &msg)
         if (cmuError)
         {
             state = FAULT;
-            dtc |= DTC_CMU_INTERNAL_ERROR;
+            dtc = static_cast<DTC_CMU>(dtc | DTC_CMU_INTERNAL_ERROR);
         }
         if (temperatureInternal > CMU_MAX_INTERNAL_WARNING_TEMPERATURE)
         {
             state = FAULT;
-            dtc |= DTC_CMU_TEMPERATURE_TOO_HIGH;
+            dtc = static_cast<DTC_CMU>(dtc | DTC_CMU_TEMPERATURE_TOO_HIGH);
         }
         if (plausibilityCheck() == false)
         {
@@ -326,7 +271,7 @@ float BatteryModule::get_lowest_temperature()
 // Return the temperature of the hottest sensor in the module
 float BatteryModule::get_highest_temperature()
 {
-    float highestTemperature = -50;
+    float highestTemperature = -50.0;
     for (int t = 0; t < numTemperatureSensors; t++)
     {
         if (cellTemperature[t] > highestTemperature)
@@ -349,7 +294,7 @@ void BatteryModule::check_alive()
         if ((millis() - lastUpdate) > PACK_ALIVE_TIMEOUT)
         {
             state = FAULT;
-            dtc |= DTC_CMU_TIMED_OUT;
+            dtc = static_cast<DTC_CMU>(dtc | DTC_CMU_TIMED_OUT);
             // Serial.println(String(millis()) + ": Timed out");
         }
         break;
@@ -364,12 +309,12 @@ bool BatteryModule::plausibilityCheck()
     if ((get_lowest_cell_voltage() < CMU_MIN_PLAUSIBLE_VOLTAGE) || (get_highest_cell_voltage() > CMU_MAX_PLAUSIBLE_VOLTAGE))
     {
         plausible = false;
-        dtc |= DTC_CMU_SINGLE_VOLTAGE_IMPLAUSIBLE;
+        dtc = static_cast<DTC_CMU>(dtc | DTC_CMU_SINGLE_VOLTAGE_IMPLAUSIBLE);
     }
     if ((get_lowest_temperature() < CMU_MIN_PLAUSIBLE_TEMPERATURE) || (get_highest_temperature() > CMU_MAX_PLAUSIBLE_TEMPERATURE))
     {
         plausible = false;
-        dtc |= DTC_CMU_TEMPERATURE_IMPLAUSIBLE;
+        dtc = static_cast<DTC_CMU>(dtc | DTC_CMU_TEMPERATURE_IMPLAUSIBLE);
     }
 
     float totalVoltage = 0.0000f;
@@ -381,7 +326,7 @@ bool BatteryModule::plausibilityCheck()
     if (((totalVoltage - CMU_MAX_DELTA_MODULE_CELL_VOLTAGE) > moduleVoltage) || ((totalVoltage + CMU_MAX_DELTA_MODULE_CELL_VOLTAGE) < moduleVoltage))
     {
         plausible = false;
-        dtc |= DTC_CMU_MODULE_VOLTAGE_IMPLAUSIBLE;
+        dtc = static_cast<DTC_CMU>(dtc | DTC_CMU_MODULE_VOLTAGE_IMPLAUSIBLE);
     }
     return plausible;
 }

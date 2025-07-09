@@ -35,7 +35,6 @@ public:
     // Runnables
     void process_message(CANMessage &msg);
     void check_alive();
-    void print();
 
     // Our state
     STATE_CMU getState();
@@ -83,8 +82,6 @@ private:
 
     bool check_if_module_data_is_populated();
     bool plausibilityCheck();
-
-    void printFrame(CANMessage &frame);
 };
 
 #endif

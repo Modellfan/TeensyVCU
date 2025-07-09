@@ -16,13 +16,6 @@ Shunt_ISA_iPace::Shunt_ISA_iPace()
     _firstUpdate = true;
 }
 
-void Shunt_ISA_iPace::print() 
-{
-    Serial.println("ISA shunt:");
-    Serial.printf("    State %d, DTC %d, Current %f A, Temperature %f °C, Current Average %f A\n", this->getState(), this->getDTCString().c_str(), getCurrent(), getTemperature(), getCurrentAverage());
-    Serial.println();
-}
-
 void Shunt_ISA_iPace::initialise()
 {
     _state = INIT;
@@ -154,27 +147,6 @@ void Shunt_ISA_iPace::update()
             break;
         }
     }
-}
-
-void Shunt_ISA_iPace::monitor(std::function<void(const CANMessage &)> callback)
-{
-    CANMessage msg;
-
-    msg.data64 = 0;
-    msg.id = 1070; // Message 0x42e shunt_state 8bits None
-    msg.len = 8;
-    pack(msg, getState(), 0, 8, false, 1, 0);                  // getState : 0|8 little_endian unsigned scale: 1, offset: 0, unit: None, None
-    pack(msg, getDTC(), 8, 8, false, 1, 0);                    // getDTC : 8|8 little_endian unsigned scale: 1, offset: 0, unit: None, None
-    pack(msg, getCurrent(), 16, 16, false, 0.1, -1000);        // getCurrent : 16|16 little_endian unsigned scale: 0.1, offset: -1000, unit: Volt, None
-    pack(msg, getTemperature(), 32, 16, false, 0.1, -40);      // getTemperature : 32|16 little_endian unsigned scale: 0.1, offset: -40, unit: None, None
-    pack(msg, getCurrentAverage(), 48, 16, false, 0.1, -1000); // getCurrentAverage : 48|16 little_endian unsigned scale: 0.1, offset: -1000, unit: None, None
-
-    // Send the CAN message using the provided callback
-    if (callback != nullptr)
-    {
-        callback(msg);
-    }
-
 }
 
 void Shunt_ISA_iPace::calculate_current_values()

@@ -51,9 +51,9 @@ private:
     Contactormanager &contactorManager;
     
 
-    bool cell_available[CELLS_PER_MODULE * CELLS_PER_MODULE];
-    float internal_resistance[CELLS_PER_MODULE * CELLS_PER_MODULE];
-    float open_circuite_voltage[CELLS_PER_MODULE * CELLS_PER_MODULE];
+    bool cell_available[CELLS_PER_MODULE * MODULES_PER_PACK];
+    float internal_resistance[CELLS_PER_MODULE * MODULES_PER_PACK];
+    float open_circuite_voltage[CELLS_PER_MODULE * MODULES_PER_PACK];
 
     float power; // in Ws
 

@@ -143,14 +143,7 @@ void enable_BMS_monitor()
 //---------------------------------------------------------------------------------------------------------------------------------------------
 void print_debug()
 {
-    extern BatteryPack batteryPack;
-    batteryPack.print();
-
-    extern Contactormanager contactor_manager;
-    contactor_manager.print();
-
-    extern Shunt_ISA_iPace shunt;
-    shunt.print();   
+  
 }
 
 Task print_debug_timer(1000, TASK_FOREVER, &print_debug);

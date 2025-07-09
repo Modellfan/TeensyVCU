@@ -37,7 +37,6 @@ public:
     BatteryModule modules[MODULES_PER_PACK]; // The child modules that make up this BatteryPack
 
     // Runnables
-    void print();
     void initialize();
 
     void request_data(); // Send out message
@@ -45,6 +44,7 @@ public:
 
     // Our state
     STATE_PACK getState();
+    bool get_state_operating();
     DTC_PACK getDTC();
 
     // Helper functions
@@ -78,15 +78,13 @@ private:
     bool balanceActive;
 
     // private variables for polling
-    uint8_t pollMessageId;
-    bool initialised;
     CRC8 crc8;
     bool inStartup;
     uint8_t modulePollingCycle;
     uint8_t moduleToPoll;
     CANMessage pollModuleFrame;
 
-    // sate and dtc
+    // state and dtc
     STATE_PACK state;
     DTC_PACK dtc;
 

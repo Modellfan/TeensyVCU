@@ -98,6 +98,8 @@ void loop()
 {
   scheduler.execute();
   serial_console();
+  //Poll can buses
+
   // wdt.feed(); // must feed the watchdog every so often or it'll get angry
 }
 

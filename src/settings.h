@@ -1,13 +1,12 @@
 #ifndef SETTINGS_H
 #define SETTINGS_H
 
-#define VERSION 1.0
+#define VERSION 2.0
 //#define DEBUG
 
 //---------------------------------------------------------------------------------------------------------------------------------------------
 //CMU and pack settings
 //---------------------------------------------------------------------------------------------------------------------------------------------
-#define NUM_PACKS         1
 #define CELLS_PER_MODULE 12                        // The number of cells in each module
 #define TEMPS_PER_MODULE  4                        // The number of temperature sensors in each module
 #define MODULES_PER_PACK  8                        // The number of possible  modules in each pack
@@ -170,32 +169,24 @@
 
 // Battery
 
-// Official min pack voltage = 269V. 269 / 6 / 16 = 2.8020833333V
-#define CELL_EMPTY_VOLTAGE 2.9
+// // Official min pack voltage = 269V. 269 / 6 / 16 = 2.8020833333V
+// #define CELL_EMPTY_VOLTAGE 2.9
 
-// Official max pack voltage = 398V. 398 / 6 / 16 = 4.1458333333V
-#define CELL_FULL_VOLTAGE 4.0
+// // Official max pack voltage = 398V. 398 / 6 / 16 = 4.1458333333V
+// #define CELL_FULL_VOLTAGE 4.0
 
-#define CELL_UNDER_TEMPERATURE_FAULT_THRESHOLD 0    // degrees
-#define CELL_OVER_TEMPERATURE_WARNING_THRESHOLD 55  // degrees
-#define CELL_OVER_TEMPERATURE_FAULT_THRESHOLD 65    // degrees
+// #define CELL_UNDER_TEMPERATURE_FAULT_THRESHOLD 0    // degrees
+// #define CELL_OVER_TEMPERATURE_WARNING_THRESHOLD 55  // degrees
+// #define CELL_OVER_TEMPERATURE_FAULT_THRESHOLD 65    // degrees
 
-#define CHARGE_THROTTLE_TEMP_LOW  45                // Start throttling charge current when battery sensors above this temperature
-#define CHARGE_THROTTLE_TEMP_HIGH 65                // Top of the throttling scale. Limit current to CHARGE_CURRENT_MIN at and above this temperature
-#define CHARGE_CURRENT_MAX 125                      // ~50kw
-#define CHARGE_CURRENT_MIN 8                        // ~3.3kw
+// #define CHARGE_THROTTLE_TEMP_LOW  45                // Start throttling charge current when battery sensors above this temperature
+// #define CHARGE_THROTTLE_TEMP_HIGH 65                // Top of the throttling scale. Limit current to CHARGE_CURRENT_MIN at and above this temperature
+// #define CHARGE_CURRENT_MAX 125                      // ~50kw
+// #define CHARGE_CURRENT_MIN 8                        // ~3.3kw
 
-#define BALANCE_INTERVAL 1200                       // number of seconds between balancing sessions
+// #define BALANCE_INTERVAL 1200                       // number of seconds between balancing sessions
 
-#define WATCHDOG_TIMEOUT 150 // Set the watchdog timeout in milliseconds
+// #define WATCHDOG_TIMEOUT 150 // Set the watchdog timeout in milliseconds
 
-
-
-// Debug function for teleplot app in vscode
-#define PLOT(name, value) \
-    do { \
-        SerialUSB1.print(">" #name ":"); \
-        SerialUSB1.println(value); \
-    } while(0)
 
 #endif
