@@ -483,6 +483,8 @@ bool BatteryPack::get_any_module_balancing()
 
 BatteryPack::STATE_PACK BatteryPack::getState() { return state; }
 
+bool BatteryPack::get_state_operating() { return state == OPERATING; }
+
 BatteryPack::DTC_PACK BatteryPack::getDTC() { return dtc; }
 
 bool BatteryPack::get_balancing_active() { return balanceActive; }
