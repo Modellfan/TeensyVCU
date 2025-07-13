@@ -17,6 +17,7 @@ BMS::BMS(BatteryPack &_batteryPack, Shunt_ISA_iPace &_shunt, Contactormanager &_
     max_charge_current = 0.0f;
     max_discharge_current = 0.0f;
     ready_to_shutdown = false;
+    vehicle_state = STATE_SLEEP;
 }
 
 void BMS::initialize()
@@ -121,6 +122,10 @@ void BMS::read_message()
 
     if (ACAN_T4::BMS_CAN.receive(msg))
     {
+        if (msg.id == VCU_STATUS_MSG_ID && msg.len >= 1)
+        {
+            vehicle_state = static_cast<VehicleState>(msg.data[0]);
+        }
         //Incoming from Main
         //  Energy state - struct
         //  Close contactor manually/ open boolean
@@ -376,6 +381,11 @@ void BMS::set_ready_to_shutdown(bool ready)
 bool BMS::get_ready_to_shutdown() const
 {
     return ready_to_shutdown;
+}
+  
+BMS::VehicleState BMS::get_vehicle_state()
+{
+    return vehicle_state;
 }
 
 
