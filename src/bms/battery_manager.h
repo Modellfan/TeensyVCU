@@ -122,9 +122,9 @@ private:
     void send_battery_status_message();
 
     // --- Core Functions ---
-    void calculate_soc_ocv_lut();
-    void calculate_soc_coulomb_counting();
-    void calculate_soc_correction();
+    void update_soc_ocv_lut();
+    void update_soc_coulomb_counting();
+    void correct_soc();
     void calculate_soh();
 
     void lookup_current_limits();
