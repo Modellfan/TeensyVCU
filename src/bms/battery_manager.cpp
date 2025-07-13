@@ -5,6 +5,7 @@
 #include "bms/current.h"
 #include "bms/contactor_manager.h"
 #include "utils/can_packer.h"
+#include "utils/soc_lookup.h"
 #include <math.h>
 
 // #define DEBUG
@@ -236,9 +237,25 @@ void BMS::send_message(CANMessage *frame)
 
 // --- Core Algorithm Stubs -------------------------------------------------
 
-void BMS::calculate_soc_ocv_lut() {}
-void BMS::calculate_soc_coulomb_counting() {}
-void BMS::calculate_soc_correction() {}
+void BMS::update_soc_ocv_lut() {
+    if (fabs(pack_current) <= BMS_OCV_CURRENT_THRESHOLD) {
+        // Use lowest cell voltage across the pack as OCV reference
+        const float ocv = batteryPack.get_lowest_cell_voltage();
+
+        // Average pack temperature handled by BatteryPack
+        const float avgTemp = batteryPack.get_average_temperature();
+
+        soc_ocv_lut = SOC_FROM_OCV_TEMP(avgTemp, ocv);
+    }
+}
+
+void BMS::update_soc_coulomb_counting() {
+    soc_coulomb_counting = 0.0f;
+}
+
+void BMS::correct_soc() {
+    soc = soc_ocv_lut;
+}
 void BMS::calculate_soh() {}
 
 void BMS::lookup_current_limits() {}

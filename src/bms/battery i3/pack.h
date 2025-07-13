@@ -69,6 +69,7 @@ public:
     //   Temperature
     float get_lowest_temperature();
     float get_highest_temperature();
+    float get_average_temperature();
     bool get_cell_temperature(byte cell, float &temperature);
 
 private:
