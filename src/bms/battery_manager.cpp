@@ -234,3 +234,26 @@ void BMS::send_message(CANMessage *frame)
     }
 }
 
+// --- Core Algorithm Stubs -------------------------------------------------
+
+void BMS::calculate_soc_ocv_lut() {}
+void BMS::calculate_soc_coulomb_counting() {}
+void BMS::calculate_soc_correction() {}
+void BMS::calculate_soh() {}
+
+void BMS::lookup_current_limits() {}
+void BMS::lookup_internal_resistance_table() {}
+void BMS::estimate_internal_resistance_online() {}
+void BMS::select_internal_resistance_used() {}
+
+void BMS::calculate_voltage_derate() {}
+void BMS::calculate_rms_ema() {}
+void BMS::calculate_dynamic_voltage_limit() {}
+
+void BMS::select_current_limit() {}
+
+void BMS::calculate_limp_home_limit() {}
+void BMS::select_limp_home() {}
+
+void BMS::rate_limit_current() {}
+
