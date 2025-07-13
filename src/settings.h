@@ -62,6 +62,21 @@
 
 #define BMS_MAX_DISCHARGE_PEAK_CURRENT 406 * 0.9 //Safetyfactor
 
+// Internal resistance online estimation parameters
+#define IR_ESTIMATION_CURRENT_STEP_THRESHOLD 1.0f
+#define IR_ESTIMATION_ALPHA 0.1f
+
+// Voltage thresholds for current derating
+#define V_MIN_DERATE 3.3f
+#define V_MIN_CUTOFF 3.0f
+#define V_MAX_DERATE 4.1f
+#define V_MAX_CUTOFF 4.2f
+
+// Maximum absolute pack current (A) for valid OCV-based SOC estimation
+#define BMS_OCV_CURRENT_THRESHOLD 0.5f
+
+
+
 // //Discharge Limits
 // const int16_t temperatures[] PROGMEM = {60, 50, 40, 35, 30, 25, 20, 15, 10, 5, 0, -5, -10, -15, -20, -25, -30, -40};
 // const int16_t continuous_discharge_CurrentLimits[] PROGMEM = {223, 223, 223, 210, 196, 180, 166, 153, 136, 124, 108, 93, 77, 74, 62, 57, 46, 33};

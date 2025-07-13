@@ -5,6 +5,8 @@
 #include "bms/current.h"
 #include "bms/contactor_manager.h"
 #include "utils/can_packer.h"
+#include "utils/current_limit_lookup.h"
+#include "utils/soc_lookup.h"
 #include <math.h>
 
 // #define DEBUG
@@ -16,6 +18,12 @@ BMS::BMS(BatteryPack &_batteryPack, Shunt_ISA_iPace &_shunt, Contactormanager &_
     moduleToBeMonitored = 0;
     max_charge_current = 0.0f;
     max_discharge_current = 0.0f;
+    current_limit_peak = 0.0f;
+    current_limit_rms = 0.0f;
+    current_limit_peak_charge = 0.0f;
+    current_limit_rms_charge = 0.0f;
+    current_limit_rms_derated_discharge = 0.0f;
+    current_limit_rms_derated_charge = 0.0f;
     ready_to_shutdown = false;
     vehicle_state = STATE_SLEEP;
 }
@@ -233,4 +241,150 @@ void BMS::send_message(CANMessage *frame)
         // Serial.println("Send nok");
     }
 }
+
+// --- Core Algorithm Stubs -------------------------------------------------
+
+void BMS::update_soc_ocv_lut() {
+    if (fabs(pack_current) <= BMS_OCV_CURRENT_THRESHOLD) {
+        // Use lowest cell voltage across the pack as OCV reference
+        const float ocv = batteryPack.get_lowest_cell_voltage();
+
+        // Average pack temperature handled by BatteryPack
+        const float avgTemp = batteryPack.get_average_temperature();
+
+        soc_ocv_lut = SOC_FROM_OCV_TEMP(avgTemp, ocv);
+    }
+}
+
+void BMS::update_soc_coulomb_counting() {
+    soc_coulomb_counting = 0.0f;
+}
+
+void BMS::correct_soc() {
+    soc = soc_ocv_lut;
+}
+void BMS::calculate_soh() {}
+
+void BMS::lookup_current_limits()
+{
+    // Use the coldest cell temperature of the pack as conservative limit.
+    // Assumption: The coldest cell determines the safe current limits for both
+    // charging and discharging operations.
+    float temperature = batteryPack.get_lowest_temperature();
+
+    // Lookup tables defined in utils/current_limit_lookup.h
+    float discharge_peak = DISCHARGE_PEAK_CURRENT_LIMIT(temperature);
+    float discharge_cont = DISCHARGE_CONT_CURRENT_LIMIT(temperature);
+    float charge_peak = CHARGE_PEAK_CURRENT_LIMIT(temperature);
+    float charge_cont = CHARGE_CONT_CURRENT_LIMIT(temperature);
+
+    // Store results separately for charge and discharge
+    current_limit_peak = discharge_peak; // default discharge limit
+    current_limit_rms = discharge_cont;
+    current_limit_peak_charge = charge_peak;
+    current_limit_rms_charge = charge_cont;
+
+    max_discharge_current = discharge_peak;
+    max_charge_current = charge_peak;
+}
+void BMS::lookup_internal_resistance_table() {}
+void BMS::estimate_internal_resistance_online() {
+    const float current_threshold = IR_ESTIMATION_CURRENT_STEP_THRESHOLD;
+    const float alpha = IR_ESTIMATION_ALPHA;
+
+    static bool first_run = true;
+    static float last_pack_current = 0.0f;
+    static float last_cell_voltage[CELLS_PER_MODULE * MODULES_PER_PACK] = {0};
+
+    // Gather current and voltages
+    pack_current = shunt.getCurrent();
+
+    for (int i = 0; i < CELLS_PER_MODULE * MODULES_PER_PACK; ++i) {
+        float v;
+        if (batteryPack.get_cell_voltage(i, v)) {
+            cell_voltage[i] = v;
+        } else {
+            cell_voltage[i] = 0.0f;
+        }
+    }
+
+    if (first_run) {
+        last_pack_current = pack_current;
+        for (int i = 0; i < CELLS_PER_MODULE * MODULES_PER_PACK; ++i) {
+            last_cell_voltage[i] = cell_voltage[i];
+            internal_resistance_estimated_cells[i] = 0.0f;
+        }
+        first_run = false;
+        return;
+    }
+
+    float deltaI = pack_current - last_pack_current;
+
+    if (fabs(deltaI) > current_threshold) {
+        for (int i = 0; i < CELLS_PER_MODULE * MODULES_PER_PACK; ++i) {
+            float deltaV = cell_voltage[i] - last_cell_voltage[i];
+            float ir_sample = (deltaI != 0.0f) ? deltaV / deltaI : 0.0f;
+            internal_resistance_estimated_cells[i] =
+                alpha * ir_sample + (1.0f - alpha) * internal_resistance_estimated_cells[i];
+        }
+    }
+
+    last_pack_current = pack_current;
+    for (int i = 0; i < CELLS_PER_MODULE * MODULES_PER_PACK; ++i) {
+        last_cell_voltage[i] = cell_voltage[i];
+    }
+
+    // Compute average pack internal resistance from estimated cell values
+    float sum_ir = 0.0f;
+    for (int i = 0; i < CELLS_PER_MODULE * MODULES_PER_PACK; ++i) {
+        sum_ir += internal_resistance_estimated_cells[i];
+    }
+    internal_resistance_estimated =
+        sum_ir / static_cast<float>(CELLS_PER_MODULE * MODULES_PER_PACK);
+}
+void BMS::select_internal_resistance_used() {}
+
+void BMS::calculate_voltage_derate()
+{
+    // Derate discharge current using the lowest cell voltage in the pack
+    float low_voltage = batteryPack.get_lowest_cell_voltage();
+
+    float discharge_derate = 1.0f;
+    // Gradually reduce discharge capability as cells approach the minimum cutoff
+    if (low_voltage < V_MIN_DERATE && low_voltage > V_MIN_CUTOFF)
+    {
+        discharge_derate = (low_voltage - V_MIN_CUTOFF) / (V_MIN_DERATE - V_MIN_CUTOFF);
+    }
+    else if (low_voltage <= V_MIN_CUTOFF)
+    {
+        discharge_derate = 0.0f; // Below cutoff, no discharge allowed
+    }
+
+    current_limit_rms_derated_discharge = current_limit_rms * discharge_derate;
+
+    // Derate charge current using the highest cell voltage in the pack
+    float high_voltage = batteryPack.get_highest_cell_voltage();
+
+    float charge_derate = 1.0f;
+    // Limit charging as cells get close to the maximum voltage threshold
+    if (high_voltage > V_MAX_DERATE && high_voltage < V_MAX_CUTOFF)
+    {
+        charge_derate = (V_MAX_CUTOFF - high_voltage) / (V_MAX_CUTOFF - V_MAX_DERATE);
+    }
+    else if (high_voltage >= V_MAX_CUTOFF)
+    {
+        charge_derate = 0.0f; // Above cutoff, charging not allowed
+    }
+
+    current_limit_rms_derated_charge = current_limit_rms_charge * charge_derate;
+}
+void BMS::calculate_rms_ema() {}
+void BMS::calculate_dynamic_voltage_limit() {}
+
+void BMS::select_current_limit() {}
+
+void BMS::calculate_limp_home_limit() {}
+void BMS::select_limp_home() {}
+
+void BMS::rate_limit_current() {}
 
