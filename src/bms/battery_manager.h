@@ -84,9 +84,12 @@ private:
     float measured_capacity_Ah; // Integrated capacity over a full cycle
 
     // --- Current Limits (Temperature) ---
-    float current_limit_peak;        // Peak allowed current (A)
-    float current_limit_rms;         // RMS allowed current (A)
-    float current_limit_rms_derated; // Derated RMS current limit
+    float current_limit_peak;        // Peak allowed current (A) - discharge direction
+    float current_limit_rms;         // RMS allowed current (A)  - discharge direction
+    float current_limit_peak_charge; // Peak charge current (A)
+    float current_limit_rms_charge;  // Continuous charge current (A)
+    float current_limit_rms_derated_discharge; // Derated RMS current limit for discharge
+    float current_limit_rms_derated_charge;    // Derated RMS current limit for charge
 
     // --- Internal Resistance (IR) ---
     float internal_resistance_table;                                // IR from LUT
@@ -119,9 +122,9 @@ private:
     void send_battery_status_message();
 
     // --- Core Functions ---
-    void calculate_soc_ocv_lut();
-    void calculate_soc_coulomb_counting();
-    void calculate_soc_correction();
+    void update_soc_ocv_lut();
+    void update_soc_coulomb_counting();
+    void correct_soc();
     void calculate_soh();
 
     void lookup_current_limits();
