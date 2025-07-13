@@ -334,6 +334,25 @@ float BatteryPack::get_highest_temperature()
     return highestModuleTemperature;
 }
 
+// return the average temperature of all modules in the pack
+float BatteryPack::get_average_temperature()
+{
+    float sumTemp = 0.0f;
+    int numTemp = 0;
+
+    for (int m = 0; m < numModules; m++)
+    {
+        if (modules[m].getState() != BatteryModule::OPERATING)
+        {
+            continue;
+        }
+        sumTemp += modules[m].get_average_temperature();
+        numTemp++;
+    }
+
+    return (numTemp > 0) ? sumTemp / numTemp : 0.0f;
+}
+
 const char *BatteryPack::getStateString()
 {
     switch (state)
