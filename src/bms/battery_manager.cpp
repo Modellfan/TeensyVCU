@@ -70,49 +70,18 @@ void BMS::initialize()
 void BMS::Task2Ms() { read_message(); } // Read Can messages ?
 void BMS::Task10Ms()
 {
-    float _current;
-    // todo Check if current sensor state is operation
-    _current = shunt.getCurrent();
-    power = _current * batteryPack.get_pack_voltage();
 
-    float _temp;
-    _temp = shunt.getAmpereSeconds();
-    ampere_seconds += _temp;
-    watt_seconds += _temp * batteryPack.get_pack_voltage();
-
-    //todo calculate from internal resistance the internal watt seconds
-
-    soc_coulomb_counting = watt_seconds / total_capacity * 100; // SOC percentage
 
 }
 
 void BMS::Task100Ms()
 {
-    float _temperature;
-    float _voltage;
-    float _current;
 
-    // todo Check if current sensor state is operation
-    // maybe load balance this task by doing one module every 10ms
+}
 
-    _current = shunt.getCurrent();
+void BMS::Task1000Ms()
+{
 
-    for (int i = 0; i <= CELLS_PER_MODULE * MODULES_PER_PACK; ++i)
-    {
-        if (batteryPack.get_cell_voltage(i, _voltage) == false)
-        {
-            cell_available[i] = false;
-            continue;
-        }
-        if (batteryPack.get_cell_temperature(i, _temperature) == false)
-        {
-            cell_available[i] = false;
-            continue;
-        }
-        // if cell value is fine
-        internal_resistance[i] = 1.0; // make it a better calculation. in mOhm
-        open_circuite_voltage[i] = _voltage - internal_resistance[i] * _current / 1000.0;
-    }
 }
 
 // Read messages into modules and check alive
@@ -134,10 +103,32 @@ void BMS::read_message()
 
 }
 
-void BMS::Monitor100Ms()
+void BMS::send_battery_status_message()
 {
+    // Implementation for send_outgoing_messages method
 
-    CANMessage msg;
+    //Messages to charger
+    //-min current
+    //Messages to inverter
+    //-max current
+    //-min current
+    //-bms bollean failiure
+
+    //HMI & Main VCU
+        //max temp °C
+        //min temp °C
+        //delimiting temp °C
+        //soc %
+        //soh %
+        //remaining capacity Wh
+        //total capacity Wh
+        //Battery Voltage V
+        //Battery Current A
+        //Min Current A
+        //Max Current A
+        //Error State
+
+            CANMessage msg;
 
     msg.data64 = 0;
     msg.id = 1050; // Message 0x41a pack_state 8bits None
@@ -167,119 +158,9 @@ void BMS::Monitor100Ms()
     pack(msg, max_discharge_current, 32, 16, false, 0.1, 0);
     pack(msg, max_charge_current, 48, 16, false, 0.1, 0);
     send_message(&msg);
-}
-
-// void BMS::Monitor1000Ms()
-// {
-//     // Implementation for Monitor1000Ms method
-// }
-
-// void BMS::calculate_current_limits()
-// {
-//     float max_current_temperature_derating;
-//     float max_current_dynamic_current_derating_battery;
-//     float max_current_dynamic_current_derating_fuse;
-//     float max_current_voltage_derating;
-//     float max_current_cable_temperature_derating;
-//     float max_current_limp_home;
-//     float max_current_constant_max;
-
-//     float max_current = max_current_constant_max;
-//     max_current = fmin(max_current, max_current_temperature_derating);
-//     max_current = fmin(max_current, max_current_dynamic_current_derating_battery);
-//     max_current = fmin(max_current, max_current_dynamic_current_derating_fuse);
-//     max_current = fmin(max_current, max_current_voltage_derating);
-//     max_current = fmin(max_current, max_current_cable_temperature_derating);
-//     max_current = fmin(max_current, max_current_limp_home);
-//     //Aber auch mindestens Limp home strom
-
-//     float min_current_temperature_derating;
-//     float min_current_dynamic_current_derating_battery;
-//     float min_current_dynamic_current_derating_fuse;
-//     float min_current_voltage_derating;
-//     float min_current_cable_temperature_derating;
-//     float min_current_limp_home;
-//     float min_current_constant_max;
-
-//     float min_current = min_current_constant_max;
-//     min_current = fmax(min_current, min_current_temperature_derating);
-//     min_current = fmax(min_current, min_current_dynamic_current_derating_battery);
-//     min_current = fmax(min_current, min_current_dynamic_current_derating_fuse);
-//     min_current = fmax(min_current, min_current_voltage_derating);
-//     min_current = fmax(min_current, min_current_cable_temperature_derating);
-//     min_current = fmax(min_current, min_current_limp_home);
-// };
-
-// void BMS::calculate_balancing_target()
-// {
-//     // Implementation for calculate_balancing_target method
-// }
-
-// void BMS::calculate_soc()
-// {
-//     // Implementation for calculate_soc method
-// }
-
-// void BMS::calculate_soc_lut()
-// {
-//     // Implementation for calculate_soc_lut method
-// }
-
-// void BMS::calculate_soc_ekf()
-// {
-//     // Implementation for calculate_soc_ekf method
-// }
-
-// void BMS::calculate_soc_coulomb_counting()
-// {
-//     // Implementation for calculate_soc_coulomb_counting method
-// }
-
-// void BMS::calculate_open_circuit_voltage()
-// {
-//     // Implementation for calculate_open_circuit_voltage method
-// }
-
-// void BMS::calculate_soh()
-// {
-//     // Implementation for calculate_soh method
-// }
-
-void BMS::send_battery_status_message()
-{
-    // Implementation for send_outgoing_messages method
-
-    //Messages to charger
-    //-min current
-    //Messages to inverter
-    //-max current
-    //-min current
-    //-bms bollean failiure
-
-    //HMI & Main VCU
-        //max temp °C
-        //min temp °C
-        //delimiting temp °C
-        //soc %
-        //soh %
-        //remaining capacity Wh
-        //total capacity Wh
-        //Battery Voltage V
-        //Battery Current A
-        //Min Current A
-        //Max Current A
-        //Error State
 
 }
 
-// void BMS::calculate_hmi_values()
-// {
-//     // Implementation for calculate_hmi_values method
-
-//     // Temperature
-//     // SOC
-//     // SOE
-// }
 
 // void BMS::update_state_machine()
 // {
@@ -334,7 +215,7 @@ void BMS::send_battery_status_message()
     // }
     // case FAULT:
     // {
-    //     // Additional fault handling logic can be added here if needed
+    //     // Additional fault handling logic can be added here if neededF 
     //     break;
     // }
     // }
@@ -353,57 +234,3 @@ void BMS::send_message(CANMessage *frame)
     }
 }
 
-void BMS::set_max_charge_current(float current)
-{
-    max_charge_current = current;
-}
-
-void BMS::set_max_discharge_current(float current)
-{
-    max_discharge_current = current;
-}
-
-float BMS::get_max_charge_current() const
-{
-    return max_charge_current;
-}
-
-float BMS::get_max_discharge_current() const
-{
-    return max_discharge_current;
-}
-
-void BMS::set_ready_to_shutdown(bool ready)
-{
-    ready_to_shutdown = ready;
-}
-
-bool BMS::get_ready_to_shutdown() const
-{
-    return ready_to_shutdown;
-}
-  
-BMS::VehicleState BMS::get_vehicle_state()
-{
-    return vehicle_state;
-}
-
-
-//Interpolation
-
-// Map2D<8, int16_t, int8_t> test;
-// test.setXs_P(xs);
-// test.setYs_P(ys);
-
-// for (int idx = 250; idx < 2550; idx += 50)
-// {
-//   int8_t val = test.f(idx);
-//   Serial.print(idx);
-//   Serial.print(F(": "));
-//   Serial.println((int)val);
-// }
-
-// const int16_t xs[] PROGMEM = {300, 700, 800, 900, 1500, 1800, 2100, 2500};
-// const int8_t ys[] PROGMEM = {-127, -50, 127, 0, 10, -30, -50, 10};
-// const byte ysb[] PROGMEM = {0, 30, 55, 89, 99, 145, 255, 10};
-// const float ysfl[] PROGMEM = {-127.3, -49.9, 127.0, 0.0, 13.3, -33.0, -35.8, 10.0};

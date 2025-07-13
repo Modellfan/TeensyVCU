@@ -43,7 +43,7 @@ public:
         STATE_LIMP_HOME
     };
 
-    static const uint16_t VCU_STATUS_MSG_ID = 0x500; // CAN message containing vehicle state
+    static const uint16_t VCU_STATUS_MSG_ID = 0x437; // CAN message containing vehicle state
 
     BMS(BatteryPack &_batteryPack, Shunt_ISA_iPace &_shunt, Contactormanager &_contactorManager); // Constructor taking a reference to BatteryPack
 
@@ -55,25 +55,12 @@ public:
     void Task2Ms();  // Read Can messages ?
     void Task10Ms(); // Poll messages
     void Task100Ms();
-
-    void Monitor100Ms();
-    // void Monitor1000Ms();
-
-
-    // Accessors for new status information
-    void set_max_charge_current(float current);
-    void set_max_discharge_current(float current);
-    float get_max_charge_current() const;
-    float get_max_discharge_current() const;
-    void set_ready_to_shutdown(bool ready);
-    bool get_ready_to_shutdown() const;
-    VehicleState get_vehicle_state();
+    void Task1000Ms();
 
 private:
     BatteryPack &batteryPack; // Reference to the BatteryPack
     Shunt_ISA_iPace &shunt;
     Contactormanager &contactorManager;
-    
 
     bool cell_available[CELLS_PER_MODULE * MODULES_PER_PACK];
     float internal_resistance[CELLS_PER_MODULE * MODULES_PER_PACK];
@@ -81,7 +68,7 @@ private:
 
     float power; // in Ws
 
-    //SOC
+    // SOC
     float soc_coulomb_counting;
 
     // Non-Volatile Variable!!
@@ -89,25 +76,7 @@ private:
     float ampere_seconds;
     float total_capacity = BMS_TOTAL_CAPACITY;
 
-
-
-    //         // Current derating
-    //         void calculate_current_limits();
-
-    //         // Calculate balacing target
-    //         void calculate_balancing_target();
-
-    //         // Calculate SOC
-    //         void calculate_soc();
-    //         void calculate_soc_lut();
-    //         void calculate_soc_ekf();
-    //         void calculate_soc_coulomb_counting();
-    //         void calculate_open_circuit_voltage();
-    //         void calculate_soh();
-
-    // // Send CAN messages
     void send_battery_status_message();
-    //         void calculate_hmi_values();
 
     //         // State maschine updating
     //         void update_state_machine();

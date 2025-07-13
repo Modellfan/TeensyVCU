@@ -117,7 +117,7 @@ void enable_BMS_tasks()
 
 void BMS_Monitor100ms()
 {
-    battery_manager.Monitor100Ms();
+    //battery_manager.Monitor100Ms();
 }
 
 void BMS_Monitor1000ms()
