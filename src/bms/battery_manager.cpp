@@ -14,6 +14,7 @@ BMS::BMS(BatteryPack &_batteryPack, Shunt_ISA_iPace &_shunt, Contactormanager &_
     state = INIT;
     dtc = DTC_BMS_NONE;
     moduleToBeMonitored = 0;
+    vehicle_state = STATE_SLEEP;
 }
 
 void BMS::initialize()
@@ -118,6 +119,10 @@ void BMS::read_message()
 
     if (ACAN_T4::BMS_CAN.receive(msg))
     {
+        if (msg.id == VCU_STATUS_MSG_ID && msg.len >= 1)
+        {
+            vehicle_state = static_cast<VehicleState>(msg.data[0]);
+        }
         //Incoming from Main
         //  Energy state - struct
         //  Close contactor manually/ open boolean
@@ -340,6 +345,11 @@ void BMS::send_message(CANMessage *frame)
         dtc |= DTC_BMS_CAN_SEND_ERROR;
         // Serial.println("Send nok");
     }
+}
+
+BMS::VehicleState BMS::get_vehicle_state()
+{
+    return vehicle_state;
 }
 
 

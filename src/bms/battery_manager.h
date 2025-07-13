@@ -31,6 +31,20 @@ public:
         DTC_BMS_PACK_FAULT = 1 << 2,
     } DTC_BMS;
 
+    enum VehicleState
+    {
+        STATE_SLEEP = 0,
+        STATE_STANDBY,
+        STATE_READY,
+        STATE_CONDITIONING,
+        STATE_DRIVE,
+        STATE_CHARGE,
+        STATE_ERROR,
+        STATE_LIMP_HOME
+    };
+
+    static const uint16_t VCU_STATUS_MSG_ID = 0x500; // CAN message containing vehicle state
+
     BMS(BatteryPack &_batteryPack, Shunt_ISA_iPace &_shunt, Contactormanager &_contactorManager); // Constructor taking a reference to BatteryPack
 
     // Runnables
@@ -44,6 +58,8 @@ public:
 
     void Monitor100Ms();
     // void Monitor1000Ms();
+
+    VehicleState get_vehicle_state();
 
 private:
     BatteryPack &batteryPack; // Reference to the BatteryPack
@@ -92,6 +108,9 @@ private:
     void send_message(CANMessage *frame); // Send out CAN message
 
     byte moduleToBeMonitored;
+
+    // Current vehicle state received from the VCU
+    VehicleState vehicle_state;
 
     // State and DTC
     STATE_BMS state;
