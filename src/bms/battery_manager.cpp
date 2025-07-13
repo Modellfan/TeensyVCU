@@ -288,7 +288,60 @@ void BMS::lookup_current_limits()
     max_charge_current = charge_peak;
 }
 void BMS::lookup_internal_resistance_table() {}
-void BMS::estimate_internal_resistance_online() {}
+void BMS::estimate_internal_resistance_online() {
+    const float current_threshold = IR_ESTIMATION_CURRENT_STEP_THRESHOLD;
+    const float alpha = IR_ESTIMATION_ALPHA;
+
+    static bool first_run = true;
+    static float last_pack_current = 0.0f;
+    static float last_cell_voltage[CELLS_PER_MODULE * MODULES_PER_PACK] = {0};
+
+    // Gather current and voltages
+    pack_current = shunt.getCurrent();
+
+    for (int i = 0; i < CELLS_PER_MODULE * MODULES_PER_PACK; ++i) {
+        float v;
+        if (batteryPack.get_cell_voltage(i, v)) {
+            cell_voltage[i] = v;
+        } else {
+            cell_voltage[i] = 0.0f;
+        }
+    }
+
+    if (first_run) {
+        last_pack_current = pack_current;
+        for (int i = 0; i < CELLS_PER_MODULE * MODULES_PER_PACK; ++i) {
+            last_cell_voltage[i] = cell_voltage[i];
+            internal_resistance_estimated_cells[i] = 0.0f;
+        }
+        first_run = false;
+        return;
+    }
+
+    float deltaI = pack_current - last_pack_current;
+
+    if (fabs(deltaI) > current_threshold) {
+        for (int i = 0; i < CELLS_PER_MODULE * MODULES_PER_PACK; ++i) {
+            float deltaV = cell_voltage[i] - last_cell_voltage[i];
+            float ir_sample = (deltaI != 0.0f) ? deltaV / deltaI : 0.0f;
+            internal_resistance_estimated_cells[i] =
+                alpha * ir_sample + (1.0f - alpha) * internal_resistance_estimated_cells[i];
+        }
+    }
+
+    last_pack_current = pack_current;
+    for (int i = 0; i < CELLS_PER_MODULE * MODULES_PER_PACK; ++i) {
+        last_cell_voltage[i] = cell_voltage[i];
+    }
+
+    // Compute average pack internal resistance from estimated cell values
+    float sum_ir = 0.0f;
+    for (int i = 0; i < CELLS_PER_MODULE * MODULES_PER_PACK; ++i) {
+        sum_ir += internal_resistance_estimated_cells[i];
+    }
+    internal_resistance_estimated =
+        sum_ir / static_cast<float>(CELLS_PER_MODULE * MODULES_PER_PACK);
+}
 void BMS::select_internal_resistance_used() {}
 
 void BMS::calculate_voltage_derate()
