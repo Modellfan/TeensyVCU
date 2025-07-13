@@ -14,6 +14,9 @@ BMS::BMS(BatteryPack &_batteryPack, Shunt_ISA_iPace &_shunt, Contactormanager &_
     state = INIT;
     dtc = DTC_BMS_NONE;
     moduleToBeMonitored = 0;
+    max_charge_current = 0.0f;
+    max_discharge_current = 0.0f;
+    ready_to_shutdown = false;
 }
 
 void BMS::initialize()
@@ -139,6 +142,7 @@ void BMS::Monitor100Ms()
     pack(msg, batteryPack.get_balancing_voltage(), 16, 16, false, 0.001, 0); // get_balancing_voltage : 16|16 little_endian unsigned scale: 0.001, offset: 0, unit: Volt, None
     pack(msg, batteryPack.get_balancing_active(), 32, 1, false);             // batteryPack__modules7__get_balancing_active : 32|1 little_endian unsigned scale: 1, offset: 0, unit: None, None
     pack(msg, batteryPack.get_any_module_balancing(), 33, 1, false);         // batteryPack__modules7__get_any_module_balancing : 33|1 little_endian unsigned scale: 1, offset: 0, unit: None, None
+    pack(msg, ready_to_shutdown, 34, 1, false);
     send_message(&msg);
 
     msg.data64 = 0;
@@ -155,6 +159,8 @@ void BMS::Monitor100Ms()
     msg.len = 8;
     pack(msg, batteryPack.get_lowest_temperature(), 0, 16, false, 1, -40);   // batteryPack__get_lowest_temperature : 0|16 little_endian unsigned scale: 1, offset: -40, unit: Â°C, None
     pack(msg, batteryPack.get_highest_temperature(), 16, 16, false, 1, -40); // batteryPack__get_highest_temperature : 16|16 little_endian unsigned scale: 1, offset: -40, unit: Â°C, None
+    pack(msg, max_discharge_current, 32, 16, false, 0.1, 0);
+    pack(msg, max_charge_current, 48, 16, false, 0.1, 0);
     send_message(&msg);
 }
 
@@ -340,6 +346,36 @@ void BMS::send_message(CANMessage *frame)
         dtc |= DTC_BMS_CAN_SEND_ERROR;
         // Serial.println("Send nok");
     }
+}
+
+void BMS::set_max_charge_current(float current)
+{
+    max_charge_current = current;
+}
+
+void BMS::set_max_discharge_current(float current)
+{
+    max_discharge_current = current;
+}
+
+float BMS::get_max_charge_current() const
+{
+    return max_charge_current;
+}
+
+float BMS::get_max_discharge_current() const
+{
+    return max_discharge_current;
+}
+
+void BMS::set_ready_to_shutdown(bool ready)
+{
+    ready_to_shutdown = ready;
+}
+
+bool BMS::get_ready_to_shutdown() const
+{
+    return ready_to_shutdown;
 }
 
 

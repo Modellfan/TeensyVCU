@@ -45,6 +45,14 @@ public:
     void Monitor100Ms();
     // void Monitor1000Ms();
 
+    // Accessors for new status information
+    void set_max_charge_current(float current);
+    void set_max_discharge_current(float current);
+    float get_max_charge_current() const;
+    float get_max_discharge_current() const;
+    void set_ready_to_shutdown(bool ready);
+    bool get_ready_to_shutdown() const;
+
 private:
     BatteryPack &batteryPack; // Reference to the BatteryPack
     Shunt_ISA_iPace &shunt;
@@ -96,6 +104,10 @@ private:
     // State and DTC
     STATE_BMS state;
     DTC_BMS dtc;
+
+    float max_charge_current;
+    float max_discharge_current;
+    bool ready_to_shutdown;
     //         const char *getStateString();
     //         String getDTCString();
 };
