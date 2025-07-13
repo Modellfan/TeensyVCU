@@ -5,6 +5,7 @@
 #include "bms/current.h"
 #include "bms/contactor_manager.h"
 #include "utils/can_packer.h"
+#include "utils/current_limit_lookup.h"
 #include <math.h>
 
 // #define DEBUG
@@ -16,6 +17,12 @@ BMS::BMS(BatteryPack &_batteryPack, Shunt_ISA_iPace &_shunt, Contactormanager &_
     moduleToBeMonitored = 0;
     max_charge_current = 0.0f;
     max_discharge_current = 0.0f;
+    current_limit_peak = 0.0f;
+    current_limit_rms = 0.0f;
+    current_limit_peak_charge = 0.0f;
+    current_limit_rms_charge = 0.0f;
+    current_limit_rms_derated_discharge = 0.0f;
+    current_limit_rms_derated_charge = 0.0f;
     ready_to_shutdown = false;
     vehicle_state = STATE_SLEEP;
 }
@@ -241,12 +248,66 @@ void BMS::calculate_soc_coulomb_counting() {}
 void BMS::calculate_soc_correction() {}
 void BMS::calculate_soh() {}
 
-void BMS::lookup_current_limits() {}
+void BMS::lookup_current_limits()
+{
+    // Use the coldest cell temperature of the pack as conservative limit.
+    // Assumption: The coldest cell determines the safe current limits for both
+    // charging and discharging operations.
+    float temperature = batteryPack.get_lowest_temperature();
+
+    // Lookup tables defined in utils/current_limit_lookup.h
+    float discharge_peak = DISCHARGE_PEAK_CURRENT_LIMIT(temperature);
+    float discharge_cont = DISCHARGE_CONT_CURRENT_LIMIT(temperature);
+    float charge_peak = CHARGE_PEAK_CURRENT_LIMIT(temperature);
+    float charge_cont = CHARGE_CONT_CURRENT_LIMIT(temperature);
+
+    // Store results separately for charge and discharge
+    current_limit_peak = discharge_peak; // default discharge limit
+    current_limit_rms = discharge_cont;
+    current_limit_peak_charge = charge_peak;
+    current_limit_rms_charge = charge_cont;
+
+    max_discharge_current = discharge_peak;
+    max_charge_current = charge_peak;
+}
 void BMS::lookup_internal_resistance_table() {}
 void BMS::estimate_internal_resistance_online() {}
 void BMS::select_internal_resistance_used() {}
 
-void BMS::calculate_voltage_derate() {}
+void BMS::calculate_voltage_derate()
+{
+    // Derate discharge current using the lowest cell voltage in the pack
+    float low_voltage = batteryPack.get_lowest_cell_voltage();
+
+    float discharge_derate = 1.0f;
+    // Gradually reduce discharge capability as cells approach the minimum cutoff
+    if (low_voltage < V_MIN_DERATE && low_voltage > V_MIN_CUTOFF)
+    {
+        discharge_derate = (low_voltage - V_MIN_CUTOFF) / (V_MIN_DERATE - V_MIN_CUTOFF);
+    }
+    else if (low_voltage <= V_MIN_CUTOFF)
+    {
+        discharge_derate = 0.0f; // Below cutoff, no discharge allowed
+    }
+
+    current_limit_rms_derated_discharge = current_limit_rms * discharge_derate;
+
+    // Derate charge current using the highest cell voltage in the pack
+    float high_voltage = batteryPack.get_highest_cell_voltage();
+
+    float charge_derate = 1.0f;
+    // Limit charging as cells get close to the maximum voltage threshold
+    if (high_voltage > V_MAX_DERATE && high_voltage < V_MAX_CUTOFF)
+    {
+        charge_derate = (V_MAX_CUTOFF - high_voltage) / (V_MAX_CUTOFF - V_MAX_DERATE);
+    }
+    else if (high_voltage >= V_MAX_CUTOFF)
+    {
+        charge_derate = 0.0f; // Above cutoff, charging not allowed
+    }
+
+    current_limit_rms_derated_charge = current_limit_rms_charge * charge_derate;
+}
 void BMS::calculate_rms_ema() {}
 void BMS::calculate_dynamic_voltage_limit() {}
 
