@@ -31,7 +31,7 @@ The following tables describe the structure of all CAN messages exchanged betwee
 |-----|--------|------|---------------|-------|-------|
 | 0-1 | Max Discharge Current | `uint16` | A × 10 | 0–65535 | 0–6553.5 A |
 | 2-3 | Max Charge Current | `uint16` | A × 10 | 0–65535 | 0–6553.5 A |
-| 4 | Contactor Status | `uint8` | 0=open, 1=closed | 0–1 | boolean as `uint8` |
+| 4 | Contactor State | `uint8` | enum | 0–7 | 0=INIT,1=OPEN,2=CLOSING_PRE,3=CLOSING_POS,4=CLOSED,5=OPENING_POS,6=OPENING_PRE,7=FAULT |
 | 5 | Fault Code | `uint8` |  | 0–255 | enum |
 | 6 | Counter (4&nbsp;bit) | `uint8` | lower 4 bits only | 0–15 | bits 7–4 always 0 |
 | 7 | CRC8 | `uint8` |  |  |  |

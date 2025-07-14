@@ -78,16 +78,17 @@ void BMS::initialize()
     {
         Serial.print("Error BMS CAN: 0x");
         Serial.println(errorCode, HEX);
-        dtc |= DTC_BMS_CAN_INIT_ERROR;
+        dtc = static_cast<DTC_BMS>(dtc | DTC_BMS_CAN_INIT_ERROR);
     }
 
     contactorManager.close();
 }
 
-void BMS::Task2Ms() { read_message(); } // Read Can messages ?
+void BMS::Task2Ms() { read_message(); }
 
 void BMS::Task10Ms()
 {
+    update_state_machine();
 }
 
 void BMS::Task100Ms()
@@ -97,6 +98,7 @@ void BMS::Task100Ms()
 
 void BMS::Task1000Ms()
 {
+    // Reserved for future use
 }
 
 // Read messages into modules and check alive
@@ -134,64 +136,43 @@ void BMS::read_message()
     }
 }
 
-// void BMS::update_state_machine()
-// {
+void BMS::update_state_machine()
+{
+    BatteryPack::STATE_PACK pack_state = batteryPack.getState();
+    Contactormanager::State contactor_state = contactorManager.getState();
 
-// for (int i = 0; i < numModules; i++)
-// {
-//     modules[i].check_alive();
-// }
+    // Transition to fault state whenever a critical component reports a fault
+    if (pack_state == BatteryPack::FAULT || contactor_state == Contactormanager::FAULT)
+    {
+        dtc = static_cast<DTC_BMS>(dtc | DTC_BMS_PACK_FAULT);
+        state = FAULT;
+        contactorManager.open();
+        return;
+    }
 
-// switch (this->state)
-// {
-// case INIT: // Wait for all modules to go into init
-// {
-//     byte numModulesOperating = 0;
-//     for (int i = 0; i < numModules; i++)
-//     {
-//         float v = modules[i].get_voltage();
-//         if (modules[i].getState() == BatteryModule::OPERATING)
-//         {
-//             numModulesOperating++;
-//         }
-//         if (modules[i].getState() == BatteryModule::FAULT)
-//         {
-//             dtc |= DTC_PACK_MODULE_FAULT;
-//         }
-//     }
+    switch (state)
+    {
+    case INIT:
+        if (pack_state == BatteryPack::OPERATING && contactor_state == Contactormanager::CLOSED)
+        {
+            state = OPERATING;
+        }
+        break;
 
-//     if (numModulesOperating == PACK_WAIT_FOR_NUM_MODULES)
-//     {
-//         state = OPERATING;
-//     }
-//     if (dtc > 0)
-//     {
-//         state = FAULT;
-//     }
-//     break;
-// }
-// case OPERATING: // Check if no module fault is popping up
-// {
-//     for (int i = 0; i < numModules; i++)
-//     {
-//         if (modules[i].getState() == BatteryModule::FAULT)
-//         {
-//             dtc |= DTC_PACK_MODULE_FAULT;
-//         }
-//     }
-//     if (dtc > 0)
-//     {
-//         state = FAULT;
-//     }
-//     break;
-// }
-// case FAULT:
-// {
-//     // Additional fault handling logic can be added here if neededF
-//     break;
-// }
-// }
-// }
+    case OPERATING:
+        // If contactors open unexpectedly, fall back to INIT
+        if (contactor_state != Contactormanager::CLOSED)
+        {
+            state = INIT;
+        }
+        break;
+
+    case FAULT:
+        // Stay in fault until power cycle; ensure contactors are open
+        contactorManager.open();
+        break;
+    }
+}
 
 void BMS::send_message(CANMessage *frame)
 {
@@ -201,7 +182,7 @@ void BMS::send_message(CANMessage *frame)
     }
     else
     {
-        dtc |= DTC_BMS_CAN_SEND_ERROR;
+        dtc = static_cast<DTC_BMS>(dtc | DTC_BMS_CAN_SEND_ERROR);
         // Serial.println("Send nok");
     }
 }
@@ -410,7 +391,7 @@ void BMS::send_battery_status_message()
     msg.data[1] = maxD >> 8;
     msg.data[2] = maxC & 0xFF;
     msg.data[3] = maxC >> 8;
-    msg.data[4] = contactorManager.getState() == Contactormanager::CLOSED ? 1 : 0;
+    msg.data[4] = static_cast<uint8_t>(contactorManager.getState());
     msg.data[5] = static_cast<uint8_t>(dtc);
     msg.data[6] = msg3_counter & 0x0F;
     msg.data[7] = 0;
