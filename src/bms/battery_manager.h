@@ -56,6 +56,11 @@ public:
     void Task100Ms();
     void Task1000Ms();
 
+    // Balancing control
+    void update_balancing();
+
+    bool is_balancing_finished() const { return balancing_finished; }
+
 private:
     BatteryPack &batteryPack; // Reference to the BatteryPack
     Shunt_ISA_iPace &shunt;
@@ -112,6 +117,9 @@ private:
     float current_limit_limp_home;   // Limp home current limit
     float current_limit_selected;    // After limp home logic
     float current_limit_final;       // After rate limiter
+
+    // Balancing finished flag
+    bool balancing_finished;
 
     // Non-Volatile Variable!!
     float watt_seconds;

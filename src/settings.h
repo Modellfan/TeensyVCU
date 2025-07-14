@@ -98,6 +98,18 @@
 // Maximum absolute pack current (A) for valid OCV-based SOC estimation
 #define BMS_OCV_CURRENT_THRESHOLD 10.0f
 
+// -----------------------------------------------------------------------------
+// Balancing Settings
+// -----------------------------------------------------------------------------
+#define BALANCE_DELTA_V      0.015f   // Minimum delta between cells to start balancing (V)
+#define BALANCE_MIN_VOLTAGE  3.4f     // Do not balance below this cell voltage (V)
+#define BALANCE_MAX_TEMP     50.0f    // Do not balance above this temperature (°C)
+#define BALANCE_OFFSET_V     0.005f   // Offset added to lowest cell voltage for target (V)
+
+
+
+
+
 
 
 //Archive
