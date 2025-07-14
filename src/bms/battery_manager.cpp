@@ -84,15 +84,20 @@ void BMS::initialize()
     contactorManager.close();
 }
 
+//###############################################################################################################################################################################
+//  Runnables
+//###############################################################################################################################################################################
+
 void BMS::Task2Ms() { read_message(); }
 
 void BMS::Task10Ms()
 {
-    update_state_machine();
+    // Reserved for future use
 }
 
 void BMS::Task100Ms()
 {
+    update_state_machine();
     send_battery_status_message();
 }
 
@@ -101,40 +106,9 @@ void BMS::Task1000Ms()
     // Reserved for future use
 }
 
-// Read messages into modules and check alive
-void BMS::read_message()
-{
-    CANMessage msg;
-
-    if (ACAN_T4::BMS_CAN.receive(msg))
-    {
-        if (msg.id == BMS_VCU_MSG_ID && msg.len == 8)
-        {
-            uint8_t tmp[8];
-            memcpy(tmp, msg.data, 8);
-            tmp[4] = 0; // crc byte cleared
-            uint8_t crc = can_crc8(tmp);
-            if (crc == msg.data[4])
-            {
-                vehicle_state = static_cast<VehicleState>(msg.data[0]);
-                ready_to_shutdown = msg.data[1];
-                if (msg.data[2])
-                    contactorManager.close();
-                else
-                    contactorManager.open();
-
-                vcu_counter = msg.data[3] & 0x0F;
-                last_vcu_msg = millis();
-                vcu_timeout = false;
-            }
-        }
-    }
-
-    if ((millis() - last_vcu_msg) > BMS_VCU_TIMEOUT)
-    {
-        vcu_timeout = true;
-    }
-}
+//###############################################################################################################################################################################
+//  BMS State Machine
+//###############################################################################################################################################################################
 
 void BMS::update_state_machine()
 {
@@ -174,20 +148,9 @@ void BMS::update_state_machine()
     }
 }
 
-void BMS::send_message(CANMessage *frame)
-{
-    if (ACAN_T4::BMS_CAN.tryToSend(*frame))
-    {
-        // Serial.println("Send ok");
-    }
-    else
-    {
-        dtc = static_cast<DTC_BMS>(dtc | DTC_BMS_CAN_SEND_ERROR);
-        // Serial.println("Send nok");
-    }
-}
-
-// --- Core Algorithm Stubs -------------------------------------------------
+//###############################################################################################################################################################################
+//  Battery Management Functions
+//###############################################################################################################################################################################
 
 void BMS::update_soc_ocv_lut()
 {
@@ -346,6 +309,45 @@ void BMS::select_limp_home() {}
 
 void BMS::rate_limit_current() {}
 
+//###############################################################################################################################################################################
+//  CAN Messaging
+//###############################################################################################################################################################################
+
+// Read messages into modules and check alive
+void BMS::read_message()
+{
+    CANMessage msg;
+
+    if (ACAN_T4::BMS_CAN.receive(msg))
+    {
+        if (msg.id == BMS_VCU_MSG_ID && msg.len == 8)
+        {
+            uint8_t tmp[8];
+            memcpy(tmp, msg.data, 8);
+            tmp[4] = 0; // crc byte cleared
+            uint8_t crc = can_crc8(tmp);
+            if (crc == msg.data[4])
+            {
+                vehicle_state = static_cast<VehicleState>(msg.data[0]);
+                ready_to_shutdown = msg.data[1];
+                if (msg.data[2])
+                    contactorManager.close();
+                else
+                    contactorManager.open();
+
+                vcu_counter = msg.data[3] & 0x0F;
+                last_vcu_msg = millis();
+                vcu_timeout = false;
+            }
+        }
+    }
+
+    if ((millis() - last_vcu_msg) > BMS_VCU_TIMEOUT)
+    {
+        vcu_timeout = true;
+    }
+}
+
 void BMS::send_battery_status_message()
 {
     CANMessage msg;
@@ -428,4 +430,17 @@ void BMS::send_battery_status_message()
     msg.data[5] = can_crc8(msg.data);
     send_message(&msg);
     msg5_counter = (msg5_counter + 1) & 0x0F;
+}
+
+void BMS::send_message(CANMessage *frame)
+{
+    if (ACAN_T4::BMS_CAN.tryToSend(*frame))
+    {
+        // Serial.println("Send ok");
+    }
+    else
+    {
+        dtc = static_cast<DTC_BMS>(dtc | DTC_BMS_CAN_SEND_ERROR);
+        // Serial.println("Send nok");
+    }
 }
