@@ -5,6 +5,7 @@
 #include "bms/current.h"
 #include "bms/contactor_manager.h"
 #include "utils/can_packer.h"
+#include "utils/can_crc.h"
 #include "utils/current_limit_lookup.h"
 #include "utils/soc_lookup.h"
 #include <math.h>
@@ -26,6 +27,8 @@ BMS::BMS(BatteryPack &_batteryPack, Shunt_ISA_iPace &_shunt, Contactormanager &_
     current_limit_rms_derated_charge = 0.0f;
     ready_to_shutdown = false;
     vehicle_state = STATE_SLEEP;
+    msg1_counter=0; msg2_counter=0; msg3_counter=0; msg4_counter=0; msg5_counter=0;
+    vcu_counter=0; last_vcu_msg=0; vcu_timeout=false;
 }
 
 void BMS::initialize()
@@ -99,73 +102,33 @@ void BMS::read_message()
 
     if (ACAN_T4::BMS_CAN.receive(msg))
     {
-        if (msg.id == VCU_STATUS_MSG_ID && msg.len >= 1)
+        if (msg.id == BMS_VCU_MSG_ID && msg.len == 8)
         {
-            vehicle_state = static_cast<VehicleState>(msg.data[0]);
+            uint8_t tmp[8];
+            memcpy(tmp, msg.data, 8);
+            tmp[4] = 0; // crc byte cleared
+            uint8_t crc = can_crc8(tmp);
+            if (crc == msg.data[4])
+            {
+                vehicle_state = static_cast<VehicleState>(msg.data[0]);
+                ready_to_shutdown = msg.data[1];
+                if (msg.data[2])
+                    contactorManager.close();
+                else
+                    contactorManager.open();
+
+                vcu_counter = msg.data[3] & 0x0F;
+                last_vcu_msg = millis();
+                vcu_timeout = false;
+            }
         }
-        //Incoming from Main
-        //  Energy state - struct
-        //  Close contactor manually/ open boolean
     }
 
+    if ((millis() - last_vcu_msg) > BMS_VCU_TIMEOUT)
+    {
+        vcu_timeout = true;
+    }
 
-}
-
-void BMS::send_battery_status_message()
-{
-    // Implementation for send_outgoing_messages method
-
-    //Messages to charger
-    //-min current
-    //Messages to inverter
-    //-max current
-    //-min current
-    //-bms bollean failiure
-
-    //HMI & Main VCU
-        //max temp °C
-        //min temp °C
-        //delimiting temp °C
-        //soc %
-        //soh %
-        //remaining capacity Wh
-        //total capacity Wh
-        //Battery Voltage V
-        //Battery Current A
-        //Min Current A
-        //Max Current A
-        //Error State
-
-            CANMessage msg;
-
-    msg.data64 = 0;
-    msg.id = 1050; // Message 0x41a pack_state 8bits None
-    msg.len = 8;
-    pack(msg, batteryPack.getState(), 0, 8, false, 1, 0);                    // batteryPack__getState : 0|8 little_endian unsigned scale: 1, offset: 0, unit: None, None
-    pack(msg, batteryPack.getDTC(), 8, 8, false, 1, 0);                      // batteryPack__getDTC : 8|8 little_endian unsigned scale: 1, offset: 0, unit: None, None
-    pack(msg, batteryPack.get_balancing_voltage(), 16, 16, false, 0.001, 0); // get_balancing_voltage : 16|16 little_endian unsigned scale: 0.001, offset: 0, unit: Volt, None
-    pack(msg, batteryPack.get_balancing_active(), 32, 1, false);             // batteryPack__modules7__get_balancing_active : 32|1 little_endian unsigned scale: 1, offset: 0, unit: None, None
-    pack(msg, batteryPack.get_any_module_balancing(), 33, 1, false);         // batteryPack__modules7__get_any_module_balancing : 33|1 little_endian unsigned scale: 1, offset: 0, unit: None, None
-    pack(msg, ready_to_shutdown, 34, 1, false);
-    send_message(&msg);
-
-    msg.data64 = 0;
-    msg.id = 1051; // Message 0x41b pack_voltage 8bits None
-    msg.len = 8;
-    pack(msg, batteryPack.get_lowest_cell_voltage(), 0, 16, false, 0.001, 0);   // batteryPack__get_lowest_cell_voltage : 0|16 little_endian unsigned scale: 0.001, offset: 0, unit: Volt, None
-    pack(msg, batteryPack.get_highest_cell_voltage(), 16, 16, false, 0.001, 0); // batteryPack__get_highest_cell_voltage : 16|16 little_endian unsigned scale: 0.001, offset: 0, unit: Volt, None
-    pack(msg, batteryPack.get_pack_voltage(), 32, 16, false, 0.01, 0);         // batteryPack__get_pack_voltage : 32|16 little_endian unsigned scale: 0.001, offset: 0, unit: Volt, None
-    pack(msg, batteryPack.get_delta_cell_voltage(), 48, 16, false, 0.001, 0);   // batteryPack__get_delta_cell_voltage : 48|16 little_endian unsigned scale: 0.001, offset: 0, unit: Volt, None
-    send_message(&msg);
-
-    msg.data64 = 0;
-    msg.id = 1052; // Message 0x41c pack_temperatures 8bits None
-    msg.len = 8;
-    pack(msg, batteryPack.get_lowest_temperature(), 0, 16, false, 1, -40);   // batteryPack__get_lowest_temperature : 0|16 little_endian unsigned scale: 1, offset: -40, unit: Â°C, None
-    pack(msg, batteryPack.get_highest_temperature(), 16, 16, false, 1, -40); // batteryPack__get_highest_temperature : 16|16 little_endian unsigned scale: 1, offset: -40, unit: Â°C, None
-    pack(msg, max_discharge_current, 32, 16, false, 0.1, 0);
-    pack(msg, max_charge_current, 48, 16, false, 0.1, 0);
-    send_message(&msg);
 
 }
 
@@ -388,3 +351,87 @@ void BMS::select_limp_home() {}
 
 void BMS::rate_limit_current() {}
 
+
+void BMS::send_battery_status_message()
+{
+    CANMessage msg;
+
+    msg.id = BMS_MSG_VOLTAGE;
+    msg.len = 8;
+    uint16_t pack_v = (uint16_t)(batteryPack.get_pack_voltage() * 10.0f);
+    uint16_t pack_i = (uint16_t)((shunt.getCurrent() * 10.0f) + 5000.0f);
+    msg.data[0] = pack_v & 0xFF;
+    msg.data[1] = pack_v >> 8;
+    msg.data[2] = pack_i & 0xFF;
+    msg.data[3] = pack_i >> 8;
+    msg.data[4] = (uint8_t)(batteryPack.get_lowest_cell_voltage() * 50.0f);
+    msg.data[5] = (uint8_t)(batteryPack.get_highest_cell_voltage() * 50.0f);
+    msg.data[6] = msg1_counter & 0x0F;
+    msg.data[7] = 0;
+    msg.data[7] = can_crc8(msg.data);
+    send_message(&msg);
+    msg1_counter = (msg1_counter + 1) & 0x0F;
+
+    msg.id = BMS_MSG_CELL_TEMP;
+    uint8_t minT = (uint8_t)(batteryPack.get_lowest_temperature() + 40.0f);
+    uint8_t maxT = (uint8_t)(batteryPack.get_highest_temperature() + 40.0f);
+    uint8_t cellAvg = (uint8_t)(batteryPack.get_pack_voltage() / (MODULES_PER_PACK * CELLS_PER_MODULE) * 50.0f);
+    uint8_t cellDelta = (uint8_t)(batteryPack.get_delta_cell_voltage() * 100.0f);
+    uint16_t packPower = (uint16_t)((batteryPack.get_pack_voltage() * shunt.getCurrent() / 1000.0f) * 10.0f + 2000.0f);
+    msg.data[0] = minT;
+    msg.data[1] = maxT;
+    msg.data[2] = cellAvg;
+    msg.data[3] = cellDelta;
+    msg.data[4] = packPower & 0xFF;
+    msg.data[5] = packPower >> 8;
+    msg.data[6] = msg2_counter & 0x0F;
+    msg.data[7] = 0;
+    msg.data[7] = can_crc8(msg.data);
+    send_message(&msg);
+    msg2_counter = (msg2_counter + 1) & 0x0F;
+
+    msg.id = BMS_MSG_LIMITS;
+    uint16_t maxD = (uint16_t)(max_discharge_current * 10.0f);
+    uint16_t maxC = (uint16_t)(max_charge_current * 10.0f);
+    msg.data[0] = maxD & 0xFF;
+    msg.data[1] = maxD >> 8;
+    msg.data[2] = maxC & 0xFF;
+    msg.data[3] = maxC >> 8;
+    msg.data[4] = contactorManager.getState() == Contactormanager::CLOSED ? 1 : 0;
+    msg.data[5] = static_cast<uint8_t>(dtc);
+    msg.data[6] = msg3_counter & 0x0F;
+    msg.data[7] = 0;
+    msg.data[7] = can_crc8(msg.data);
+    send_message(&msg);
+    msg3_counter = (msg3_counter + 1) & 0x0F;
+
+    msg.id = BMS_MSG_SOC;
+    uint16_t soc16 = (uint16_t)(soc * 100.0f);
+    uint16_t soh16 = (uint16_t)(10000);
+    msg.data[0] = soc16 & 0xFF;
+    msg.data[1] = soc16 >> 8;
+    msg.data[2] = soh16 & 0xFF;
+    msg.data[3] = soh16 >> 8;
+    msg.data[4] = batteryPack.get_any_module_balancing() ? 1 : 0;
+    msg.data[5] = state;
+    msg.data[6] = msg4_counter & 0x0F;
+    msg.data[7] = 0;
+    msg.data[7] = can_crc8(msg.data);
+    send_message(&msg);
+    msg4_counter = (msg4_counter + 1) & 0x0F;
+
+    msg.id = BMS_MSG_HMI;
+    uint16_t energy = 0;
+    uint16_t ttf = 0;
+    msg.data[0] = energy & 0xFF;
+    msg.data[1] = energy >> 8;
+    msg.data[2] = ttf & 0xFF;
+    msg.data[3] = ttf >> 8;
+    msg.data[4] = msg5_counter & 0x0F;
+    msg.data[5] = 0;
+    msg.data[6] = 0;
+    msg.data[7] = 0;
+    msg.data[5] = can_crc8(msg.data);
+    send_message(&msg);
+    msg5_counter = (msg5_counter + 1) & 0x0F;
+}
