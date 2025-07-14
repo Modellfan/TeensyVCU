@@ -83,8 +83,8 @@ private:
     float measured_capacity_Ah; // Integrated capacity over a full cycle
 
     // --- Current Limits (Temperature) ---
-    float current_limit_peak_discharge;        // Peak allowed current (A) - discharge direction
-    float current_limit_rms_discharge;         // RMS allowed current (A)  - discharge direction
+    float current_limit_peak;        // Peak allowed discharge current (A)
+    float current_limit_rms;         // RMS allowed discharge current (A)
     float current_limit_peak_charge; // Peak charge current (A)
     float current_limit_rms_charge;  // Continuous charge current (A)
     float current_limit_rms_derated_discharge; // Derated RMS current limit for discharge
@@ -143,7 +143,7 @@ private:
     void rate_limit_current();
 
     //         // State maschine updating
-    //         void update_state_machine();
+    void update_state_machine();
 
     // Helper functions
     void send_message(CANMessage *frame); // Send out CAN message
