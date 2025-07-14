@@ -84,8 +84,8 @@ private:
     float measured_capacity_Ah; // Integrated capacity over a full cycle
 
     // --- Current Limits (Temperature) ---
-    float current_limit_peak;        // Peak allowed current (A) - discharge direction
-    float current_limit_rms;         // RMS allowed current (A)  - discharge direction
+    float current_limit_peak_discharge;        // Peak allowed current (A) - discharge direction
+    float current_limit_rms_discharge;         // RMS allowed current (A)  - discharge direction
     float current_limit_peak_charge; // Peak charge current (A)
     float current_limit_rms_charge;  // Continuous charge current (A)
     float current_limit_rms_derated_discharge; // Derated RMS current limit for discharge
