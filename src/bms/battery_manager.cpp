@@ -72,7 +72,7 @@ void BMS::initialize()
     {
         Serial.print("Error BMS CAN: 0x");
         Serial.println(errorCode, HEX);
-        dtc |= DTC_BMS_CAN_INIT_ERROR;
+        dtc = static_cast<DTC_BMS>(dtc | DTC_BMS_CAN_INIT_ERROR);
     }
 
     contactorManager.close();
@@ -200,7 +200,7 @@ void BMS::send_message(CANMessage *frame)
     }
     else
     {
-        dtc |= DTC_BMS_CAN_SEND_ERROR;
+        dtc = static_cast<DTC_BMS>(dtc | DTC_BMS_CAN_SEND_ERROR);
         // Serial.println("Send nok");
     }
 }

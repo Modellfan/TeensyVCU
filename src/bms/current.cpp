@@ -58,7 +58,7 @@ void Shunt_ISA_iPace::initialise()
     {
         Serial.print("Error Shunt CAN: 0x");
         Serial.println(errorCode, HEX);
-        _dtc |= DTC_ISA_CAN_INIT_ERROR;
+        _dtc = static_cast<DTC_ISA>(_dtc | DTC_ISA_CAN_INIT_ERROR);
     }
 
 
