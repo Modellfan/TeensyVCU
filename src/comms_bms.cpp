@@ -100,9 +100,15 @@ void BMS_Task100ms()
     //battery_manager.Task100Ms();
 }
 
+void BMS_Task1000ms()
+{
+    battery_manager.Task1000Ms();
+}
+
 Task BMS_task2ms_timer(2, TASK_FOREVER, &BMS_Task2ms);
 Task BMS_Task10ms_timer(10, TASK_FOREVER, &BMS_Task10ms);
 Task BMS_task100ms_timer(100, TASK_FOREVER, &BMS_Task100ms);
+Task BMS_task1000ms_timer(1000, TASK_FOREVER, &BMS_Task1000ms);
 
 void enable_BMS_tasks()
 {
@@ -112,6 +118,8 @@ void enable_BMS_tasks()
     BMS_Task10ms_timer.enable();
     scheduler.addTask(BMS_task100ms_timer);
     BMS_task100ms_timer.enable();
+    scheduler.addTask(BMS_task1000ms_timer);
+    BMS_task1000ms_timer.enable();
     Serial.println("BMS handle tasks timer enabled.");
 }
 
