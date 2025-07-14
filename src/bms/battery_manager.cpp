@@ -397,7 +397,7 @@ void BMS::send_battery_status_message()
     msg.data[1] = maxD >> 8;
     msg.data[2] = maxC & 0xFF;
     msg.data[3] = maxC >> 8;
-    msg.data[4] = contactorManager.getState() == Contactormanager::CLOSED ? 1 : 0;
+    msg.data[4] = static_cast<uint8_t>(contactorManager.getState());
     msg.data[5] = static_cast<uint8_t>(dtc);
     msg.data[6] = msg3_counter & 0x0F;
     msg.data[7] = 0;
