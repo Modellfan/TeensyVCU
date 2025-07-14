@@ -19,16 +19,22 @@ BMS::BMS(BatteryPack &_batteryPack, Shunt_ISA_iPace &_shunt, Contactormanager &_
     moduleToBeMonitored = 0;
     max_charge_current = 0.0f;
     max_discharge_current = 0.0f;
-    current_limit_peak = 0.0f;
-    current_limit_rms = 0.0f;
+    current_limit_peak_discharge = 0.0f;
+    current_limit_rms_discharge = 0.0f;
     current_limit_peak_charge = 0.0f;
     current_limit_rms_charge = 0.0f;
     current_limit_rms_derated_discharge = 0.0f;
     current_limit_rms_derated_charge = 0.0f;
     ready_to_shutdown = false;
     vehicle_state = STATE_SLEEP;
-    msg1_counter=0; msg2_counter=0; msg3_counter=0; msg4_counter=0; msg5_counter=0;
-    vcu_counter=0; last_vcu_msg=0; vcu_timeout=false;
+    msg1_counter = 0;
+    msg2_counter = 0;
+    msg3_counter = 0;
+    msg4_counter = 0;
+    msg5_counter = 0;
+    vcu_counter = 0;
+    last_vcu_msg = 0;
+    vcu_timeout = false;
 }
 
 void BMS::initialize()
@@ -79,20 +85,18 @@ void BMS::initialize()
 }
 
 void BMS::Task2Ms() { read_message(); } // Read Can messages ?
+
 void BMS::Task10Ms()
 {
-
-
 }
 
 void BMS::Task100Ms()
 {
-
+    send_battery_status_message();
 }
 
 void BMS::Task1000Ms()
 {
-
 }
 
 // Read messages into modules and check alive
@@ -128,68 +132,65 @@ void BMS::read_message()
     {
         vcu_timeout = true;
     }
-
-
 }
-
 
 // void BMS::update_state_machine()
 // {
 
-        // for (int i = 0; i < numModules; i++)
-    // {
-    //     modules[i].check_alive();
-    // }
+// for (int i = 0; i < numModules; i++)
+// {
+//     modules[i].check_alive();
+// }
 
-    // switch (this->state)
-    // {
-    // case INIT: // Wait for all modules to go into init
-    // {
-    //     byte numModulesOperating = 0;
-    //     for (int i = 0; i < numModules; i++)
-    //     {
-    //         float v = modules[i].get_voltage();
-    //         if (modules[i].getState() == BatteryModule::OPERATING)
-    //         {
-    //             numModulesOperating++;
-    //         }
-    //         if (modules[i].getState() == BatteryModule::FAULT)
-    //         {
-    //             dtc |= DTC_PACK_MODULE_FAULT;
-    //         }
-    //     }
+// switch (this->state)
+// {
+// case INIT: // Wait for all modules to go into init
+// {
+//     byte numModulesOperating = 0;
+//     for (int i = 0; i < numModules; i++)
+//     {
+//         float v = modules[i].get_voltage();
+//         if (modules[i].getState() == BatteryModule::OPERATING)
+//         {
+//             numModulesOperating++;
+//         }
+//         if (modules[i].getState() == BatteryModule::FAULT)
+//         {
+//             dtc |= DTC_PACK_MODULE_FAULT;
+//         }
+//     }
 
-    //     if (numModulesOperating == PACK_WAIT_FOR_NUM_MODULES)
-    //     {
-    //         state = OPERATING;
-    //     }
-    //     if (dtc > 0)
-    //     {
-    //         state = FAULT;
-    //     }
-    //     break;
-    // }
-    // case OPERATING: // Check if no module fault is popping up
-    // {
-    //     for (int i = 0; i < numModules; i++)
-    //     {
-    //         if (modules[i].getState() == BatteryModule::FAULT)
-    //         {
-    //             dtc |= DTC_PACK_MODULE_FAULT;
-    //         }
-    //     }
-    //     if (dtc > 0)
-    //     {
-    //         state = FAULT;
-    //     }
-    //     break;
-    // }
-    // case FAULT:
-    // {
-    //     // Additional fault handling logic can be added here if neededF 
-    //     break;
-    // }
-    // }
+//     if (numModulesOperating == PACK_WAIT_FOR_NUM_MODULES)
+//     {
+//         state = OPERATING;
+//     }
+//     if (dtc > 0)
+//     {
+//         state = FAULT;
+//     }
+//     break;
+// }
+// case OPERATING: // Check if no module fault is popping up
+// {
+//     for (int i = 0; i < numModules; i++)
+//     {
+//         if (modules[i].getState() == BatteryModule::FAULT)
+//         {
+//             dtc |= DTC_PACK_MODULE_FAULT;
+//         }
+//     }
+//     if (dtc > 0)
+//     {
+//         state = FAULT;
+//     }
+//     break;
+// }
+// case FAULT:
+// {
+//     // Additional fault handling logic can be added here if neededF
+//     break;
+// }
+// }
 // }
 
 void BMS::send_message(CANMessage *frame)
@@ -207,8 +208,10 @@ void BMS::send_message(CANMessage *frame)
 
 // --- Core Algorithm Stubs -------------------------------------------------
 
-void BMS::update_soc_ocv_lut() {
-    if (fabs(pack_current) <= BMS_OCV_CURRENT_THRESHOLD) {
+void BMS::update_soc_ocv_lut()
+{
+    if (fabs(pack_current) <= BMS_OCV_CURRENT_THRESHOLD)
+    {
         // Use lowest cell voltage across the pack as OCV reference
         const float ocv = batteryPack.get_lowest_cell_voltage();
 
@@ -219,11 +222,13 @@ void BMS::update_soc_ocv_lut() {
     }
 }
 
-void BMS::update_soc_coulomb_counting() {
+void BMS::update_soc_coulomb_counting()
+{
     soc_coulomb_counting = 0.0f;
 }
 
-void BMS::correct_soc() {
+void BMS::correct_soc()
+{
     soc = soc_ocv_lut;
 }
 void BMS::calculate_soh() {}
@@ -242,16 +247,15 @@ void BMS::lookup_current_limits()
     float charge_cont = CHARGE_CONT_CURRENT_LIMIT(temperature);
 
     // Store results separately for charge and discharge
-    current_limit_peak = discharge_peak; // default discharge limit
-    current_limit_rms = discharge_cont;
+    current_limit_peak_discharge = discharge_peak; // default discharge limit
+    current_limit_rms_discharge = discharge_cont;
     current_limit_peak_charge = charge_peak;
     current_limit_rms_charge = charge_cont;
-
-    max_discharge_current = discharge_peak;
-    max_charge_current = charge_peak;
 }
+
 void BMS::lookup_internal_resistance_table() {}
-void BMS::estimate_internal_resistance_online() {
+void BMS::estimate_internal_resistance_online()
+{
     const float current_threshold = IR_ESTIMATION_CURRENT_STEP_THRESHOLD;
     const float alpha = IR_ESTIMATION_ALPHA;
 
@@ -262,18 +266,24 @@ void BMS::estimate_internal_resistance_online() {
     // Gather current and voltages
     pack_current = shunt.getCurrent();
 
-    for (int i = 0; i < CELLS_PER_MODULE * MODULES_PER_PACK; ++i) {
+    for (int i = 0; i < CELLS_PER_MODULE * MODULES_PER_PACK; ++i)
+    {
         float v;
-        if (batteryPack.get_cell_voltage(i, v)) {
+        if (batteryPack.get_cell_voltage(i, v))
+        {
             cell_voltage[i] = v;
-        } else {
+        }
+        else
+        {
             cell_voltage[i] = 0.0f;
         }
     }
 
-    if (first_run) {
+    if (first_run)
+    {
         last_pack_current = pack_current;
-        for (int i = 0; i < CELLS_PER_MODULE * MODULES_PER_PACK; ++i) {
+        for (int i = 0; i < CELLS_PER_MODULE * MODULES_PER_PACK; ++i)
+        {
             last_cell_voltage[i] = cell_voltage[i];
             internal_resistance_estimated_cells[i] = 0.0f;
         }
@@ -283,8 +293,10 @@ void BMS::estimate_internal_resistance_online() {
 
     float deltaI = pack_current - last_pack_current;
 
-    if (fabs(deltaI) > current_threshold) {
-        for (int i = 0; i < CELLS_PER_MODULE * MODULES_PER_PACK; ++i) {
+    if (fabs(deltaI) > current_threshold)
+    {
+        for (int i = 0; i < CELLS_PER_MODULE * MODULES_PER_PACK; ++i)
+        {
             float deltaV = cell_voltage[i] - last_cell_voltage[i];
             float ir_sample = (deltaI != 0.0f) ? deltaV / deltaI : 0.0f;
             internal_resistance_estimated_cells[i] =
@@ -293,13 +305,15 @@ void BMS::estimate_internal_resistance_online() {
     }
 
     last_pack_current = pack_current;
-    for (int i = 0; i < CELLS_PER_MODULE * MODULES_PER_PACK; ++i) {
+    for (int i = 0; i < CELLS_PER_MODULE * MODULES_PER_PACK; ++i)
+    {
         last_cell_voltage[i] = cell_voltage[i];
     }
 
     // Compute average pack internal resistance from estimated cell values
     float sum_ir = 0.0f;
-    for (int i = 0; i < CELLS_PER_MODULE * MODULES_PER_PACK; ++i) {
+    for (int i = 0; i < CELLS_PER_MODULE * MODULES_PER_PACK; ++i)
+    {
         sum_ir += internal_resistance_estimated_cells[i];
     }
     internal_resistance_estimated =
@@ -323,7 +337,7 @@ void BMS::calculate_voltage_derate()
         discharge_derate = 0.0f; // Below cutoff, no discharge allowed
     }
 
-    current_limit_rms_derated_discharge = current_limit_rms * discharge_derate;
+    current_limit_rms_derated_discharge = current_limit_rms_discharge * discharge_derate;
 
     // Derate charge current using the highest cell voltage in the pack
     float high_voltage = batteryPack.get_highest_cell_voltage();
@@ -350,7 +364,6 @@ void BMS::calculate_limp_home_limit() {}
 void BMS::select_limp_home() {}
 
 void BMS::rate_limit_current() {}
-
 
 void BMS::send_battery_status_message()
 {
