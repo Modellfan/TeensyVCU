@@ -43,8 +43,7 @@ public:
         STATE_LIMP_HOME
     };
 
-    static const uint16_t VCU_STATUS_MSG_ID = 0x437; // CAN message containing vehicle state
-
+    
     BMS(BatteryPack &_batteryPack, Shunt_ISA_iPace &_shunt, Contactormanager &_contactorManager); // Constructor taking a reference to BatteryPack
 
     // Runnables
@@ -150,6 +149,16 @@ private:
     void send_message(CANMessage *frame); // Send out CAN message
 
     byte moduleToBeMonitored;
+
+    uint8_t msg1_counter;
+    uint8_t msg2_counter;
+    uint8_t msg3_counter;
+    uint8_t msg4_counter;
+    uint8_t msg5_counter;
+
+    uint8_t vcu_counter;
+    unsigned long last_vcu_msg;
+    bool vcu_timeout;
 
     // Current vehicle state received from the VCU
     VehicleState vehicle_state;

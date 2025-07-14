@@ -54,6 +54,13 @@
 //BMS software module settings
 //---------------------------------------------------------------------------------------------------------------------------------------------
 #define BMS_CAN can3
+#define BMS_VCU_MSG_ID 0x437
+#define BMS_MSG_VOLTAGE 0x41A
+#define BMS_MSG_CELL_TEMP 0x41B
+#define BMS_MSG_LIMITS 0x41C
+#define BMS_MSG_SOC 0x41D
+#define BMS_MSG_HMI 0x41E
+#define BMS_VCU_TIMEOUT 100
 
 #define BMS_TOTAL_CAPACITY 345 * 3600 * CELLS_PER_MODULE; //Num modules missing 345Wh 3600 s/H 12 Cells. Unit: Ws
 
