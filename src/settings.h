@@ -69,6 +69,10 @@
 
 #define BMS_MAX_DISCHARGE_PEAK_CURRENT 406 * 0.9 //Safetyfactor
 
+// Default current limit used in limp home mode when the BMS detects a fault
+#define BMS_LIMP_HOME_DISCHARGE_CURRENT 10.0f
+#define BMS_LIMP_HOME_CHARGE_CURRENT    10.0f
+
 // Internal resistance online estimation parameters
 #define IR_ESTIMATION_CURRENT_STEP_THRESHOLD 1.0f
 #define IR_ESTIMATION_ALPHA 0.1f
