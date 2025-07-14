@@ -114,36 +114,45 @@ void BMS::update_state_machine()
 {
     BatteryPack::STATE_PACK pack_state = batteryPack.getState();
     Contactormanager::State contactor_state = contactorManager.getState();
+    Shunt_ISA_iPace::STATE_ISA shunt_state = shunt.getState();
 
     // Transition to fault state whenever a critical component reports a fault
-    if (pack_state == BatteryPack::FAULT || contactor_state == Contactormanager::FAULT)
+    if (pack_state == BatteryPack::FAULT ||
+        contactor_state == Contactormanager::FAULT ||
+        shunt_state == Shunt_ISA_iPace::FAULT)
     {
         dtc = static_cast<DTC_BMS>(dtc | DTC_BMS_PACK_FAULT);
         state = FAULT;
-        contactorManager.open();
+        max_discharge_current = BMS_LIMP_HOME_DISCHARGE_CURRENT;
+        max_charge_current = BMS_LIMP_HOME_CHARGE_CURRENT;
         return;
     }
 
     switch (state)
     {
     case INIT:
-        if (pack_state == BatteryPack::OPERATING && contactor_state == Contactormanager::CLOSED)
+        if (pack_state == BatteryPack::OPERATING &&
+            shunt_state == Shunt_ISA_iPace::OPERATING &&
+            contactor_state != Contactormanager::INIT &&
+            contactor_state != Contactormanager::FAULT)
         {
             state = OPERATING;
         }
         break;
 
     case OPERATING:
-        // If contactors open unexpectedly, fall back to INIT
-        if (contactor_state != Contactormanager::CLOSED)
+        if (pack_state == BatteryPack::INIT ||
+            shunt_state == Shunt_ISA_iPace::INIT ||
+            contactor_state == Contactormanager::INIT)
         {
             state = INIT;
         }
         break;
 
     case FAULT:
-        // Stay in fault until power cycle; ensure contactors are open
-        contactorManager.open();
+        // Stay in fault until power cycle; keep contactors as-is
+        max_discharge_current = BMS_LIMP_HOME_DISCHARGE_CURRENT;
+        max_charge_current = BMS_LIMP_HOME_CHARGE_CURRENT;
         break;
     }
 }
