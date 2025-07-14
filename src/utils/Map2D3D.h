@@ -171,9 +171,12 @@ public:
         {
             x2s[i] = 0;
         }
-        for (int i = 0; i < R * C; i++)
+        for (int i = 0; i < R; i++)
         {
-            ys[i] = 0;
+            for (int j = 0; j < C; j++)
+            {
+                ys[i][j] = 0;
+            }
         }
     }
 
