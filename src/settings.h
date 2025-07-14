@@ -54,6 +54,7 @@
 //BMS software module settings
 //---------------------------------------------------------------------------------------------------------------------------------------------
 #define BMS_CAN can3
+
 #define BMS_VCU_MSG_ID 0x437
 #define BMS_MSG_VOLTAGE 0x41A
 #define BMS_MSG_CELL_TEMP 0x41B
@@ -65,9 +66,20 @@
 #define BMS_TOTAL_CAPACITY 345 * 3600 * CELLS_PER_MODULE; //Num modules missing 345Wh 3600 s/H 12 Cells. Unit: Ws
 
 //BMW i3 Specs from Samsung SDI document
-#define BMS_SOC_WARNING_LIMIT 0.8 //Below this limit, max current values are not allowed anymore
+#define SAFETY_LIMIT_CHARGE 4.25
+#define SAFETY_LIMIT_DISCHARGE 1.5
 
-#define BMS_MAX_DISCHARGE_PEAK_CURRENT 406 * 0.9 //Safetyfactor
+#define OPERATING_LIMIT_CHARGE 4.15
+#define OPERATING_LIMIT_DISCHARGE 2.7
+
+#define SAFETY_LIMIT_MAX_STORAGE_TEMP 80
+#define SAFETY_LIMIT_MIN_STORAGE_TEMP -40
+
+#define SAFETY_LIMIT_MAX_OPERATION_TEMP 80
+#define SAFETY_LIMIT_MIN_OPERATION_TEMP -40
+
+#define OPERATION_LIMIT_MAX_TEMP 60
+#define OPERATION_LIMIT_MIN_TEMP -40
 
 // Default current limit used in limp home mode when the BMS detects a fault
 #define BMS_LIMP_HOME_DISCHARGE_CURRENT 10.0f
@@ -78,13 +90,13 @@
 #define IR_ESTIMATION_ALPHA 0.1f
 
 // Voltage thresholds for current derating
-#define V_MIN_DERATE 3.3f
-#define V_MIN_CUTOFF 3.0f
-#define V_MAX_DERATE 4.1f
-#define V_MAX_CUTOFF 4.2f
+#define V_MIN_DERATE 3.5f //based on SOC
+#define V_MIN_CUTOFF OPERATING_LIMIT_DISCHARGE
+#define V_MAX_DERATE 4.0f //based on SOC
+#define V_MAX_CUTOFF OPERATING_LIMIT_CHARGE
 
 // Maximum absolute pack current (A) for valid OCV-based SOC estimation
-#define BMS_OCV_CURRENT_THRESHOLD 0.5f
+#define BMS_OCV_CURRENT_THRESHOLD 10.0f
 
 // -----------------------------------------------------------------------------
 // Balancing Settings
@@ -96,106 +108,7 @@
 
 
 
-// //Discharge Limits
-// const int16_t temperatures[] PROGMEM = {60, 50, 40, 35, 30, 25, 20, 15, 10, 5, 0, -5, -10, -15, -20, -25, -30, -40};
-// const int16_t continuous_discharge_CurrentLimits[] PROGMEM = {223, 223, 223, 210, 196, 180, 166, 153, 136, 124, 108, 93, 77, 74, 62, 57, 46, 33};
-// #define BMS_DISCHARGE_TIME_INTEGRAL 150
 
-// //Charge Limits
-// const int16_t temperatures_charge[] PROGMEM = {60, 50, 40, 35, 30, 25, 20, 15, 10, 5, 0, -5, -10, -15, -20, -25, -30, -40};
-// const int16_t chargeCurrentLimits_peak[] PROGMEM = {270, 270, 270, 270, 270, 270, 270, 270, 270, 270, 237, 185, 125, 62, 33, 22, 7, 1};
-// const int16_t Irms_charge[] PROGMEM = {107, 107, 96, 84, 73, 61, 51, 41, 32, 24, 18, 12, 7.2, 4.3, 2.7, 1.7, 1.0, 0.4};
-// #define BMS_CHARGE_TIME_INTEGRAL 100
-
-// #define SAFETY_LIMIT_CHARGE 4.25
-// #define SAFETY_LIMIT_DISCHARGE 1.5
-
-// #define OPERATING_LIMIT_CHARGE 4.15
-// #define OPERATING_LIMIT_DISCHARGE 2.7
-
-// #define SAFETY_LIMIT_MAX_STORAGE_TEMP 80
-// #define SAFETY_LIMIT_MIN_STORAGE_TEMP -40
-
-// #define SAFETY_LIMIT_MAX_OPERATION_TEMP 80
-// #define SAFETY_LIMIT_MIN_OPERATION_TEMP -40
-
-// #define OPERATION_LIMIT_MAX_TEMP 60
-// #define OPERATION_LIMIT_MIN_TEMP -40
-
-// //SOC LUT
-// const int16_t soc[] PROGMEM = {100, 90, 80, 70, 60, 50, 40, 30, 20, 10, 0};
-// float temperatureLevels[4] = {40, 25, -10, -25};
-
-// float dischargeTable[11][4] = {
-//     {4.129, 4.129, 4.131, 4.132},
-//     {4.009, 4.010, 4.012, 4.013},
-//     {3.9076, 3.907, 3.909, 3.910},
-//     {3.818, 3.819, 3.820, 3.821},
-//     {3.750, 3.751, 3.751, 3.752},
-//     {3.677, 3.676, 3.671, 3.669},
-//     {3.641, 3.641, 3.634, 3.647},
-//     {3.616, 3.614, 3.611, 3.611},
-//     {3.572, 3.574, 3.579, 3.581},
-//     {3.452, 3.490, 3.496, 3.499},
-//     {3.395, 3.404, 3.422, 3.429}
-// };
-
-
-// const int16_t soc[] PROGMEM = {100, 90, 80, 70, 60, 50, 40, 30, 20, 10, 0};
-// const float chargeCurrentLimits_25C[] PROGMEM = {4.133, 4.022, 3.921, 3.833, 3.765, 3.690, 3.653, 3.627, 3.598, 3.517, 3.433};
-
-// //416A
-
-// // Define the data types for x1s, x2s, and ys
-// typedef int X1Type; // SOC
-// typedef float X2Type; // Temperature
-// typedef float YType; // Resistance (mΩ)
-
-// // Define the data table
-// const X1Type x1sData[11] = {100, 95, 90, 80, 70, 60, 50, 40, 30, 20, 10, 5};
-// const X2Type x2sData[4] = {40, 25, -10, -25};
-// const YType ysData[11][4] = {
-//     {0.53, 0.69, 2.22, 3.85},
-//     {0.53, 0.68, 2.22, 3.84},
-//     {0.52, 0.68, 2.22, 3.87},
-//     {0.52, 0.68, 2.25, 3.90},
-//     {0.52, 0.68, 2.29, 4.00},
-//     {0.52, 0.68, 2.34, 4.14},
-//     {0.52, 0.68, 2.40, 4.32},
-//     {0.51, 0.68, 2.84, 5.66},
-//     {0.52, 0.68, 3.59, 8.41},
-//     {0.54, 0.74, 5.20, 14.68},
-//     {0.60, 0.99, 9.53, 18.01},
-//     {0.71, 1.81, 11.30, 16.31}
-// };
-
-// //294A
-// // Define the table dimensions
-// const int numRows = 12; // Number of rows including the header
-// const int numCols = 5;  // Number of columns including the SOC column
-
-// // Define the data types for x1s, x2s, and ys
-// typedef int X1Type; // SOC
-// typedef float X2Type; // Temperature
-// typedef float YType; // Resistance (mΩ)
-
-// // Define the data table
-// const X1Type x1sData[numRows] = {100, 95, 90, 80, 70, 60, 50, 40, 30, 20, 10, 5};
-// const X2Type x2sData[numCols] = {40, 25, -10, -25};
-// const YType ysData[numRows - 1][numCols - 1] = {
-//     {0.75, 0.96, 2.77, 4.29},
-//     {0.74, 0.95, 2.77, 4.31},
-//     {0.73, 0.94, 2.76, 4.39},
-//     {0.72, 0.93, 2.77, 4.42},
-//     {0.71, 0.91, 2.81, 4.54},
-//     {0.70, 0.91, 2.89, 4.71},
-//     {0.67, 0.90, 2.98, 5.09},
-//     {0.65, 0.88, 3.24, 5.44},
-//     {0.67, 0.91, 3.72, 10.69},
-//     {0.75, 1.03, 6.47, 19.61},
-//     {0.90, 1.88, 14.63, 39.36},
-//     {1.51, 3.79, 22.52, 48.00}
-// };
 
 
 
