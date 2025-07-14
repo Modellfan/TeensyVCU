@@ -92,12 +92,12 @@ void BMS_Task2ms()
 
 void BMS_Task10ms()
 {
-    //battery_manager.Task10Ms();
+    battery_manager.Task10Ms();
 }
 
 void BMS_Task100ms()
 {
-    //battery_manager.Task100Ms();
+    battery_manager.Task100Ms();
 }
 
 void BMS_Task1000ms()
