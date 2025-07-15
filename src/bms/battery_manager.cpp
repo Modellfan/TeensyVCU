@@ -103,7 +103,9 @@ void BMS::Task100Ms()
 
 void BMS::Task1000Ms()
 {
-    // Reserved for future use
+    update_soc_ocv_lut();
+    update_soc_coulomb_counting();
+    correct_soc();
 }
 
 //###############################################################################################################################################################################
@@ -141,18 +143,10 @@ void BMS::update_state_machine()
         break;
 
     case OPERATING:
-        if (pack_state == BatteryPack::INIT ||
-            shunt_state == Shunt_ISA_iPace::INIT ||
-            contactor_state == Contactormanager::INIT)
-        {
-            state = INIT;
-        }
         break;
 
     case FAULT:
         // Stay in fault until power cycle; keep contactors as-is
-        max_discharge_current = BMS_LIMP_HOME_DISCHARGE_CURRENT;
-        max_charge_current = BMS_LIMP_HOME_CHARGE_CURRENT;
         break;
     }
 }
@@ -184,6 +178,7 @@ void BMS::correct_soc()
 {
     soc = soc_ocv_lut;
 }
+
 void BMS::calculate_soh() {}
 
 void BMS::lookup_current_limits()
@@ -313,7 +308,6 @@ void BMS::calculate_dynamic_voltage_limit() {}
 
 void BMS::select_current_limit() {}
 
-void BMS::calculate_limp_home_limit() {}
 void BMS::select_limp_home() {}
 
 void BMS::rate_limit_current() {}
