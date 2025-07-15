@@ -1,6 +1,62 @@
 #include "serial_console.h"
 #include <ctype.h>
 
+static const char *pack_state_to_string(BatteryPack::STATE_PACK state) {
+    switch (state) {
+        case BatteryPack::INIT: return "INIT";
+        case BatteryPack::OPERATING: return "OPERATING";
+        case BatteryPack::FAULT: return "FAULT";
+        default: return "UNKNOWN";
+    }
+}
+
+static String pack_dtc_to_string(BatteryPack::DTC_PACK dtc) {
+    String errorString = "";
+    if (static_cast<uint8_t>(dtc) == 0) {
+        errorString = "None";
+    } else {
+        if (dtc & BatteryPack::DTC_PACK_CAN_SEND_ERROR) {
+            errorString += "CAN_SEND_ERROR, ";
+        }
+        if (dtc & BatteryPack::DTC_PACK_CAN_INIT_ERROR) {
+            errorString += "CAN_INIT_ERROR, ";
+        }
+        if (dtc & BatteryPack::DTC_PACK_MODULE_FAULT) {
+            errorString += "MODULE_FAULT, ";
+        }
+        errorString.remove(errorString.length() - 2);
+    }
+    return errorString;
+}
+
+static const char *bms_state_to_string(BMS::STATE_BMS state) {
+    switch (state) {
+        case BMS::INIT: return "INIT";
+        case BMS::OPERATING: return "OPERATING";
+        case BMS::FAULT: return "FAULT";
+        default: return "UNKNOWN";
+    }
+}
+
+static String bms_dtc_to_string(BMS::DTC_BMS dtc) {
+    String errorString = "";
+    if (static_cast<uint8_t>(dtc) == 0) {
+        errorString = "None";
+    } else {
+        if (dtc & BMS::DTC_BMS_CAN_SEND_ERROR) {
+            errorString += "CAN_SEND_ERROR, ";
+        }
+        if (dtc & BMS::DTC_BMS_CAN_INIT_ERROR) {
+            errorString += "CAN_INIT_ERROR, ";
+        }
+        if (dtc & BMS::DTC_BMS_PACK_FAULT) {
+            errorString += "PACK_FAULT, ";
+        }
+        errorString.remove(errorString.length() - 2);
+    }
+    return errorString;
+}
+
 void print_console_help() {
     console.println("Available commands:");
     console.println("  c - close contactors");
@@ -23,9 +79,9 @@ void print_pack_status() {
                    batteryPack.get_balancing_voltage(),
                    batteryPack.get_balancing_active(),
                    batteryPack.get_any_module_balancing());
-    console.printf("State: %d, DTC: %d\n",
-                   batteryPack.getState(),
-                   batteryPack.getDTC());
+    console.printf("State: %s, DTC: %s\n",
+                   pack_state_to_string(batteryPack.getState()),
+                   pack_dtc_to_string(batteryPack.getDTC()).c_str());
 }
 
 static const char *contactor_state_to_string(Contactormanager::State state) {
@@ -127,8 +183,9 @@ void print_module_status(int index) {
 }
 
 void print_bms_status() {
-    console.printf("BMS State: %d, DTC: %d\n",
-                   battery_manager.get_state(), battery_manager.get_dtc());
+    console.printf("BMS State: %s, DTC: %s\n",
+                   bms_state_to_string(battery_manager.get_state()),
+                   bms_dtc_to_string(battery_manager.get_dtc()).c_str());
     console.printf(
         "Vehicle State: %d, ReadyToShutdown: %d, VCU Timeout: %d\n",
         battery_manager.get_vehicle_state(),
@@ -157,6 +214,13 @@ void print_contactor_status() {
                    contactor_state_to_string(contactor_manager.getState()));
     console.printf("Contactor DTC: %s\n",
                    contactor_dtc_to_string(contactor_manager.getDTC()).c_str());
+    console.printf("POS_OUT:%d POS_IN:%d PRE_OUT:%d PRE_IN:%d NEG_IN:%d SUPPLY_IN:%d\n",
+                   digitalRead(CONTACTOR_POS_OUT_PIN),
+                   digitalRead(CONTACTOR_POS_IN_PIN),
+                   digitalRead(CONTACTOR_PRCHG_OUT_PIN),
+                   digitalRead(CONTACTOR_PRCHG_IN_PIN),
+                   digitalRead(CONTACTOR_NEG_IN_PIN),
+                   digitalRead(CONTACTOR_POWER_SUPPLY_IN_PIN));
 }
 
 
