@@ -98,6 +98,9 @@
 // Maximum absolute pack current (A) for valid OCV-based SOC estimation
 #define BMS_OCV_CURRENT_THRESHOLD 10.0f
 
+// Maximum allowable instantaneous pack discharge current (A)
+#define BMS_MAX_DISCHARGE_PEAK_CURRENT 409.0f
+
 // -----------------------------------------------------------------------------
 // Balancing Settings
 // -----------------------------------------------------------------------------

@@ -489,18 +489,3 @@ void BMS::send_message(CANMessage *frame)
     }
 }
 
-// Getter implementations
-BMS::STATE_BMS BMS::get_state() const { return state; }
-BMS::DTC_BMS BMS::get_dtc() const { return dtc; }
-BMS::VehicleState BMS::get_vehicle_state() const { return vehicle_state; }
-bool BMS::get_ready_to_shutdown() const { return ready_to_shutdown; }
-bool BMS::get_vcu_timeout() const { return vcu_timeout; }
-float BMS::get_max_charge_current() const { return max_charge_current; }
-float BMS::get_max_discharge_current() const { return max_discharge_current; }
-float BMS::get_soc() const { return soc; }
-float BMS::get_soc_ocv_lut() const { return soc_ocv_lut; }
-float BMS::get_soc_coulomb_counting() const { return soc_coulomb_counting; }
-float BMS::get_current_limit_peak_discharge() const { return current_limit_peak_discharge; }
-float BMS::get_current_limit_rms_discharge() const { return current_limit_rms_discharge; }
-float BMS::get_current_limit_peak_charge() const { return current_limit_peak_charge; }
-float BMS::get_current_limit_rms_charge() const { return current_limit_rms_charge; }
