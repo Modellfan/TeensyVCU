@@ -56,6 +56,27 @@ public:
     void Task100Ms();
     void Task1000Ms();
 
+    // Balancing control
+    void update_balancing();
+
+    // Accessors for monitoring values
+    STATE_BMS get_state() const { return state; }
+    DTC_BMS get_dtc() const { return dtc; }
+    VehicleState get_vehicle_state() const { return vehicle_state; }
+    bool get_ready_to_shutdown() const { return ready_to_shutdown; }
+    bool get_vcu_timeout() const { return vcu_timeout; }
+    float get_max_charge_current() const { return max_charge_current; }
+    float get_max_discharge_current() const { return max_discharge_current; }
+    float get_soc() const { return soc; }
+    float get_soc_ocv_lut() const { return soc_ocv_lut; }
+    float get_soc_coulomb_counting() const { return soc_coulomb_counting; }
+    float get_current_limit_peak_discharge() const { return current_limit_peak_discharge; }
+    float get_current_limit_rms_discharge() const { return current_limit_rms_discharge; }
+    float get_current_limit_peak_charge() const { return current_limit_peak_charge; }
+    float get_current_limit_rms_charge() const { return current_limit_rms_charge; }
+
+    bool is_balancing_finished() const { return balancing_finished; }
+
 private:
     BatteryPack &batteryPack; // Reference to the BatteryPack
     Shunt_ISA_iPace &shunt;
@@ -112,6 +133,9 @@ private:
     float current_limit_limp_home;   // Limp home current limit
     float current_limit_selected;    // After limp home logic
     float current_limit_final;       // After rate limiter
+
+    // Balancing finished flag
+    bool balancing_finished;
 
     // Non-Volatile Variable!!
     float watt_seconds;

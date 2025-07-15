@@ -35,6 +35,7 @@ BMS::BMS(BatteryPack &_batteryPack, Shunt_ISA_iPace &_shunt, Contactormanager &_
     vcu_counter = 0;
     last_vcu_msg = 0;
     vcu_timeout = false;
+    balancing_finished = false;
 }
 
 void BMS::initialize()
@@ -312,6 +313,41 @@ void BMS::select_limp_home() {}
 
 void BMS::rate_limit_current() {}
 
+void BMS::update_balancing()
+{
+    float lowestV = batteryPack.get_lowest_cell_voltage();
+    float cellDelta = batteryPack.get_delta_cell_voltage();
+    bool temp_ok = batteryPack.get_highest_temperature() < BALANCE_MAX_TEMP;
+    bool vehicle_ok = (vehicle_state == STATE_CHARGE);
+
+    if (vehicle_ok && temp_ok && lowestV > BALANCE_MIN_VOLTAGE)
+    {
+        if (cellDelta > BALANCE_DELTA_V)
+        {
+            batteryPack.set_balancing_voltage(lowestV + BALANCE_OFFSET_V);
+            batteryPack.set_balancing_active(true);
+            balancing_finished = false;
+        }
+        else
+        {
+            batteryPack.set_balancing_active(false);
+            balancing_finished = true;
+        }
+    }
+    else if (vehicle_ok && (!temp_ok || lowestV <= BALANCE_MIN_VOLTAGE))
+    {
+        batteryPack.set_balancing_active(false);
+        balancing_finished = true;
+    }
+    else
+    {
+        // Vehicle state does not allow balancing - just ensure outputs are off
+        batteryPack.set_balancing_active(false);
+        // keep balancing_finished unchanged so the VCU knows balancing still
+        // needs to occur
+    }
+}
+
 //###############################################################################################################################################################################
 //  CAN Messaging
 //###############################################################################################################################################################################
@@ -411,7 +447,12 @@ void BMS::send_battery_status_message()
     msg.data[1] = soc16 >> 8;
     msg.data[2] = soh16 & 0xFF;
     msg.data[3] = soh16 >> 8;
-    msg.data[4] = batteryPack.get_any_module_balancing() ? 1 : 0;
+    if (balancing_finished)
+        msg.data[4] = 2; // balanced/finished
+    else if (batteryPack.get_balancing_active())
+        msg.data[4] = 1; // actively balancing
+    else
+        msg.data[4] = 0; // idle
     msg.data[5] = state;
     msg.data[6] = msg4_counter & 0x0F;
     msg.data[7] = 0;
@@ -447,3 +488,19 @@ void BMS::send_message(CANMessage *frame)
         // Serial.println("Send nok");
     }
 }
+
+// Getter implementations
+BMS::STATE_BMS BMS::get_state() const { return state; }
+BMS::DTC_BMS BMS::get_dtc() const { return dtc; }
+BMS::VehicleState BMS::get_vehicle_state() const { return vehicle_state; }
+bool BMS::get_ready_to_shutdown() const { return ready_to_shutdown; }
+bool BMS::get_vcu_timeout() const { return vcu_timeout; }
+float BMS::get_max_charge_current() const { return max_charge_current; }
+float BMS::get_max_discharge_current() const { return max_discharge_current; }
+float BMS::get_soc() const { return soc; }
+float BMS::get_soc_ocv_lut() const { return soc_ocv_lut; }
+float BMS::get_soc_coulomb_counting() const { return soc_coulomb_counting; }
+float BMS::get_current_limit_peak_discharge() const { return current_limit_peak_discharge; }
+float BMS::get_current_limit_rms_discharge() const { return current_limit_rms_discharge; }
+float BMS::get_current_limit_peak_charge() const { return current_limit_peak_charge; }
+float BMS::get_current_limit_rms_charge() const { return current_limit_rms_charge; }
