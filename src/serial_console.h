@@ -11,5 +11,6 @@ void print_console_help();
 void print_pack_status();
 void print_module_status(int index);
 void print_contactor_status();
+void print_bms_status();
 
 #endif // SERIAL_CONSOLE_H

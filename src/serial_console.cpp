@@ -10,6 +10,7 @@ void print_console_help() {
     console.println("  b - toggle balancing");
     console.println("  vX.XX - set balancing voltage");
     console.println("  mX - print module X status (0-7)");
+    console.println("  B - print BMS status");
     console.println("  h - print this help message");
 }
 
@@ -125,6 +126,32 @@ void print_module_status(int index) {
     console.printf("  Balancing: %d\n", mod.get_is_balancing());
 }
 
+void print_bms_status() {
+    console.printf("BMS State: %d, DTC: %d\n",
+                   battery_manager.get_state(), battery_manager.get_dtc());
+    console.printf(
+        "Vehicle State: %d, ReadyToShutdown: %d, VCU Timeout: %d\n",
+        battery_manager.get_vehicle_state(),
+        battery_manager.get_ready_to_shutdown(),
+        battery_manager.get_vcu_timeout());
+    console.printf("Max Charge Current: %.1fA, Max Discharge Current: %.1fA\n",
+                   battery_manager.get_max_charge_current(),
+                   battery_manager.get_max_discharge_current());
+    console.printf(
+        "SOC: %.1f%% (OCV %.1f%%, Coulomb %.1f%%)\n",
+        battery_manager.get_soc() * 100.0f,
+        battery_manager.get_soc_ocv_lut() * 100.0f,
+        battery_manager.get_soc_coulomb_counting() * 100.0f);
+    console.printf(
+        "Current Limits - Peak Discharge: %.1fA, RMS Discharge: %.1fA, Peak Charge: %.1fA, RMS Charge: %.1fA\n",
+        battery_manager.get_current_limit_peak_discharge(),
+        battery_manager.get_current_limit_rms_discharge(),
+        battery_manager.get_current_limit_peak_charge(),
+        battery_manager.get_current_limit_rms_charge());
+    console.printf("Balancing Finished: %d\n",
+                   battery_manager.is_balancing_finished());
+}
+
 void print_contactor_status() {
     console.printf("Contactor State: %s\n",
                    contactor_state_to_string(contactor_manager.getState()));
@@ -192,6 +219,9 @@ void serial_console() {
                 }
                 break;
             }
+            case 'B':
+                print_bms_status();
+                break;
             case 'h':
             case '?':
                 print_console_help();
