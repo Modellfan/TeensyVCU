@@ -71,11 +71,11 @@ void print_console_help() {
 }
 
 void print_pack_status() {
-    console.printf("Pack Voltage: %3.2fV, Lowest Cell: %3.2fV, Highest Cell: %3.2fV\n",
+    console.printf("Pack Voltage: %3.3fV, Lowest Cell: %3.3fV, Highest Cell: %3.3fV\n",
                    batteryPack.get_pack_voltage(),
                    batteryPack.get_lowest_cell_voltage(),
                    batteryPack.get_highest_cell_voltage());
-    console.printf("Balancing Target: %3.2fV, Balancing Active: %d, Any Module Balancing: %d\n",
+    console.printf("Balancing Target: %3.3fV, Balancing Active: %d, Any Module Balancing: %d\n",
                    batteryPack.get_balancing_voltage(),
                    batteryPack.get_balancing_active(),
                    batteryPack.get_any_module_balancing());
@@ -196,9 +196,9 @@ void print_bms_status() {
                    battery_manager.get_max_discharge_current());
     console.printf(
         "SOC: %.1f%% (OCV %.1f%%, Coulomb %.1f%%)\n",
-        battery_manager.get_soc() * 100.0f,
-        battery_manager.get_soc_ocv_lut() * 100.0f,
-        battery_manager.get_soc_coulomb_counting() * 100.0f);
+        battery_manager.get_soc(),
+        battery_manager.get_soc_ocv_lut(),
+        battery_manager.get_soc_coulomb_counting());
     console.printf(
         "Current Limits - Peak Discharge: %.1fA, RMS Discharge: %.1fA, Peak Charge: %.1fA, RMS Charge: %.1fA\n",
         battery_manager.get_current_limit_peak_discharge(),
