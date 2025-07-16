@@ -57,6 +57,44 @@ static String bms_dtc_to_string(BMS::DTC_BMS dtc) {
     return errorString;
 }
 
+static const char *shunt_state_to_string(Shunt_ISA_iPace::STATE_ISA state) {
+    switch (state) {
+        case Shunt_ISA_iPace::INIT: return "INIT";
+        case Shunt_ISA_iPace::OPERATING: return "OPERATING";
+        case Shunt_ISA_iPace::FAULT: return "FAULT";
+        default: return "UNKNOWN";
+    }
+}
+
+static String shunt_dtc_to_string(Shunt_ISA_iPace::DTC_ISA dtc) {
+    String errorString = "";
+    if (dtc == Shunt_ISA_iPace::DTC_ISA_NONE) {
+        errorString = "None";
+    } else {
+        bool hasError = false;
+        if (dtc & Shunt_ISA_iPace::DTC_ISA_CAN_INIT_ERROR) {
+            errorString += "CAN_INIT_ERROR, ";
+            hasError = true;
+        }
+        if (dtc & Shunt_ISA_iPace::DTC_ISA_TEMPERATURE_TOO_HIGH) {
+            errorString += "TEMP_TOO_HIGH, ";
+            hasError = true;
+        }
+        if (dtc & Shunt_ISA_iPace::DTC_ISA_MAX_CURRENT_EXCEEDED) {
+            errorString += "MAX_CURRENT_EXCEEDED, ";
+            hasError = true;
+        }
+        if (dtc & Shunt_ISA_iPace::DTC_ISA_TIMED_OUT) {
+            errorString += "TIMED_OUT, ";
+            hasError = true;
+        }
+        if (hasError) {
+            errorString.remove(errorString.length() - 2);
+        }
+    }
+    return errorString;
+}
+
 void print_console_help() {
     console.println("Available commands:");
     console.println("  c - close contactors");
@@ -67,6 +105,7 @@ void print_console_help() {
     console.println("  vX.XX - set balancing voltage");
     console.println("  mX - print module X status (0-7)");
     console.println("  B - print BMS status");
+    console.println("  i - print current sensor status");
     console.println("  h - print this help message");
 }
 
@@ -75,6 +114,10 @@ void print_pack_status() {
                    batteryPack.get_pack_voltage(),
                    batteryPack.get_lowest_cell_voltage(),
                    batteryPack.get_highest_cell_voltage());
+    console.printf("Lowest Temp: %.1fC, Highest Temp: %.1fC, Avg Temp: %.1fC\n",
+                   batteryPack.get_lowest_temperature(),
+                   batteryPack.get_highest_temperature(),
+                   batteryPack.get_average_temperature());
     console.printf("Balancing Target: %3.3fV, Balancing Active: %d, Any Module Balancing: %d\n",
                    batteryPack.get_balancing_voltage(),
                    batteryPack.get_balancing_active(),
@@ -220,7 +263,20 @@ void print_contactor_status() {
                    digitalRead(CONTACTOR_PRCHG_OUT_PIN),
                    digitalRead(CONTACTOR_PRCHG_IN_PIN),
                    digitalRead(CONTACTOR_NEG_IN_PIN),
-                   digitalRead(CONTACTOR_POWER_SUPPLY_IN_PIN));
+                  digitalRead(CONTACTOR_POWER_SUPPLY_IN_PIN));
+}
+
+void print_shunt_status() {
+    console.printf("Current: %.1fA (avg %.1fA)\n",
+                   shunt.getCurrent(),
+                   shunt.getCurrentAverage());
+    console.printf("Temperature: %.1fC, AmpereSeconds: %.1fAs, dI/dt: %.1fA/s\n",
+                   shunt.getTemperature(),
+                   shunt.getAmpereSeconds(),
+                   shunt.getCurrentDerivative());
+    console.printf("State: %s, DTC: %s\n",
+                   shunt_state_to_string(shunt.getState()),
+                   shunt_dtc_to_string(shunt.getDTC()).c_str());
 }
 
 
@@ -283,6 +339,9 @@ void serial_console() {
                 }
                 break;
             }
+            case 'i':
+                print_shunt_status();
+                break;
             case 'B':
                 print_bms_status();
                 break;
