@@ -328,14 +328,24 @@ String Contactormanager::getDTCString()
 
 Contactormanager::DTC_COM Contactormanager::getDTC() { return _dtc; }
 
-const Contactor &Contactormanager::getPositiveContactor() const
+Contactor::State Contactormanager::getPositiveState() const
 {
-    return _positiveContactor;
+    return _positiveContactor.getState();
 }
 
-const Contactor &Contactormanager::getPrechargeContactor() const
+bool Contactormanager::getPositiveInputPin() const
 {
-    return _prechargeContactor;
+    return _positiveContactor.getInputPin();
+}
+
+Contactor::State Contactormanager::getPrechargeState() const
+{
+    return _prechargeContactor.getState();
+}
+
+bool Contactormanager::getPrechargeInputPin() const
+{
+    return _prechargeContactor.getInputPin();
 }
 
 bool Contactormanager::isNegativeContactorClosed() const
