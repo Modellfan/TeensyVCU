@@ -44,8 +44,10 @@ public:
     DTC_COM getDTC();
     void update();
     Contactor::State getPositiveState() const;
+    Contactor::DTC_CON getPositiveDTC() const;
     bool getPositiveInputPin() const;
     Contactor::State getPrechargeState() const;
+    Contactor::DTC_CON getPrechargeDTC() const;
     bool getPrechargeInputPin() const;
     bool isNegativeContactorClosed() const;
     bool isContactorVoltageAvailable() const;
