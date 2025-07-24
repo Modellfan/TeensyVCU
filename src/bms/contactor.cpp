@@ -55,18 +55,18 @@ void Contactor::open()
     }
 }
 
-Contactor::State Contactor::getState()
+Contactor::State Contactor::getState() const
 {
     return _currentState;
 }
 
-bool Contactor::getInputPin()
+bool Contactor::getInputPin() const
 {
 
     return (digitalRead(_inputPin) == CONTACTOR_CLOSED_STATE);
 }
 
-bool Contactor::getOutputPin()
+bool Contactor::getOutputPin() const
 {
     return digitalRead(_outputPin);
 }

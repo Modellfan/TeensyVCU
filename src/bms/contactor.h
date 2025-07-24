@@ -23,9 +23,9 @@ public:
     void initialise();
     void close();
     void open();
-    State getState();
-    bool getInputPin();
-    bool getOutputPin();
+    State getState() const;
+    bool getInputPin() const;
+    bool getOutputPin() const;
     void update();
 
 private:

@@ -362,13 +362,11 @@ void print_contactor_status() {
                    contactor_state_to_string(contactor_manager.getState()));
     console.printf("Contactor DTC: %s\n",
                    contactor_dtc_to_string(contactor_manager.getDTC()).c_str());
-    const Contactor &pos = contactor_manager.getPositiveContactor();
-    const Contactor &pre = contactor_manager.getPrechargeContactor();
     console.printf("POS:%s POS_IN:%d PRE:%s PRE_IN:%d NEG_IN:%d SUPPLY_IN:%d\n",
-                   contactor_state_to_string(pos.getState()),
-                   pos.getInputPin(),
-                   contactor_state_to_string(pre.getState()),
-                   pre.getInputPin(),
+                   contactor_state_to_string(contactor_manager.getPositiveState()),
+                   contactor_manager.getPositiveInputPin(),
+                   contactor_state_to_string(contactor_manager.getPrechargeState()),
+                   contactor_manager.getPrechargeInputPin(),
                    contactor_manager.isNegativeContactorClosed(),
                    contactor_manager.isContactorVoltageAvailable());
 }

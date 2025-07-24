@@ -43,8 +43,10 @@ public:
     State getState();
     DTC_COM getDTC();
     void update();
-    const Contactor &getPositiveContactor() const;
-    const Contactor &getPrechargeContactor() const;
+    Contactor::State getPositiveState() const;
+    bool getPositiveInputPin() const;
+    Contactor::State getPrechargeState() const;
+    bool getPrechargeInputPin() const;
     bool isNegativeContactorClosed() const;
     bool isContactorVoltageAvailable() const;
 
@@ -53,8 +55,8 @@ private:
     const char *getTargetStateString();
     String getDTCString();
 
-    Contactor _positiveContactor;
     Contactor _prechargeContactor;
+    Contactor _positiveContactor;
     unsigned long _lastPreChangeTime;
     State _currentState;
     State _targetState;
