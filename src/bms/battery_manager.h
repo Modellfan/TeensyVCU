@@ -29,6 +29,8 @@ public:
         DTC_BMS_CAN_SEND_ERROR = 1 << 0,
         DTC_BMS_CAN_INIT_ERROR = 1 << 1,
         DTC_BMS_PACK_FAULT = 1 << 2,
+        DTC_BMS_CONTACTOR_FAULT = 1 << 3,
+        DTC_BMS_SHUNT_FAULT = 1 << 4,
     } DTC_BMS;
 
     enum VehicleState
