@@ -8,6 +8,8 @@
 #include "utils/can_crc.h"
 #include "utils/current_limit_lookup.h"
 #include "utils/soc_lookup.h"
+#include "utils/resistance_lookup.h"
+#include "serial_console.h"
 #include <math.h>
 
 // #define DEBUG
@@ -107,6 +109,9 @@ void BMS::Task1000Ms()
     update_soc_ocv_lut();
     update_soc_coulomb_counting();
     correct_soc();
+
+    update_balancing();
+
 }
 
 //###############################################################################################################################################################################
@@ -213,7 +218,15 @@ void BMS::lookup_current_limits()
     current_limit_rms_charge = charge_cont;
 }
 
-void BMS::lookup_internal_resistance_table() {}
+void BMS::lookup_internal_resistance_table()
+{
+    // Use pack average temperature for resistance lookup
+    const float avg_temp = batteryPack.get_average_temperature();
+    const float soc_percent = soc;
+
+    const float ir_mohm = RESISTANCE_FROM_SOC_TEMP(avg_temp, soc_percent, 0);
+    internal_resistance_table = ir_mohm / 1000.0f; // convert mΩ to Ω
+}
 void BMS::estimate_internal_resistance_online()
 {
     const float current_threshold = IR_ESTIMATION_CURRENT_STEP_THRESHOLD;
@@ -326,36 +339,61 @@ void BMS::rate_limit_current() {}
 
 void BMS::update_balancing()
 {
-    float lowestV = batteryPack.get_lowest_cell_voltage();
-    float cellDelta = batteryPack.get_delta_cell_voltage();
-    bool temp_ok = batteryPack.get_highest_temperature() < BALANCE_MAX_TEMP;
-    bool vehicle_ok = (!vcu_timeout && vehicle_state == STATE_CHARGE);
+    // Only run the balancing logic when the BMS is operating
+    if (state != OPERATING)
+        return;
 
-    if (vehicle_ok && temp_ok && lowestV > BALANCE_MIN_VOLTAGE)
+    // Check if any module is currently balancing. Cell voltages are unreliable
+    // during balancing, so we only evaluate the target voltage when no module is
+    // active. This avoids using wrong voltage readings while balancing.
+    bool any_balancing = batteryPack.get_any_module_balancing();
+
+    // Balancing is allowed in standby or charge vehicle states
+    bool vehicle_ok = (vehicle_state == STATE_CHARGE) ||
+                      (vehicle_state == STATE_STANDBY);
+
+
+    if (!any_balancing)
     {
-        if (cellDelta > BALANCE_DELTA_V)
+        float lowestV = batteryPack.get_lowest_cell_voltage();
+        float cellDelta = batteryPack.get_delta_cell_voltage();
+        bool temp_ok = batteryPack.get_highest_temperature() < BALANCE_MAX_TEMP;
+
+        if (vehicle_ok && temp_ok && lowestV > BALANCE_MIN_VOLTAGE)
         {
-            batteryPack.set_balancing_voltage(lowestV + BALANCE_OFFSET_V);
-            batteryPack.set_balancing_active(true);
-            balancing_finished = false;
+            if (cellDelta > BALANCE_DELTA_V)
+            {
+                batteryPack.set_balancing_voltage(lowestV + BALANCE_OFFSET_V);
+                batteryPack.set_balancing_active(true);
+                balancing_finished = false;
+            }
+            else
+            {
+                batteryPack.set_balancing_active(false);
+                balancing_finished = true;
+            }
         }
-        else
+        else if (vehicle_ok && (!temp_ok || lowestV <= BALANCE_MIN_VOLTAGE))
         {
             batteryPack.set_balancing_active(false);
             balancing_finished = true;
         }
-    }
-    else if (vehicle_ok && (!temp_ok || lowestV <= BALANCE_MIN_VOLTAGE))
-    {
-        batteryPack.set_balancing_active(false);
-        balancing_finished = true;
+        else
+        {
+            // Vehicle state does not allow balancing - just ensure outputs are off
+            batteryPack.set_balancing_active(false);
+            // keep balancing_finished unchanged so the VCU knows balancing still
+            // needs to occur
+        }
     }
     else
     {
-        // Vehicle state does not allow balancing - just ensure outputs are off
-        batteryPack.set_balancing_active(false);
-        // keep balancing_finished unchanged so the VCU knows balancing still
-        // needs to occur
+        // Modules are balancing, measurements may be inaccurate. Only disable
+        // balancing if the vehicle state no longer allows it.
+        if (!vehicle_ok)
+        {
+            batteryPack.set_balancing_active(false);
+        }
     }
 }
 
