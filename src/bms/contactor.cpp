@@ -15,12 +15,14 @@ Contactor::Contactor(int outputPin, int inputPin, int debounce_ms, int timeout_m
     pinMode(_inputPin, INPUT_PULLUP);
     digitalWrite(_outputPin, LOW);
     _lastStateChange = millis();
+    _dtc = DTC_CON_NONE;
 }
 
 void Contactor::initialise()
 {
     if (_currentState == INIT)
     {
+        _dtc = DTC_CON_NONE;
         digitalWrite(_outputPin, LOW);
         if (digitalRead(_inputPin) == CONTACTOR_CLOSED_STATE)
         {
@@ -33,6 +35,7 @@ void Contactor::initialise()
             {
                 _currentState = FAULT;
                 digitalWrite(_outputPin, LOW);
+                _dtc = DTC_CON_INIT_CLOSED;
             }
         }
         else
@@ -98,6 +101,7 @@ void Contactor::update()
             {
                 _currentState = FAULT;
                 digitalWrite(_outputPin, LOW);
+                _dtc = DTC_CON_UNEXPECTED_CLOSED;
             }
         }
         break;
@@ -113,6 +117,7 @@ void Contactor::update()
             {
                 _currentState = FAULT;
                 digitalWrite(_outputPin, LOW);
+                _dtc = DTC_CON_UNEXPECTED_OPEN;
             }
         }
         break;
@@ -121,6 +126,7 @@ void Contactor::update()
         {
             _currentState = FAULT;
             digitalWrite(_outputPin, LOW);
+            _dtc = DTC_CON_OPEN_TIMEOUT;
         }
         else
         {
@@ -139,6 +145,7 @@ void Contactor::update()
         {
             _currentState = FAULT;
             digitalWrite(_outputPin, LOW);
+            _dtc = DTC_CON_CLOSE_TIMEOUT;
         }
         else
         {
@@ -157,4 +164,53 @@ void Contactor::update()
         break;
     }
 
+}
+
+Contactor::DTC_CON Contactor::getDTC() const { return _dtc; }
+
+String Contactor::getDTCString() const
+{
+    String errorString = "";
+
+    if (_dtc == DTC_CON_NONE)
+    {
+        errorString = "None";
+    }
+    else
+    {
+        bool hasError = false;
+
+        if (_dtc & DTC_CON_INIT_CLOSED)
+        {
+            errorString += "INIT_CLOSED, ";
+            hasError = true;
+        }
+        if (_dtc & DTC_CON_UNEXPECTED_CLOSED)
+        {
+            errorString += "UNEXPECTED_CLOSED, ";
+            hasError = true;
+        }
+        if (_dtc & DTC_CON_UNEXPECTED_OPEN)
+        {
+            errorString += "UNEXPECTED_OPEN, ";
+            hasError = true;
+        }
+        if (_dtc & DTC_CON_OPEN_TIMEOUT)
+        {
+            errorString += "OPEN_TIMEOUT, ";
+            hasError = true;
+        }
+        if (_dtc & DTC_CON_CLOSE_TIMEOUT)
+        {
+            errorString += "CLOSE_TIMEOUT, ";
+            hasError = true;
+        }
+
+        if (hasError)
+        {
+            errorString.remove(errorString.length() - 2);
+        }
+    }
+
+    return errorString;
 }

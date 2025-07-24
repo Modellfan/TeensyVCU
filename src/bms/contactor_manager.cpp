@@ -333,6 +333,11 @@ Contactor::State Contactormanager::getPositiveState() const
     return _positiveContactor.getState();
 }
 
+Contactor::DTC_CON Contactormanager::getPositiveDTC() const
+{
+    return _positiveContactor.getDTC();
+}
+
 bool Contactormanager::getPositiveInputPin() const
 {
     return _positiveContactor.getInputPin();
@@ -341,6 +346,11 @@ bool Contactormanager::getPositiveInputPin() const
 Contactor::State Contactormanager::getPrechargeState() const
 {
     return _prechargeContactor.getState();
+}
+
+Contactor::DTC_CON Contactormanager::getPrechargeDTC() const
+{
+    return _prechargeContactor.getDTC();
 }
 
 bool Contactormanager::getPrechargeInputPin() const

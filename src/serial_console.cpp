@@ -188,6 +188,39 @@ static String contactor_dtc_to_string(Contactormanager::DTC_COM dtc) {
     return errorString;
 }
 
+static String single_contactor_dtc_to_string(Contactor::DTC_CON dtc) {
+    String errorString = "";
+    if (dtc == Contactor::DTC_CON_NONE) {
+        errorString = "None";
+    } else {
+        bool hasError = false;
+        if (dtc & Contactor::DTC_CON_INIT_CLOSED) {
+            errorString += "INIT_CLOSED, ";
+            hasError = true;
+        }
+        if (dtc & Contactor::DTC_CON_UNEXPECTED_CLOSED) {
+            errorString += "UNEXPECTED_CLOSED, ";
+            hasError = true;
+        }
+        if (dtc & Contactor::DTC_CON_UNEXPECTED_OPEN) {
+            errorString += "UNEXPECTED_OPEN, ";
+            hasError = true;
+        }
+        if (dtc & Contactor::DTC_CON_OPEN_TIMEOUT) {
+            errorString += "OPEN_TIMEOUT, ";
+            hasError = true;
+        }
+        if (dtc & Contactor::DTC_CON_CLOSE_TIMEOUT) {
+            errorString += "CLOSE_TIMEOUT, ";
+            hasError = true;
+        }
+        if (hasError) {
+            errorString.remove(errorString.length() - 2);
+        }
+    }
+    return errorString;
+}
+
 static const char *module_state_to_string(BatteryModule::STATE_CMU state) {
     switch (state) {
         case BatteryModule::INIT: return "INIT";
@@ -362,6 +395,9 @@ void print_contactor_status() {
                    contactor_state_to_string(contactor_manager.getState()));
     console.printf("Contactor DTC: %s\n",
                    contactor_dtc_to_string(contactor_manager.getDTC()).c_str());
+    console.printf("POS_DTC:%s PRE_DTC:%s\n",
+                   single_contactor_dtc_to_string(contactor_manager.getPositiveDTC()).c_str(),
+                   single_contactor_dtc_to_string(contactor_manager.getPrechargeDTC()).c_str());
     console.printf("POS:%s POS_IN:%d PRE:%s PRE_IN:%d NEG_IN:%d SUPPLY_IN:%d\n",
                    contactor_state_to_string(contactor_manager.getPositiveState()),
                    contactor_manager.getPositiveInputPin(),
