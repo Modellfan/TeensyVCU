@@ -350,6 +350,11 @@ void print_bms_can_data() {
 
 void print_bms_internal_state() {
 #ifdef DEBUG
+    // Only print diagnostics when the BMS is operating
+    if (battery_manager.get_state() != BMS::OPERATING) {
+        return;
+    }
+
     Serial.println("---- BMS Internal State ----");
     Serial.print("state: ");
     Serial.println(battery_manager.get_state());
