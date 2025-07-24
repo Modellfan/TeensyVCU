@@ -52,6 +52,12 @@ static String bms_dtc_to_string(BMS::DTC_BMS dtc) {
         if (dtc & BMS::DTC_BMS_PACK_FAULT) {
             errorString += "PACK_FAULT, ";
         }
+        if (dtc & BMS::DTC_BMS_CONTACTOR_FAULT) {
+            errorString += "CONTACTOR_FAULT, ";
+        }
+        if (dtc & BMS::DTC_BMS_SHUNT_FAULT) {
+            errorString += "SHUNT_FAULT, ";
+        }
         errorString.remove(errorString.length() - 2);
     }
     return errorString;

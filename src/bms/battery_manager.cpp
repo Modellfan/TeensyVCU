@@ -124,7 +124,18 @@ void BMS::update_state_machine()
         contactor_state == Contactormanager::FAULT ||
         shunt_state == Shunt_ISA_iPace::FAULT)
     {
-        dtc = static_cast<DTC_BMS>(dtc | DTC_BMS_PACK_FAULT);
+        if (pack_state == BatteryPack::FAULT)
+        {
+            dtc = static_cast<DTC_BMS>(dtc | DTC_BMS_PACK_FAULT);
+        }
+        if (contactor_state == Contactormanager::FAULT)
+        {
+            dtc = static_cast<DTC_BMS>(dtc | DTC_BMS_CONTACTOR_FAULT);
+        }
+        if (shunt_state == Shunt_ISA_iPace::FAULT)
+        {
+            dtc = static_cast<DTC_BMS>(dtc | DTC_BMS_SHUNT_FAULT);
+        }
         state = FAULT;
         max_discharge_current = BMS_LIMP_HOME_DISCHARGE_CURRENT;
         max_charge_current = BMS_LIMP_HOME_CHARGE_CURRENT;
