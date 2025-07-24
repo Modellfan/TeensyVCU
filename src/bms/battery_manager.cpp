@@ -343,6 +343,7 @@ void BMS::update_balancing()
     bool vehicle_ok = (vehicle_state == STATE_CHARGE) ||
                       (vehicle_state == STATE_STANDBY);
 
+
     if (!any_balancing)
     {
         float lowestV = batteryPack.get_lowest_cell_voltage();

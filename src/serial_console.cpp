@@ -38,6 +38,20 @@ static const char *bms_state_to_string(BMS::STATE_BMS state) {
     }
 }
 
+static const char *vehicle_state_to_string(BMS::VehicleState state) {
+    switch (state) {
+        case BMS::STATE_SLEEP: return "SLEEP";
+        case BMS::STATE_STANDBY: return "STANDBY";
+        case BMS::STATE_READY: return "READY";
+        case BMS::STATE_CONDITIONING: return "CONDITIONING";
+        case BMS::STATE_DRIVE: return "DRIVE";
+        case BMS::STATE_CHARGE: return "CHARGE";
+        case BMS::STATE_ERROR: return "ERROR";
+        case BMS::STATE_LIMP_HOME: return "LIMP_HOME";
+        default: return "UNKNOWN";
+    }
+}
+
 static String bms_dtc_to_string(BMS::DTC_BMS dtc) {
     String errorString = "";
     if (static_cast<uint8_t>(dtc) == 0) {
@@ -280,11 +294,16 @@ void print_bms_status() {
     console.printf("BMS State: %s, DTC: %s\n",
                    bms_state_to_string(battery_manager.get_state()),
                    bms_dtc_to_string(battery_manager.get_dtc()).c_str());
-    console.printf(
-        "Vehicle State: %d, ReadyToShutdown: %d, VCU Timeout: %d\n",
-        battery_manager.get_vehicle_state(),
-        battery_manager.get_ready_to_shutdown(),
-        battery_manager.get_vcu_timeout());
+    if (battery_manager.is_vcu_data_valid()) {
+        console.printf(
+            "Vehicle State: %s, ReadyToShutdown: %d, VCU Timeout: %d\n",
+            vehicle_state_to_string(battery_manager.get_vehicle_state()),
+            battery_manager.get_ready_to_shutdown(),
+            battery_manager.get_vcu_timeout());
+    } else {
+        console.printf("Vehicle State: INVALID, VCU Timeout: %d\n",
+                       battery_manager.get_vcu_timeout());
+    }
     console.printf("Max Charge Current: %.1fA, Max Discharge Current: %.1fA\n",
                    battery_manager.get_max_charge_current(),
                    battery_manager.get_max_discharge_current());
@@ -361,9 +380,15 @@ void print_bms_internal_state() {
     Serial.print("dtc: ");
     Serial.println(battery_manager.get_dtc());
     Serial.print("vehicle_state: ");
-    Serial.println(battery_manager.get_vehicle_state());
-    Serial.print("ready_to_shutdown: ");
-    Serial.println(battery_manager.get_ready_to_shutdown());
+    if (battery_manager.is_vcu_data_valid()) {
+        Serial.println(vehicle_state_to_string(battery_manager.get_vehicle_state()));
+        Serial.print("ready_to_shutdown: ");
+        Serial.println(battery_manager.get_ready_to_shutdown());
+    } else {
+        Serial.println("INVALID");
+        Serial.print("ready_to_shutdown: ");
+        Serial.println("INVALID");
+    }
     Serial.print("vcu_timeout: ");
     Serial.println(battery_manager.get_vcu_timeout());
     Serial.print("pack_voltage: ");
