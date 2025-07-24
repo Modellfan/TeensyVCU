@@ -17,7 +17,8 @@ public:
         FAULT
     };
 
-    Contactor(int outputPin, int inputPin, int debounce_ms, int timeout_ms);
+    Contactor(int outputPin, int inputPin, int debounce_ms, int timeout_ms,
+              bool allowExternalControl = false);
 
     void initialise();
     void close();
@@ -34,6 +35,7 @@ private:
     unsigned int _timeout_ms;
     unsigned long _lastStateChange;
     State _currentState;
+    bool _allowExternalControl;
 };
 
 #endif
