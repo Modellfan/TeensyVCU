@@ -250,6 +250,93 @@ void print_bms_status() {
         battery_manager.get_current_limit_rms_charge());
     console.printf("Balancing Finished: %d\n",
                    battery_manager.is_balancing_finished());
+
+    // Also dump CAN data and internal state for debugging
+    print_bms_can_data();
+    print_bms_internal_state();
+}
+
+void print_bms_can_data() {
+#ifdef DEBUG
+    Serial.println("---- BMS CAN Data ----");
+    Serial.print("pack_voltage: ");
+    Serial.println(batteryPack.get_pack_voltage());
+    Serial.print("pack_current: ");
+    Serial.println(shunt.getCurrent());
+    Serial.print("lowest_cell_voltage: ");
+    Serial.println(batteryPack.get_lowest_cell_voltage());
+    Serial.print("highest_cell_voltage: ");
+    Serial.println(batteryPack.get_highest_cell_voltage());
+    Serial.print("lowest_temp: ");
+    Serial.println(batteryPack.get_lowest_temperature());
+    Serial.print("highest_temp: ");
+    Serial.println(batteryPack.get_highest_temperature());
+    Serial.print("avg_cell_voltage: ");
+    Serial.println(batteryPack.get_pack_voltage() /
+                   (MODULES_PER_PACK * CELLS_PER_MODULE));
+    Serial.print("cell_delta: ");
+    Serial.println(batteryPack.get_delta_cell_voltage());
+    Serial.print("pack_power: ");
+    Serial.println(batteryPack.get_pack_voltage() * shunt.getCurrent() / 1000.0f);
+    Serial.print("max_discharge_current: ");
+    Serial.println(battery_manager.get_max_discharge_current());
+    Serial.print("max_charge_current: ");
+    Serial.println(battery_manager.get_max_charge_current());
+    Serial.print("contactor_state: ");
+    Serial.println(static_cast<uint8_t>(contactor_manager.getState()));
+    Serial.print("dtc: ");
+    Serial.println(static_cast<uint8_t>(battery_manager.get_dtc()));
+    Serial.print("soc: ");
+    Serial.println(battery_manager.get_soc());
+    Serial.print("soh: ");
+    Serial.println(100);
+    Serial.print("balancing_finished: ");
+    Serial.println(battery_manager.is_balancing_finished());
+    Serial.print("state: ");
+    Serial.println(battery_manager.get_state());
+#endif
+}
+
+void print_bms_internal_state() {
+#ifdef DEBUG
+    Serial.println("---- BMS Internal State ----");
+    Serial.print("state: ");
+    Serial.println(battery_manager.get_state());
+    Serial.print("dtc: ");
+    Serial.println(battery_manager.get_dtc());
+    Serial.print("vehicle_state: ");
+    Serial.println(battery_manager.get_vehicle_state());
+    Serial.print("ready_to_shutdown: ");
+    Serial.println(battery_manager.get_ready_to_shutdown());
+    Serial.print("vcu_timeout: ");
+    Serial.println(battery_manager.get_vcu_timeout());
+    Serial.print("pack_voltage: ");
+    Serial.println(batteryPack.get_pack_voltage());
+    Serial.print("pack_current: ");
+    Serial.println(shunt.getCurrent());
+    Serial.print("max_charge_current: ");
+    Serial.println(battery_manager.get_max_charge_current());
+    Serial.print("max_discharge_current: ");
+    Serial.println(battery_manager.get_max_discharge_current());
+    Serial.print("soc: ");
+    Serial.println(battery_manager.get_soc());
+    Serial.print("soc_ocv_lut: ");
+    Serial.println(battery_manager.get_soc_ocv_lut());
+    Serial.print("soc_coulomb_counting: ");
+    Serial.println(battery_manager.get_soc_coulomb_counting());
+    Serial.print("current_limit_peak_discharge: ");
+    Serial.println(battery_manager.get_current_limit_peak_discharge());
+    Serial.print("current_limit_rms_discharge: ");
+    Serial.println(battery_manager.get_current_limit_rms_discharge());
+    Serial.print("current_limit_peak_charge: ");
+    Serial.println(battery_manager.get_current_limit_peak_charge());
+    Serial.print("current_limit_rms_charge: ");
+    Serial.println(battery_manager.get_current_limit_rms_charge());
+    Serial.print("current_limit_rms_derated_discharge: ");
+    Serial.println(battery_manager.get_current_limit_rms_derated_discharge());
+    Serial.print("current_limit_rms_derated_charge: ");
+    Serial.println(battery_manager.get_current_limit_rms_derated_charge());
+#endif
 }
 
 void print_contactor_status() {

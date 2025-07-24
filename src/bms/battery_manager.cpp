@@ -473,6 +473,7 @@ void BMS::send_battery_status_message()
     msg.data[7] = 0;
     msg.data[5] = can_crc8(msg.data);
     send_message(&msg);
+
     msg5_counter = (msg5_counter + 1) & 0x0F;
 }
 
@@ -488,4 +489,5 @@ void BMS::send_message(CANMessage *frame)
         // Serial.println("Send nok");
     }
 }
+
 
