@@ -64,6 +64,11 @@ bool Contactor::getInputPin()
     return (digitalRead(_inputPin) == CONTACTOR_CLOSED_STATE);
 }
 
+bool Contactor::getOutputPin()
+{
+    return digitalRead(_outputPin);
+}
+
 void Contactor::update()
 {
 

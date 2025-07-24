@@ -319,3 +319,23 @@ String Contactormanager::getDTCString()
 }
 
 Contactormanager::DTC_COM Contactormanager::getDTC() { return _dtc; }
+
+const Contactor &Contactormanager::getPositiveContactor() const
+{
+    return _positiveContactor;
+}
+
+const Contactor &Contactormanager::getPrechargeContactor() const
+{
+    return _prechargeContactor;
+}
+
+bool Contactormanager::isNegativeContactorClosed() const
+{
+    return _negativeContactor_closed;
+}
+
+bool Contactormanager::isContactorVoltageAvailable() const
+{
+    return _contactorVoltage_available;
+}
