@@ -24,6 +24,7 @@ public:
     void open();
     State getState();
     bool getInputPin();
+    bool getOutputPin();
     void update();
 
 private:
