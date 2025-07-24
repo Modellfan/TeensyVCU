@@ -8,6 +8,7 @@
 #include "utils/can_crc.h"
 #include "utils/current_limit_lookup.h"
 #include "utils/soc_lookup.h"
+#include "utils/resistance_lookup.h"
 #include <math.h>
 
 // #define DEBUG
@@ -213,7 +214,15 @@ void BMS::lookup_current_limits()
     current_limit_rms_charge = charge_cont;
 }
 
-void BMS::lookup_internal_resistance_table() {}
+void BMS::lookup_internal_resistance_table()
+{
+    // Use pack average temperature for resistance lookup
+    const float avg_temp = batteryPack.get_average_temperature();
+    const float soc_percent = soc;
+
+    const float ir_mohm = RESISTANCE_FROM_SOC_TEMP(avg_temp, soc_percent, 0);
+    internal_resistance_table = ir_mohm / 1000.0f; // convert mΩ to Ω
+}
 void BMS::estimate_internal_resistance_online()
 {
     const float current_threshold = IR_ESTIMATION_CURRENT_STEP_THRESHOLD;
