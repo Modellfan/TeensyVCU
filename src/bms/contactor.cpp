@@ -24,8 +24,16 @@ void Contactor::initialise()
         digitalWrite(_outputPin, LOW);
         if (digitalRead(_inputPin) == CONTACTOR_CLOSED_STATE)
         {
-            _currentState = FAULT;
-            digitalWrite(_outputPin, LOW);
+            if (_allowExternalControl)
+            {
+                _currentState = CLOSED;
+                _lastStateChange = millis();
+            }
+            else
+            {
+                _currentState = FAULT;
+                digitalWrite(_outputPin, LOW);
+            }
         }
         else
         {
