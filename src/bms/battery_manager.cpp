@@ -329,7 +329,7 @@ void BMS::update_balancing()
     float lowestV = batteryPack.get_lowest_cell_voltage();
     float cellDelta = batteryPack.get_delta_cell_voltage();
     bool temp_ok = batteryPack.get_highest_temperature() < BALANCE_MAX_TEMP;
-    bool vehicle_ok = (vehicle_state == STATE_CHARGE);
+    bool vehicle_ok = (!vcu_timeout && vehicle_state == STATE_CHARGE);
 
     if (vehicle_ok && temp_ok && lowestV > BALANCE_MIN_VOLTAGE)
     {

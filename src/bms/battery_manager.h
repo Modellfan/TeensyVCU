@@ -67,6 +67,7 @@ public:
     VehicleState get_vehicle_state() const { return vehicle_state; }
     bool get_ready_to_shutdown() const { return ready_to_shutdown; }
     bool get_vcu_timeout() const { return vcu_timeout; }
+    bool is_vcu_data_valid() const { return !vcu_timeout; }
     float get_max_charge_current() const { return max_charge_current; }
     float get_max_discharge_current() const { return max_discharge_current; }
     float get_soc() const { return soc; }
