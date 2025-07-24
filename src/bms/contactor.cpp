@@ -2,12 +2,14 @@
 #include "contactor.h"
 #include "settings.h"
 
-Contactor::Contactor(int outputPin, int inputPin, int debounce_ms, int timeout_ms)
+Contactor::Contactor(int outputPin, int inputPin, int debounce_ms, int timeout_ms,
+                     bool allowExternalControl)
     : _outputPin(outputPin),
       _inputPin(inputPin),
       _debounce_ms(debounce_ms),
       _timeout_ms(timeout_ms),
-      _currentState(INIT)
+      _currentState(INIT),
+      _allowExternalControl(allowExternalControl)
 {
     pinMode(_outputPin, OUTPUT);
     pinMode(_inputPin, INPUT_PULLUP);
@@ -79,15 +81,31 @@ void Contactor::update()
     case OPEN:
         if (digitalRead(_inputPin) == CONTACTOR_CLOSED_STATE)
         {
-            _currentState = FAULT;
-            digitalWrite(_outputPin, LOW);
+            if (_allowExternalControl)
+            {
+                _currentState = CLOSED;
+                _lastStateChange = millis();
+            }
+            else
+            {
+                _currentState = FAULT;
+                digitalWrite(_outputPin, LOW);
+            }
         }
         break;
     case CLOSED:
         if (digitalRead(_inputPin) != CONTACTOR_CLOSED_STATE)
         {
-            _currentState = FAULT;
-            digitalWrite(_outputPin, LOW);
+            if (_allowExternalControl)
+            {
+                _currentState = OPEN;
+                _lastStateChange = millis();
+            }
+            else
+            {
+                _currentState = FAULT;
+                digitalWrite(_outputPin, LOW);
+            }
         }
         break;
     case OPENING:

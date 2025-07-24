@@ -5,8 +5,16 @@
 #include "bms/contactor.h"
 #include "utils/can_packer.h"
 
-Contactormanager::Contactormanager() : _prechargeContactor(CONTACTOR_PRCHG_OUT_PIN, CONTACTOR_PRCHG_IN_PIN, CONTACTOR_DEBOUNCE, CONTACTOR_TIMEOUT),
-                                       _positiveContactor(CONTACTOR_POS_OUT_PIN, CONTACTOR_POS_IN_PIN, CONTACTOR_DEBOUNCE, CONTACTOR_TIMEOUT)
+Contactormanager::Contactormanager() :
+    _prechargeContactor(CONTACTOR_PRCHG_OUT_PIN,
+                        CONTACTOR_PRCHG_IN_PIN,
+                        CONTACTOR_DEBOUNCE,
+                        CONTACTOR_TIMEOUT,
+                        true),
+    _positiveContactor(CONTACTOR_POS_OUT_PIN,
+                       CONTACTOR_POS_IN_PIN,
+                       CONTACTOR_DEBOUNCE,
+                       CONTACTOR_TIMEOUT)
 {
     _currentState = INIT;
 }
