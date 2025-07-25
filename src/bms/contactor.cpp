@@ -53,7 +53,6 @@ void Contactor::close()
         _currentState = CLOSING;
         _lastStateChange = millis();
         digitalWrite(_outputPin, HIGH);
-        _currentState = CLOSED;
     }
 }
 
@@ -64,7 +63,6 @@ void Contactor::open()
         _currentState = OPENING;
         _lastStateChange = millis();
         digitalWrite(_outputPin, LOW);
-        _currentState = OPEN;
     }
 }
 
