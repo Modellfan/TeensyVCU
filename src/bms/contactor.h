@@ -4,6 +4,10 @@
 #include <Arduino.h>
 #include "settings.h"
 
+// When CONTACTOR_DISABLE_FEEDBACK is defined in settings.h the contactor
+// state machine is bypassed so commands immediately change the output pin
+// and logical state. The input pin can still be read but is not evaluated.
+// This facilitates debugging when feedback wiring is not present.
 class Contactor
 {
 public:
