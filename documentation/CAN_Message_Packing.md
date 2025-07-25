@@ -54,8 +54,8 @@ The following tables describe the structure of all CAN messages exchanged betwee
 | 0-1 | Averaged Energy per Hour | `uint16` | kWh × 100 | 0–65535 | 0–655.35 kWh |
 | 2-3 | Time to Full (Charging) | `uint16` | minutes | 0–65535 |  |
 | 4 | Counter (4&nbsp;bit) | `uint8` | lower 4 bits only | 0–15 | bits 7–4 always 0 |
-| 5-6 | reserved |  |  |  |  |
-| 7 | CRC8 | `uint8` |  |  |  |
+| 5 | CRC8 | `uint8` |  |  |  |
+| 6-7 | reserved |  |  |  |  |
 
 ## VCU to BMS
 
@@ -67,5 +67,5 @@ All signals below are unsigned unless otherwise noted.
 | 1 | RequestBMSShutdown | `uint8` | 0/1 | boolean as `uint8` |
 | 2 | RequestContactorClose | `uint8` | 0/1 | boolean as `uint8` |
 | 3 | Counter (4&nbsp;bit) | `uint8` | lower 4 bits only | bits 7–4 always 0 |
-| 4 | CRC8 | `uint8` |  |  |
-| 5-7 | reserved |  |  |  |
+| 4-6 | reserved |  |  |  |  |
+| 7 | CRC8 | `uint8` |  |  |
