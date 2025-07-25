@@ -35,7 +35,7 @@
 // Contactor Manager Settings
 //---------------------------------------------------------------------------------------------------------------------------------------------
 #define CONTACTOR_TIMELOOP 20
-#define CONTACTOR_TIMEOUT 200
+#define CONTACTOR_TIMEOUT 500
 #define CONTACTOR_DEBOUNCE 100 //Debounce should be bigger than time loop
 
 #define CONTACTOR_CLOSED_STATE LOW
