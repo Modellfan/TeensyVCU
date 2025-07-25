@@ -67,5 +67,5 @@ All signals below are unsigned unless otherwise noted.
 | 1 | RequestBMSShutdown | `uint8` | 0/1 | boolean as `uint8` |
 | 2 | RequestContactorClose | `uint8` | 0/1 | boolean as `uint8` |
 | 3 | Counter (4&nbsp;bit) | `uint8` | lower 4 bits only | bits 7–4 always 0 |
-| 4 | CRC8 | `uint8` |  |  |
-| 5-7 | reserved |  |  |  |
+| 4-6 | reserved |  |  |  |  |
+| 7 | CRC8 | `uint8` |  |  |
