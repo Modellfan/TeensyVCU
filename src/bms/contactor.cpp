@@ -20,6 +20,16 @@ Contactor::Contactor(int outputPin, int inputPin, int debounce_ms, int timeout_m
 
 void Contactor::initialise()
 {
+#ifdef CONTACTOR_DISABLE_FEEDBACK
+    // In debug mode start in open state ignoring feedback pins
+    if (_currentState == INIT)
+    {
+        _dtc = DTC_CON_NONE;
+        digitalWrite(_outputPin, LOW);
+        _currentState = OPEN;
+        _lastStateChange = millis();
+    }
+#else
     if (_currentState == INIT)
     {
         _dtc = DTC_CON_NONE;
@@ -44,26 +54,42 @@ void Contactor::initialise()
             _lastStateChange = millis();
         }
     }
+#endif
 }
 
 void Contactor::close()
 {
+#ifdef CONTACTOR_DISABLE_FEEDBACK
+    // Immediately drive the output and set state to CLOSED
+    digitalWrite(_outputPin, HIGH);
+    _currentState = CLOSED;
+    _lastStateChange = millis();
+    _dtc = DTC_CON_NONE;
+#else
     if (_currentState == OPEN || _currentState == OPENING)
     {
         _currentState = CLOSING;
         _lastStateChange = millis();
         digitalWrite(_outputPin, HIGH);
     }
+#endif
 }
 
 void Contactor::open()
 {
+#ifdef CONTACTOR_DISABLE_FEEDBACK
+    digitalWrite(_outputPin, LOW);
+    _currentState = OPEN;
+    _lastStateChange = millis();
+    _dtc = DTC_CON_NONE;
+#else
     if (_currentState == CLOSED || _currentState == CLOSING)
     {
         _currentState = OPENING;
         _lastStateChange = millis();
         digitalWrite(_outputPin, LOW);
     }
+#endif
 }
 
 Contactor::State Contactor::getState() const
@@ -73,7 +99,6 @@ Contactor::State Contactor::getState() const
 
 bool Contactor::getInputPin() const
 {
-
     return (digitalRead(_inputPin) == CONTACTOR_CLOSED_STATE);
 }
 
@@ -84,6 +109,11 @@ bool Contactor::getOutputPin() const
 
 void Contactor::update()
 {
+
+#ifdef CONTACTOR_DISABLE_FEEDBACK
+    // In debug mode no state machine is required
+    return;
+#endif
 
     switch (_currentState)
     {
