@@ -77,6 +77,8 @@ public:
     float get_current_limit_rms_discharge() const { return current_limit_rms_discharge; }
     float get_current_limit_peak_charge() const { return current_limit_peak_charge; }
     float get_current_limit_rms_charge() const { return current_limit_rms_charge; }
+    float get_current_limit_rms_derated_discharge()const { return current_limit_rms_derated_discharge; }
+    float get_current_limit_rms_derated_charge()const { return current_limit_rms_derated_charge; }
 
     bool is_balancing_finished() const { return balancing_finished; }
 

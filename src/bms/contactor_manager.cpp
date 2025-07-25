@@ -17,6 +17,7 @@ Contactormanager::Contactormanager() :
                        CONTACTOR_TIMEOUT)
 {
     _currentState = INIT;
+    _targetState = OPEN;
 }
 
 void Contactormanager::initialise()

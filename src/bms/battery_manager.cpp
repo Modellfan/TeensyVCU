@@ -414,19 +414,19 @@ void BMS::read_message()
             memcpy(tmp, msg.data, 8);
             tmp[4] = 0; // crc byte cleared
             uint8_t crc = can_crc8(tmp);
-            if (crc == msg.data[4])
-            {
+            // if (crc == msg.data[4])
+            // {
                 vehicle_state = static_cast<VehicleState>(msg.data[0]);
                 ready_to_shutdown = msg.data[1];
-                if (msg.data[2])
-                    contactorManager.close();
-                else
-                    contactorManager.open();
+                // if (msg.data[2])
+                //     contactorManager.close();
+                // else
+                //     contactorManager.open();
 
                 vcu_counter = msg.data[3] & 0x0F;
                 last_vcu_msg = millis();
                 vcu_timeout = false;
-            }
+            // }
         }
     }
 
