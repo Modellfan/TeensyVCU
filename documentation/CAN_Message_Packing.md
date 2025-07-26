@@ -21,7 +21,7 @@ The following tables describe the structure of all CAN messages exchanged betwee
 | 1 | Max Cell Temp | `uint8` | (°C) + 40 | 0–167 | –40 °C to +127 °C |
 | 2 | Cell Voltage Avg | `uint8` | V × 50 | 0–255 | 0–5.10 V |
 | 3 | Cell Voltage Delta | `uint8` | V × 100 | 0–255 | 0–2.55 V |
-| 4-5 | Pack Power | `uint16` | (kW × 10) + 2000 | 0–65535 | –200 kW to +4553 kW |
+| 4-5 | Pack Power | `uint16` | (kW × 100) + 30000 | 0–50000 | –300 kW to +200 kW |
 | 6 | Counter (4&nbsp;bit) | `uint8` | lower 4 bits only | 0–15 | bits 7–4 always 0 |
 | 7 | CRC8 | `uint8` |  |  |  |
 
@@ -54,8 +54,8 @@ The following tables describe the structure of all CAN messages exchanged betwee
 | 0-1 | Averaged Energy per Hour | `uint16` | kWh × 100 | 0–65535 | 0–655.35 kWh |
 | 2-3 | Time to Full (Charging) | `uint16` | minutes | 0–65535 |  |
 | 4 | Counter (4&nbsp;bit) | `uint8` | lower 4 bits only | 0–15 | bits 7–4 always 0 |
-| 5 | CRC8 | `uint8` |  |  |  |
-| 6-7 | reserved |  |  |  |  |
+| 5-6 | reserved |  |  |  |  |
+| 7 | CRC8 | `uint8` |  |  |  |
 
 ## VCU to BMS
 

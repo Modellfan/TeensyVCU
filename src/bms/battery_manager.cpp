@@ -458,7 +458,7 @@ void BMS::send_battery_status_message()
     uint8_t maxT = (uint8_t)(batteryPack.get_highest_temperature() + 40.0f);
     uint8_t cellAvg = (uint8_t)(batteryPack.get_pack_voltage() / (MODULES_PER_PACK * CELLS_PER_MODULE) * 50.0f);
     uint8_t cellDelta = (uint8_t)(batteryPack.get_delta_cell_voltage() * 100.0f);
-    uint16_t packPower = (uint16_t)((batteryPack.get_pack_voltage() * shunt.getCurrent() / 1000.0f) * 10.0f + 2000.0f);
+    uint16_t packPower = (uint16_t)((batteryPack.get_pack_voltage() * shunt.getCurrent() / 1000.0f) * 100.0f + 30000.0f);
     msg.data[0] = minT;
     msg.data[1] = maxT;
     msg.data[2] = cellAvg;
