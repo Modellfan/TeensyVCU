@@ -410,10 +410,9 @@ void BMS::read_message()
             memcpy(tmp, msg.data, 8);
             tmp[7] = 0; // crc byte cleared
             uint8_t crc = can_crc8(tmp);
-            if (crc == msg.data[4])
+
+            if (crc == msg.data[7])
             {
-            // if (crc == msg.data[7])
-            // {
                 vehicle_state = static_cast<VehicleState>(msg.data[0]);
                 ready_to_shutdown = msg.data[1];
                 if (msg.data[2])
@@ -450,7 +449,7 @@ void BMS::send_battery_status_message()
     msg.data[5] = (uint8_t)(batteryPack.get_highest_cell_voltage() * 50.0f);
     msg.data[6] = msg1_counter & 0x0F;
     msg.data[7] = 0;
-    msg.data[5] = can_crc8(msg.data);
+    msg.data[7] = can_crc8(msg.data);
     send_message(&msg);
     msg1_counter = (msg1_counter + 1) & 0x0F;
 
@@ -518,7 +517,7 @@ void BMS::send_battery_status_message()
     msg.data[5] = 0;
     msg.data[6] = 0;
     msg.data[7] = 0;
-    msg.data[5] = can_crc8(msg.data);
+    msg.data[7] = can_crc8(msg.data);
     send_message(&msg);
 
     msg5_counter = (msg5_counter + 1) & 0x0F;
