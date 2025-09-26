@@ -38,6 +38,7 @@ BMS::BMS(BatteryPack &_batteryPack, Shunt_ISA_iPace &_shunt, Contactormanager &_
     last_vcu_msg = 0;
     vcu_timeout = false;
     balancing_finished = false;
+    ocv_current_settle_start_ms = 0;
 }
 
 void BMS::initialize()
@@ -171,15 +172,35 @@ void BMS::update_state_machine()
 
 void BMS::update_soc_ocv_lut()
 {
-    if (fabs(pack_current) <= BMS_OCV_CURRENT_THRESHOLD)
+    const float current = shunt.getCurrent();
+    pack_current = current;
+
+    const float abs_current = fabs(current);
+
+    if (abs_current <= BMS_OCV_CURRENT_THRESHOLD)
     {
-        // Use lowest cell voltage across the pack as OCV reference
-        const float ocv = batteryPack.get_lowest_cell_voltage();
+        const unsigned long now = millis();
 
-        // Average pack temperature handled by BatteryPack
-        const float avgTemp = batteryPack.get_average_temperature();
+        if (ocv_current_settle_start_ms == 0)
+        {
+            ocv_current_settle_start_ms = now;
+        }
 
-        soc_ocv_lut = SOC_FROM_OCV_TEMP(avgTemp, ocv);
+        if (ocv_current_settle_start_ms != 0 &&
+            (now - ocv_current_settle_start_ms) >= BMS_OCV_CURRENT_SETTLE_TIME_MS)
+        {
+            // Use lowest cell voltage across the pack as OCV reference
+            const float ocv = batteryPack.get_lowest_cell_voltage();
+
+            // Average pack temperature handled by BatteryPack
+            const float avgTemp = batteryPack.get_average_temperature();
+
+            soc_ocv_lut = SOC_FROM_OCV_TEMP(avgTemp, ocv);
+        }
+    }
+    else
+    {
+        ocv_current_settle_start_ms = 0;
     }
 }
 
