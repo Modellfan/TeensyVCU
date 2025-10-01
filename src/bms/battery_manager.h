@@ -105,9 +105,6 @@ private:
     float soc_coulomb_counting; // SOC from coulomb counting
     float soc;                  // Corrected SOC
 
-    // --- SOH (Monitoring Only) ---
-    float measured_capacity_Ah; // Integrated capacity over a full cycle
-
     // --- Current Limits (Temperature) ---
     float current_limit_peak_discharge;        // Peak allowed discharge current (A)
     float current_limit_rms_discharge;         // RMS allowed discharge current (A)
