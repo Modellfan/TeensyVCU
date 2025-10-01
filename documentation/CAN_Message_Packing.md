@@ -51,10 +51,10 @@ The following tables describe the structure of all CAN messages exchanged betwee
 
 | Byte | Signal | Type | Scaling/Offset | Range | Notes |
 |-----|--------|------|---------------|-------|-------|
-| 0-1 | Averaged Energy per Hour | `uint16` | kWh × 100 | 0–65535 | 0–655.35 kWh |
-| 2-3 | Time to Full (Charging) | `uint16` | minutes | 0–65535 |  |
-| 4 | Counter (4&nbsp;bit) | `uint8` | lower 4 bits only | 0–15 | bits 7–4 always 0 |
-| 5-6 | reserved |  |  |  |  |
+| 0-1 | Averaged Energy per Hour | `int16` | kWh × 100 | –32768–32767 | sign indicates charge (–) or discharge (+) |
+| 2-3 | Remaining Time | `uint16` | seconds | 0–65535 | time to empty when discharging, time to full when charging |
+| 4-5 | Remaining Energy | `uint16` | Wh | 0–65535 | energy left |
+| 6 | Counter (4&nbsp;bit) | `uint8` | lower 4 bits only | 0–15 | bits 7–4 always 0 |
 | 7 | CRC8 | `uint8` |  |  |  |
 
 ## VCU to BMS

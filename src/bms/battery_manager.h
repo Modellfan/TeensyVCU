@@ -53,6 +53,8 @@ public:
     void initialize();
     void read_message(); // Poll messages
 
+    void set_pack_power(float pack_power_w);
+
     void Task2Ms();  // Read Can messages ?
     void Task10Ms(); // Poll messages
     void Task100Ms();
@@ -98,7 +100,8 @@ private:
     float dt;
     bool invalid_data;
 
-    float power; // in Ws
+    float power; // Optional pack power reading in W
+    bool pack_power_valid;
 
     // SOC
     float soc_ocv_lut;       // SOC from OCV-Temp LUT
@@ -143,9 +146,14 @@ private:
     bool balancing_finished;
 
     // Non-Volatile Variable!!
-    float watt_seconds;
-    float ampere_seconds;
-    float total_capacity = BMS_TOTAL_CAPACITY;
+    float measured_capacity_Wh = 28000.0f;
+    float avg_energy_per_hour; // kWh per hour
+    float remaining_wh;        // Remaining energy in Wh
+    float time_remaining_s;    // Remaining time until empty/full depending on sign
+    float avg_power_w;         // Internal average power for filtering
+    float last_instantaneous_power_w; // Latest instantaneous power sample (W)
+
+    void update_energy_metrics();
 
     void send_battery_status_message();
 
