@@ -105,6 +105,9 @@
 
 // Maximum absolute pack current (A) for valid OCV-based SOC estimation
 #define BMS_OCV_CURRENT_THRESHOLD 10.0f
+// Minimum time (ms) that pack current must stay below the OCV threshold
+// before an OCV-based SOC update is considered valid
+#define BMS_OCV_CURRENT_SETTLE_TIME_MS 5000UL
 
 // Maximum allowable instantaneous pack discharge current (A)
 #define BMS_MAX_DISCHARGE_PEAK_CURRENT 409.0f

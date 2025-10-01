@@ -10,8 +10,6 @@
 #include "utils/soc_lookup.h"
 #include "utils/resistance_lookup.h"
 #include "serial_console.h"
-#include <math.h>
-#include <algorithm>
 #include <cmath>
 
 // #define DEBUG
@@ -40,6 +38,7 @@ BMS::BMS(BatteryPack &_batteryPack, Shunt_ISA_iPace &_shunt, Contactormanager &_
     last_vcu_msg = 0;
     vcu_timeout = false;
     balancing_finished = false;
+    ocv_current_settle_start_ms = 0U;
     avg_energy_per_hour = 0.0f;
     remaining_wh = 0.0f;
     time_remaining_s = 0.0f;
@@ -188,16 +187,38 @@ void BMS::update_state_machine()
 
 void BMS::update_soc_ocv_lut()
 {
-    if (fabs(pack_current) <= BMS_OCV_CURRENT_THRESHOLD)
+    pack_current = shunt.getCurrent();
+
+    const float abs_current = std::fabs(pack_current);
+    const bool below_threshold = abs_current <= BMS_OCV_CURRENT_THRESHOLD;
+
+    if (!below_threshold)
     {
-        // Use lowest cell voltage across the pack as OCV reference
-        const float ocv = batteryPack.get_lowest_cell_voltage();
-
-        // Average pack temperature handled by BatteryPack
-        const float avgTemp = batteryPack.get_average_temperature();
-
-        soc_ocv_lut = SOC_FROM_OCV_TEMP(avgTemp, ocv);
+        ocv_current_settle_start_ms = 0;
+        return;
     }
+
+    const uint32_t now = millis();
+
+    if (ocv_current_settle_start_ms == 0U)
+    {
+        ocv_current_settle_start_ms = now;
+        return;
+    }
+
+    const uint32_t elapsed = now - ocv_current_settle_start_ms;
+    if (elapsed < BMS_OCV_CURRENT_SETTLE_TIME_MS)
+    {
+        return;
+    }
+
+    // Use lowest cell voltage across the pack as OCV reference
+    const float ocv = batteryPack.get_lowest_cell_voltage();
+
+    // Average pack temperature handled by BatteryPack
+    const float avgTemp = batteryPack.get_average_temperature();
+
+    soc_ocv_lut = SOC_FROM_OCV_TEMP(avgTemp, ocv);
 }
 
 void BMS::update_soc_coulomb_counting()
@@ -334,7 +355,7 @@ void BMS::estimate_internal_resistance_online()
 
     float deltaI = pack_current - last_pack_current;
 
-    if (fabs(deltaI) > current_threshold)
+    if (std::fabs(deltaI) > current_threshold)
     {
         for (int i = 0; i < CELLS_PER_MODULE * MODULES_PER_PACK; ++i)
         {

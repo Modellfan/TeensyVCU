@@ -101,6 +101,7 @@ private:
 
     // SOC
     float soc_ocv_lut;          // SOC from OCV-Temp LUT
+    uint32_t ocv_current_settle_start_ms;
     float soc_coulomb_counting; // SOC from coulomb counting
     float soc;                  // Corrected SOC
 
