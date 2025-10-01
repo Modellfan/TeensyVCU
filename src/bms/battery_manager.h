@@ -10,6 +10,7 @@
 #include "bms/contactor_manager.h"
 #include "utils/can_packer.h"
 #include "settings.h"
+#include "persistent_data_storage.h"
 
 typedef void (*SendMessageCallback)(const CANMessage &);
 
@@ -84,6 +85,8 @@ public:
     bool is_balancing_finished() const { return balancing_finished; }
 
 private:
+    PersistentDataStorage persistent_storage;
+
     BatteryPack &batteryPack; // Reference to the BatteryPack
     Shunt_ISA_iPace &shunt;
     Contactormanager &contactorManager;
@@ -197,6 +200,10 @@ private:
 
     // Current vehicle state received from the VCU
     VehicleState vehicle_state;
+    VehicleState last_vehicle_state;
+
+    void apply_persistent_data(const PersistentDataStorage::PersistentData &data);
+    PersistentDataStorage::PersistentData collect_persistent_data() const;
 
     // State and DTC
     STATE_BMS state;
