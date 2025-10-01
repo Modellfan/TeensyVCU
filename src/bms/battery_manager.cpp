@@ -117,7 +117,14 @@ void BMS::Task1000Ms()
     update_soc_coulomb_counting();
     correct_soc();
 
+
     update_energy_metrics();
+
+    lookup_current_limits();
+    lookup_internal_resistance_table();
+
+    calculate_voltage_derate();
+
 
     update_balancing();
 }
