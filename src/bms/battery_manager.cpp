@@ -30,6 +30,7 @@ BMS::BMS(BatteryPack &_batteryPack, Shunt_ISA_iPace &_shunt, Contactormanager &_
     current_limit_rms_derated_charge = 0.0f;
     ready_to_shutdown = false;
     vehicle_state = STATE_SLEEP;
+    last_vehicle_state = STATE_SLEEP;
     msg1_counter = 0;
     msg2_counter = 0;
     msg3_counter = 0;
@@ -49,6 +50,9 @@ BMS::BMS(BatteryPack &_batteryPack, Shunt_ISA_iPace &_shunt, Contactormanager &_
 
 void BMS::initialize()
 {
+    persistent_storage.begin();
+    apply_persistent_data(persistent_storage.load());
+
     // Set up CAN port
     ACAN_T4_Settings settings(500 * 1000); // 500 kbit/s
     settings.mTransmitBufferSize = 800;
@@ -506,7 +510,16 @@ void BMS::read_message()
 
             if (crc == msg.data[7])
             {
-                vehicle_state = static_cast<VehicleState>(msg.data[0]);
+                const VehicleState new_vehicle_state = static_cast<VehicleState>(msg.data[0]);
+                const bool transitioned_to_standby = (new_vehicle_state == STATE_STANDBY) && (last_vehicle_state != STATE_STANDBY);
+
+                vehicle_state = new_vehicle_state;
+                if (transitioned_to_standby)
+                {
+                    persistent_storage.save(collect_persistent_data());
+                }
+                last_vehicle_state = new_vehicle_state;
+
                 ready_to_shutdown = msg.data[1];
                 if (msg.data[2])
                     contactorManager.close();
@@ -524,6 +537,24 @@ void BMS::read_message()
     {
         vcu_timeout = true;
     }
+}
+
+void BMS::apply_persistent_data(const PersistentDataStorage::PersistentData &data)
+{
+    energy_initial_Wh = data.energy_initial_Wh;
+    measured_capacity_Wh = data.measured_capacity_Wh;
+    ampere_seconds_initial = data.ampere_seconds_initial;
+    measured_capacity_Ah = data.measured_capacity_Ah;
+}
+
+PersistentDataStorage::PersistentData BMS::collect_persistent_data() const
+{
+    PersistentDataStorage::PersistentData data;
+    data.energy_initial_Wh = energy_initial_Wh;
+    data.measured_capacity_Wh = measured_capacity_Wh;
+    data.ampere_seconds_initial = ampere_seconds_initial;
+    data.measured_capacity_Ah = measured_capacity_Ah;
+    return data;
 }
 
 void BMS::send_battery_status_message()
