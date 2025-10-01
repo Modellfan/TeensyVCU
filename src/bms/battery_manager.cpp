@@ -11,6 +11,7 @@
 #include "utils/resistance_lookup.h"
 #include "serial_console.h"
 #include <cmath>
+#include <algorithm>
 
 // #define DEBUG
 
@@ -548,12 +549,17 @@ void BMS::send_battery_status_message()
     msg.id = BMS_MSG_CELL_TEMP;
     uint8_t minT = (uint8_t)(batteryPack.get_lowest_temperature() + 40.0f);
     uint8_t maxT = (uint8_t)(batteryPack.get_highest_temperature() + 40.0f);
-    uint8_t cellAvg = (uint8_t)(batteryPack.get_pack_voltage() / (MODULES_PER_PACK * CELLS_PER_MODULE) * 50.0f);
+    float balancingTargetVoltage = batteryPack.get_balancing_active()
+                                       ? batteryPack.get_balancing_voltage()
+                                       : 0.0f;
+    balancingTargetVoltage =
+        std::clamp(balancingTargetVoltage, 0.0f, 5.1f);
+    uint8_t balancingTarget = static_cast<uint8_t>(balancingTargetVoltage * 50.0f);
     uint8_t cellDelta = (uint8_t)(batteryPack.get_delta_cell_voltage() * 100.0f);
     uint16_t packPower = (uint16_t)((batteryPack.get_pack_voltage() * shunt.getCurrent() / 1000.0f) * 100.0f + 30000.0f);
     msg.data[0] = minT;
     msg.data[1] = maxT;
-    msg.data[2] = cellAvg;
+    msg.data[2] = balancingTarget;
     msg.data[3] = cellDelta;
     msg.data[4] = packPower & 0xFF;
     msg.data[5] = packPower >> 8;

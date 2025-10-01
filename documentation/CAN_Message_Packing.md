@@ -2,7 +2,7 @@
 
 The following tables describe the structure of all CAN messages exchanged between the BMS and VCU.
 
-## MSG1: `BMS_VOLTAGE` (10&nbsp;Hz)
+## MSG1: `BMS_VOLTAGE` (0x41A, 10&nbsp;Hz)
 
 | Byte | Signal | Type | Scaling/Offset | Range | Notes |
 |-----|--------|------|---------------|-------|-------|
@@ -13,19 +13,19 @@ The following tables describe the structure of all CAN messages exchanged betwee
 | 6 | Counter (4&nbsp;bit) | `uint8` | lower 4 bits only | 0–15 | bits 7–4 always 0 |
 | 7 | CRC8 | `uint8` |  |  |  |
 
-## MSG2: `BMS_CELL_TEMP` (10&nbsp;Hz)
+## MSG2: `BMS_CELL_TEMP` (0x41B, 10&nbsp;Hz)
 
 | Byte | Signal | Type | Scaling/Offset | Range | Notes |
 |-----|--------|------|---------------|-------|-------|
 | 0 | Min Cell Temp | `uint8` | (°C) + 40 | 0–167 | –40 °C to +127 °C |
 | 1 | Max Cell Temp | `uint8` | (°C) + 40 | 0–167 | –40 °C to +127 °C |
-| 2 | Cell Voltage Avg | `uint8` | V × 50 | 0–255 | 0–5.10 V |
+| 2 | Balancing Target Voltage | `uint8` | V × 50 | 0–255 | 0–5.10 V, 0 V when balancing inactive |
 | 3 | Cell Voltage Delta | `uint8` | V × 100 | 0–255 | 0–2.55 V |
 | 4-5 | Pack Power | `uint16` | (kW × 100) + 30000 | 0–50000 | –300 kW to +200 kW |
 | 6 | Counter (4&nbsp;bit) | `uint8` | lower 4 bits only | 0–15 | bits 7–4 always 0 |
 | 7 | CRC8 | `uint8` |  |  |  |
 
-## MSG3: `BMS_LIMITS_FAULT` (10&nbsp;Hz)
+## MSG3: `BMS_LIMITS_FAULT` (0x41C, 10&nbsp;Hz)
 
 | Byte | Signal | Type | Scaling/Offset | Range | Notes |
 |-----|--------|------|---------------|-------|-------|
@@ -36,7 +36,7 @@ The following tables describe the structure of all CAN messages exchanged betwee
 | 6 | Counter (4&nbsp;bit) | `uint8` | lower 4 bits only | 0–15 | bits 7–4 always 0 |
 | 7 | CRC8 | `uint8` |  |  |  |
 
-## MSG4: `BMS_SOC_SOH` (1&nbsp;Hz)
+## MSG4: `BMS_SOC_SOH` (0x41D, 1&nbsp;Hz)
 
 | Byte | Signal | Type | Scaling/Offset | Range | Notes |
 |-----|--------|------|---------------|-------|-------|
@@ -47,7 +47,7 @@ The following tables describe the structure of all CAN messages exchanged betwee
 | 6 | Counter (4&nbsp;bit) | `uint8` | lower 4 bits only | 0–15 | bits 7–4 always 0 |
 | 7 | CRC8 | `uint8` |  |  |  |
 
-## MSG5: `BMS_HMI` (1&nbsp;Hz)
+## MSG5: `BMS_HMI` (0x41E, 1&nbsp;Hz)
 
 | Byte | Signal | Type | Scaling/Offset | Range | Notes |
 |-----|--------|------|---------------|-------|-------|
@@ -57,7 +57,7 @@ The following tables describe the structure of all CAN messages exchanged betwee
 | 6 | Counter (4&nbsp;bit) | `uint8` | lower 4 bits only | 0–15 | bits 7–4 always 0 |
 | 7 | CRC8 | `uint8` |  |  |  |
 
-## VCU to BMS
+## VCU to BMS (`BMS_VCU`, 0x437)
 
 All signals below are unsigned unless otherwise noted.
 
