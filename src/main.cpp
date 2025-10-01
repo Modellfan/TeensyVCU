@@ -12,6 +12,7 @@
 #include "bms/battery_manager.h"
 #include "comms_bms.h"
 #include "serial_console.h"
+#include "firmware_version.h"
 
 #ifndef __IMXRT1062__
 #error "This sketch should be compiled for Teensy 4.1"
@@ -55,6 +56,8 @@ void setup()
 #endif
 
   Serial.println("Setup software modules:");
+  Serial.print("Firmware version: ");
+  Serial.println(FIRMWARE_BUILD_INFO);
 
   // Setup SW components
   //-- only constructors go here. No setup if initialization methods
