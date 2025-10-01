@@ -68,7 +68,9 @@
 #define BMS_MSG_HMI 0x41E
 #define BMS_VCU_TIMEOUT 300
 
-#define BMS_TOTAL_CAPACITY 345 * 3600 * CELLS_PER_MODULE; //Num modules missing 345Wh 3600 s/H 12 Cells. Unit: Ws
+#define ENERGY_AVG_WINDOW_SEC 5.0f
+#define ENERGY_MIN_VALID_POWER_W 1.0f
+#define BMS_INITIAL_REMAINING_WH (345.0f * 7.0f * 12.0f)
 
 //BMW i3 Specs from Samsung SDI document
 #define SAFETY_LIMIT_CHARGE 4.25

@@ -11,6 +11,8 @@
 #include "utils/resistance_lookup.h"
 #include "serial_console.h"
 #include <math.h>
+#include <algorithm>
+#include <cmath>
 
 // #define DEBUG
 
@@ -38,6 +40,13 @@ BMS::BMS(BatteryPack &_batteryPack, Shunt_ISA_iPace &_shunt, Contactormanager &_
     last_vcu_msg = 0;
     vcu_timeout = false;
     balancing_finished = false;
+    power = 0.0f;
+    pack_power_valid = false;
+    avg_energy_per_hour = 0.0f;
+    remaining_wh = BMS_INITIAL_REMAINING_WH;
+    time_remaining_s = 0.0f;
+    avg_power_w = 0.0f;
+    last_instantaneous_power_w = 0.0f;
 }
 
 void BMS::initialize()
@@ -107,6 +116,8 @@ void BMS::Task1000Ms()
     update_soc_ocv_lut();
     update_soc_coulomb_counting();
     correct_soc();
+
+    update_energy_metrics();
 
     update_balancing();
 }
@@ -194,6 +205,67 @@ void BMS::correct_soc()
 }
 
 void BMS::calculate_soh() {}
+
+void BMS::set_pack_power(float pack_power_w)
+{
+    power = pack_power_w;
+    pack_power_valid = true;
+    last_instantaneous_power_w = pack_power_w;
+}
+
+void BMS::update_energy_metrics()
+{
+    static unsigned long last_sample_ms = 0;
+    const unsigned long now_ms = millis();
+
+    if (last_sample_ms == 0)
+    {
+        last_sample_ms = now_ms;
+        return;
+    }
+
+    const unsigned long delta_ms = now_ms - last_sample_ms;
+    last_sample_ms = now_ms;
+
+    if (delta_ms == 0)
+    {
+        return;
+    }
+
+    const float dt = static_cast<float>(delta_ms) / 1000.0f;
+
+    const float voltage = batteryPack.get_pack_voltage();
+    const float current = shunt.getCurrent();
+    const float power_w = voltage * current; // instantaneous power
+    last_instantaneous_power_w = power_w;
+
+    float alpha = dt / ENERGY_AVG_WINDOW_SEC;
+    if (alpha > 1.0f)
+    {
+        alpha = 1.0f;
+    }
+    avg_power_w = alpha * power_w + (1.0f - alpha) * avg_power_w;
+    avg_energy_per_hour = avg_power_w / 1000.0f; // convert W to kWh/h, sign preserved
+
+    // TODO: replace SOC proxy with real SoE once available
+    remaining_wh = (soc / 100.0f) * measured_capacity_Wh;
+
+    const float available_wh = remaining_wh;
+    const float deficit_wh = measured_capacity_Wh - remaining_wh;
+
+    if (avg_power_w > ENERGY_MIN_VALID_POWER_W)
+    {
+        time_remaining_s = (available_wh * 3600.0f) / avg_power_w;
+    }
+    else if (avg_power_w < -ENERGY_MIN_VALID_POWER_W)
+    {
+        time_remaining_s = (deficit_wh * 3600.0f) / -avg_power_w;
+    }
+    else
+    {
+        time_remaining_s = 0.0f;
+    }
+}
 
 void BMS::lookup_current_limits()
 {
@@ -458,7 +530,17 @@ void BMS::send_battery_status_message()
     uint8_t maxT = (uint8_t)(batteryPack.get_highest_temperature() + 40.0f);
     uint8_t cellAvg = (uint8_t)(batteryPack.get_pack_voltage() / (MODULES_PER_PACK * CELLS_PER_MODULE) * 50.0f);
     uint8_t cellDelta = (uint8_t)(batteryPack.get_delta_cell_voltage() * 100.0f);
-    uint16_t packPower = (uint16_t)((batteryPack.get_pack_voltage() * shunt.getCurrent() / 1000.0f) * 100.0f + 30000.0f);
+    float pack_power_kw;
+    if (pack_power_valid)
+    {
+        pack_power_kw = power / 1000.0f;
+    }
+    else
+    {
+        pack_power_kw = last_instantaneous_power_w / 1000.0f;
+    }
+    uint16_t packPower = static_cast<uint16_t>((pack_power_kw * 100.0f) + 30000.0f);
+    pack_power_valid = false;
     msg.data[0] = minT;
     msg.data[1] = maxT;
     msg.data[2] = cellAvg;
@@ -507,15 +589,19 @@ void BMS::send_battery_status_message()
     msg4_counter = (msg4_counter + 1) & 0x0F;
 
     msg.id = BMS_MSG_HMI;
-    uint16_t energy = 0;
-    uint16_t ttf = 0;
-    msg.data[0] = energy & 0xFF;
-    msg.data[1] = energy >> 8;
-    msg.data[2] = ttf & 0xFF;
-    msg.data[3] = ttf >> 8;
-    msg.data[4] = msg5_counter & 0x0F;
-    msg.data[5] = 0;
-    msg.data[6] = 0;
+    const float clamped_energy = std::clamp(avg_energy_per_hour, -327.67f, 327.67f);
+    const int16_t energy = static_cast<int16_t>(clamped_energy * 100.0f);
+    const float clamped_time = std::clamp(time_remaining_s, 0.0f, 65535.0f);
+    const uint16_t time_left = static_cast<uint16_t>(clamped_time);
+    const float clamped_wh = std::clamp(remaining_wh, 0.0f, 65535.0f);
+    const uint16_t wh_left = static_cast<uint16_t>(clamped_wh);
+    msg.data[0] = static_cast<uint8_t>(energy & 0xFF);
+    msg.data[1] = static_cast<uint8_t>((energy >> 8) & 0xFF);
+    msg.data[2] = static_cast<uint8_t>(time_left & 0xFF);
+    msg.data[3] = static_cast<uint8_t>(time_left >> 8);
+    msg.data[4] = static_cast<uint8_t>(wh_left & 0xFF);
+    msg.data[5] = static_cast<uint8_t>(wh_left >> 8);
+    msg.data[6] = msg5_counter & 0x0F;
     msg.data[7] = 0;
     msg.data[7] = can_crc8(msg.data);
     send_message(&msg);
