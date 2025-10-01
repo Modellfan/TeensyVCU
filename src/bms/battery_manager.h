@@ -147,10 +147,13 @@ private:
     float time_remaining_s;           // Remaining time until empty/full depending on sign
     float avg_power_w;                // Internal average power for filtering
     float last_instantaneous_power_w; // Latest instantaneous power sample (W)
-
-    // Non-Volatile Variable!!
-    float measured_capacity_Wh = BMS_INITIAL_REMAINING_WH;
     float remaining_wh; // Remaining energy in Wh
+
+    // Non-Volatile Variable!!  
+    float energy_initial_Wh;
+    float measured_capacity_Wh = BMS_INITIAL_REMAINING_WH;
+    float ampere_seconds_initial;
+    float measured_capacity_Ah;
 
     void send_battery_status_message();
 
