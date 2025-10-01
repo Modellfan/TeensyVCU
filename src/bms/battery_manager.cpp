@@ -40,10 +40,8 @@ BMS::BMS(BatteryPack &_batteryPack, Shunt_ISA_iPace &_shunt, Contactormanager &_
     last_vcu_msg = 0;
     vcu_timeout = false;
     balancing_finished = false;
-    power = 0.0f;
-    pack_power_valid = false;
     avg_energy_per_hour = 0.0f;
-    remaining_wh = BMS_INITIAL_REMAINING_WH;
+    remaining_wh = 0.0f;
     time_remaining_s = 0.0f;
     avg_power_w = 0.0f;
     last_instantaneous_power_w = 0.0f;
@@ -113,19 +111,20 @@ void BMS::Task100Ms()
 
 void BMS::Task1000Ms()
 {
+    //SOC & SOE function
     update_soc_ocv_lut();
     update_soc_coulomb_counting();
     correct_soc();
 
-
+    //HMI function
     update_energy_metrics();
 
+    //Current limiting function
     lookup_current_limits();
     lookup_internal_resistance_table();
-
     calculate_voltage_derate();
 
-
+    //Balance control function
     update_balancing();
 }
 
@@ -213,13 +212,6 @@ void BMS::correct_soc()
 
 void BMS::calculate_soh() {}
 
-void BMS::set_pack_power(float pack_power_w)
-{
-    power = pack_power_w;
-    pack_power_valid = true;
-    last_instantaneous_power_w = pack_power_w;
-}
-
 void BMS::update_energy_metrics()
 {
     static unsigned long last_sample_ms = 0;
@@ -246,7 +238,7 @@ void BMS::update_energy_metrics()
     const float power_w = voltage * current; // instantaneous power
     last_instantaneous_power_w = power_w;
 
-    float alpha = dt / ENERGY_AVG_WINDOW_SEC;
+    float alpha = dt / BMS_ENERGY_AVG_WINDOW_SEC;
     if (alpha > 1.0f)
     {
         alpha = 1.0f;
@@ -260,11 +252,11 @@ void BMS::update_energy_metrics()
     const float available_wh = remaining_wh;
     const float deficit_wh = measured_capacity_Wh - remaining_wh;
 
-    if (avg_power_w > ENERGY_MIN_VALID_POWER_W)
+    if (avg_power_w > BMS_ENERGY_MIN_VALID_POWER_W)
     {
         time_remaining_s = (available_wh * 3600.0f) / avg_power_w;
     }
-    else if (avg_power_w < -ENERGY_MIN_VALID_POWER_W)
+    else if (avg_power_w < -BMS_ENERGY_MIN_VALID_POWER_W)
     {
         time_remaining_s = (deficit_wh * 3600.0f) / -avg_power_w;
     }
@@ -537,17 +529,7 @@ void BMS::send_battery_status_message()
     uint8_t maxT = (uint8_t)(batteryPack.get_highest_temperature() + 40.0f);
     uint8_t cellAvg = (uint8_t)(batteryPack.get_pack_voltage() / (MODULES_PER_PACK * CELLS_PER_MODULE) * 50.0f);
     uint8_t cellDelta = (uint8_t)(batteryPack.get_delta_cell_voltage() * 100.0f);
-    float pack_power_kw;
-    if (pack_power_valid)
-    {
-        pack_power_kw = power / 1000.0f;
-    }
-    else
-    {
-        pack_power_kw = last_instantaneous_power_w / 1000.0f;
-    }
-    uint16_t packPower = static_cast<uint16_t>((pack_power_kw * 100.0f) + 30000.0f);
-    pack_power_valid = false;
+    uint16_t packPower = (uint16_t)((batteryPack.get_pack_voltage() * shunt.getCurrent() / 1000.0f) * 100.0f + 30000.0f);
     msg.data[0] = minT;
     msg.data[1] = maxT;
     msg.data[2] = cellAvg;

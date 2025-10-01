@@ -45,7 +45,6 @@ public:
         STATE_LIMP_HOME
     };
 
-    
     BMS(BatteryPack &_batteryPack, Shunt_ISA_iPace &_shunt, Contactormanager &_contactorManager); // Constructor taking a reference to BatteryPack
 
     // Runnables
@@ -79,8 +78,8 @@ public:
     float get_current_limit_rms_discharge() const { return current_limit_rms_discharge; }
     float get_current_limit_peak_charge() const { return current_limit_peak_charge; }
     float get_current_limit_rms_charge() const { return current_limit_rms_charge; }
-    float get_current_limit_rms_derated_discharge()const { return current_limit_rms_derated_discharge; }
-    float get_current_limit_rms_derated_charge()const { return current_limit_rms_derated_charge; }
+    float get_current_limit_rms_derated_discharge() const { return current_limit_rms_derated_discharge; }
+    float get_current_limit_rms_derated_charge() const { return current_limit_rms_derated_charge; }
 
     bool is_balancing_finished() const { return balancing_finished; }
 
@@ -100,13 +99,10 @@ private:
     float dt;
     bool invalid_data;
 
-    float power; // Optional pack power reading in W
-    bool pack_power_valid;
-
     // SOC
-    float soc_ocv_lut;       // SOC from OCV-Temp LUT
+    float soc_ocv_lut;          // SOC from OCV-Temp LUT
     float soc_coulomb_counting; // SOC from coulomb counting
-    float soc;               // Corrected SOC
+    float soc;                  // Corrected SOC
 
     // --- SOH (Monitoring Only) ---
     float measured_capacity_Ah; // Integrated capacity over a full cycle
@@ -114,18 +110,18 @@ private:
     // --- Current Limits (Temperature) ---
     float current_limit_peak_discharge;        // Peak allowed discharge current (A)
     float current_limit_rms_discharge;         // RMS allowed discharge current (A)
-    float current_limit_peak_charge; // Peak charge current (A)
-    float current_limit_rms_charge;  // Continuous charge current (A)
+    float current_limit_peak_charge;           // Peak charge current (A)
+    float current_limit_rms_charge;            // Continuous charge current (A)
     float current_limit_rms_derated_discharge; // Derated RMS current limit for discharge
     float current_limit_rms_derated_charge;    // Derated RMS current limit for charge
 
     // --- Internal Resistance (IR) ---
-    float internal_resistance_table;                                // IR from LUT
-    float internal_resistance_estimated;                            // IR from online estimation
+    float internal_resistance_table;                                                // IR from LUT
+    float internal_resistance_estimated;                                            // IR from online estimation
     float internal_resistance_estimated_cells[CELLS_PER_MODULE * MODULES_PER_PACK]; // IR from online estimation, per cell
-    float internal_resistance_used;                                 // Max(IR_table, IR_estimated)
-    float internal_resistance_used_min;                             // Smallest IR (best cell)
-    float internal_resistance_used_max;                             // Largest IR (worst cell)
+    float internal_resistance_used;                                                 // Max(IR_table, IR_estimated)
+    float internal_resistance_used_min;                                             // Smallest IR (best cell)
+    float internal_resistance_used_max;                                             // Largest IR (worst cell)
 
     // --- Voltage Derating ---
     // Placeholder for derating factor/state
@@ -137,23 +133,23 @@ private:
     // Placeholder for EMA and soft clamp state variables
 
     // --- Final Allowed Current ---
-    float current_limit_allowed;     // Output of min-selector
-    float current_limit_limp_home;   // Limp home current limit
-    float current_limit_selected;    // After limp home logic
-    float current_limit_final;       // After rate limiter
+    float current_limit_allowed;   // Output of min-selector
+    float current_limit_limp_home; // Limp home current limit
+    float current_limit_selected;  // After limp home logic
+    float current_limit_final;     // After rate limiter
 
     // Balancing finished flag
     bool balancing_finished;
 
-    // Non-Volatile Variable!!
-    float measured_capacity_Wh = 28000.0f;
-    float avg_energy_per_hour; // kWh per hour
-    float remaining_wh;        // Remaining energy in Wh
-    float time_remaining_s;    // Remaining time until empty/full depending on sign
-    float avg_power_w;         // Internal average power for filtering
+    // HMI Energy Metrics
+    float avg_energy_per_hour;        // kWh per hour
+    float time_remaining_s;           // Remaining time until empty/full depending on sign
+    float avg_power_w;                // Internal average power for filtering
     float last_instantaneous_power_w; // Latest instantaneous power sample (W)
 
-    void update_energy_metrics();
+    // Non-Volatile Variable!!
+    float measured_capacity_Wh = BMS_INITIAL_REMAINING_WH;
+    float remaining_wh; // Remaining energy in Wh
 
     void send_battery_status_message();
 
@@ -162,6 +158,7 @@ private:
     void update_soc_coulomb_counting();
     void correct_soc();
     void calculate_soh();
+    void update_energy_metrics();
 
     void lookup_current_limits();
     void lookup_internal_resistance_table();
