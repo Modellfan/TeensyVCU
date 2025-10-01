@@ -99,7 +99,7 @@ private:
     bool invalid_data;
 
     // Timestamp tracking when pack current last entered the OCV-valid region
-    unsigned long ocv_current_settle_start_ms;
+    uint32_t ocv_current_settle_start_ms;
 
     float power; // in Ws
 
