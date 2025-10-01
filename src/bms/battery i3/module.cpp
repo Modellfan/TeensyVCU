@@ -2,7 +2,10 @@
 #include "module.h"
 #include "pack.h"
 #include "utils/can_packer.h"
+#include "CRC8.h"
 #include <ACAN_T4.h>
+
+static CRC8 crc8;
 
 BatteryModule::BatteryModule() {}
 
@@ -13,6 +16,8 @@ BatteryModule::BatteryModule(int _id, BatteryPack *_pack)
 
     // Point back to parent pack
     pack = _pack;
+
+    crc8.begin();
 
     // Initialise all cell voltages to zero
     numCells = 12;
@@ -39,6 +44,8 @@ BatteryModule::BatteryModule(int _id, BatteryPack *_pack)
     state = INIT;
     dtc = DTC_CMU_NONE;
 
+    crcFailureCount = 0;
+
     lastUpdate = millis();
 }
 
@@ -48,9 +55,19 @@ void BatteryModule::process_message(CANMessage &msg)
     {
         return;
     }
-    else
+
+    const uint32_t messageType = msg.id & 0x0F0;
+    if (!((messageType == 0x000) || (messageType == 0x020) || (messageType == 0x030) || (messageType == 0x040) ||
+          (messageType == 0x050) || (messageType == 0x060) || (messageType == 0x070)))
     {
-        lastUpdate = millis();
+        return;
+    }
+
+    lastUpdate = millis();
+
+    if (!check_crc(msg))
+    {
+        return;
     }
 
     switch (msg.id & 0x0F0) // removes the module spicif part of the message id
@@ -176,7 +193,7 @@ void BatteryModule::process_message(CANMessage &msg)
     }
     case FAULT:
     {
-        // We check for more errors to come. No routine implemented to heal fault state except power off.
+        // We check for more errors to come.
         if (cmuError)
         {
             state = FAULT;
@@ -194,6 +211,59 @@ void BatteryModule::process_message(CANMessage &msg)
         break;
     }
     }
+}
+
+bool BatteryModule::check_crc(const CANMessage &msg)
+{
+    if (msg.len == 0)
+    {
+        if (crcFailureCount < 0xFF)
+        {
+            crcFailureCount++;
+        }
+
+        if (crcFailureCount >= CMU_CRC_ERROR_THRESHOLD)
+        {
+            const uint8_t dtcValue = static_cast<uint8_t>(dtc) | static_cast<uint8_t>(DTC_CMU_CRC_ERROR);
+            dtc = static_cast<DTC_CMU>(dtcValue);
+            state = FAULT;
+        }
+        return false;
+    }
+
+    constexpr size_t CRC_BUFFER_SIZE = 10;
+    uint8_t crcBuffer[CRC_BUFFER_SIZE];
+    crcBuffer[0] = static_cast<uint8_t>(msg.id >> 8);
+    crcBuffer[1] = static_cast<uint8_t>(msg.id & 0xFF);
+
+    const uint8_t payloadLength = msg.len - 1;
+    for (uint8_t i = 0; i < payloadLength; i++)
+    {
+        crcBuffer[i + 2] = msg.data[i];
+    }
+
+    const uint8_t receivedCrc = msg.data[msg.len - 1];
+    const uint8_t calculatedCrc = crc8.get_crc8(crcBuffer, payloadLength + 2, finalxor[id]);
+
+    if (calculatedCrc != receivedCrc)
+    {
+        if (crcFailureCount < 0xFF)
+        {
+            crcFailureCount++;
+        }
+
+        if (crcFailureCount >= CMU_CRC_ERROR_THRESHOLD)
+        {
+            const uint8_t dtcValue = static_cast<uint8_t>(dtc) | static_cast<uint8_t>(DTC_CMU_CRC_ERROR);
+            dtc = static_cast<DTC_CMU>(dtcValue);
+            state = FAULT;
+        }
+        return false;
+    }
+
+    crcFailureCount = 0;
+
+    return true;
 }
 
 // Return total module voltage

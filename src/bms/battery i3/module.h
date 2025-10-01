@@ -26,7 +26,8 @@ public:
         DTC_CMU_SINGLE_VOLTAGE_IMPLAUSIBLE = 1 << 2,
         DTC_CMU_TEMPERATURE_IMPLAUSIBLE = 1 << 3,
         DTC_CMU_TIMED_OUT = 1 << 4,
-        DTC_CMU_MODULE_VOLTAGE_IMPLAUSIBLE = 1 << 5
+        DTC_CMU_MODULE_VOLTAGE_IMPLAUSIBLE = 1 << 5,
+        DTC_CMU_CRC_ERROR = 1 << 6
     } DTC_CMU;
 
     BatteryModule();
@@ -74,6 +75,8 @@ private:
     STATE_CMU state;
     DTC_CMU dtc;
 
+    uint8_t crcFailureCount;
+
     u_int32_t lastUpdate; // Times out with setting value of PACK_ALIVE_TIMEOUT in ms
     BatteryPack *pack;    // The parent BatteryPack that contains this module
 
@@ -82,6 +85,8 @@ private:
 
     bool check_if_module_data_is_populated();
     bool plausibilityCheck();
+
+    bool check_crc(const CANMessage &msg);
 };
 
 #endif
