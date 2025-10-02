@@ -11,10 +11,10 @@ class PersistentDataStorage
 public:
     struct PersistentData
     {
-        float energy_initial_Wh = BMS_INITIAL_REMAINING_WH;
-        float measured_capacity_Wh = BMS_INITIAL_REMAINING_WH;
+        float energy_initial_Wh = 0.0f;
+        float measured_capacity_Wh = BMS_INITIAL_CAPACITY_WH;
         float ampere_seconds_initial = 0.0f;
-        float measured_capacity_Ah = 0.0f;
+        float measured_capacity_Ah = BMS_INITIAL_CAPACITY_AH;
     };
 
     PersistentDataStorage()
@@ -76,7 +76,7 @@ private:
 
     static constexpr uint32_t kMagic = 0x54564355UL; // 'TVCU'
     static constexpr uint16_t kVersion = 1U;
-    static constexpr size_t kSlotCount = 4U;
+    static constexpr size_t kSlotCount = 16U;
 
     bool initialized;
     bool has_valid_data;

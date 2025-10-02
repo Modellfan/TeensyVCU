@@ -71,7 +71,8 @@
 
 #define BMS_ENERGY_AVG_WINDOW_SEC 5.0f
 #define BMS_ENERGY_MIN_VALID_POWER_W 1.0f
-#define BMS_INITIAL_REMAINING_WH (345.0f * 7.0f * 12.0f)
+#define BMS_INITIAL_CAPACITY_WH (345.0f * 7.0f * 12.0f)
+#define BMS_INITIAL_CAPACITY_AH 94.0f
 
 //BMW i3 Specs from Samsung SDI document
 #define SAFETY_LIMIT_CHARGE 4.25
