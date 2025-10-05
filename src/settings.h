@@ -69,8 +69,8 @@
 #define BMS_MSG_HMI 0x41E
 #define BMS_VCU_TIMEOUT 300
 
-#define BMS_ENERGY_AVG_WINDOW_SEC 5.0f
-#define BMS_ENERGY_MIN_VALID_POWER_W 1.0f
+#define BMS_ENERGY_AVG_WINDOW_SEC 60.0f
+#define BMS_ENERGY_MIN_VALID_POWER_W 1000.0f
 #define BMS_INITIAL_CAPACITY_WH (345.0f * 7.0f * 12.0f)
 #define BMS_INITIAL_CAPACITY_AH 94.0f
 
@@ -108,7 +108,7 @@
 #define BMS_OCV_CURRENT_THRESHOLD 10.0f
 // Minimum time (ms) that pack current must stay below the OCV threshold
 // before an OCV-based SOC update is considered valid
-#define BMS_OCV_CURRENT_SETTLE_TIME_MS 5000UL
+#define BMS_OCV_CURRENT_SETTLE_TIME_MS 1000UL
 
 // Maximum allowable instantaneous pack discharge current (A)
 #define BMS_MAX_DISCHARGE_PEAK_CURRENT 409.0f
@@ -117,9 +117,9 @@
 // Balancing Settings
 // -----------------------------------------------------------------------------
 #define BALANCE_DELTA_V      0.05f   // Minimum delta between cells to start balancing (V)
-#define BALANCE_MIN_VOLTAGE  3.4f     // Do not balance below this cell voltage (V)
+#define BALANCE_MIN_VOLTAGE  3.6f     // Do not balance below this cell voltage (V)
 #define BALANCE_MAX_TEMP     50.0f    // Do not balance above this temperature (°C)
-#define BALANCE_OFFSET_V     0.01f   // Offset added to lowest cell voltage for target (V)
+#define BALANCE_OFFSET_V     0.03f   // Offset added to lowest cell voltage for target (V)
 
 
 
