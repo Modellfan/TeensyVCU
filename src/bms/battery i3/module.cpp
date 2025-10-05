@@ -46,7 +46,7 @@ BatteryModule::BatteryModule(int _id, BatteryPack *_pack)
 
 void BatteryModule::process_message(CANMessage &msg)
 {
-    if ((msg.id & 0x00F) != id) // check if module id belongs to this module
+    if ((msg.id & 0x00F) != static_cast<uint32_t>(id)) // check if module id belongs to this module
     {
         return;
     }

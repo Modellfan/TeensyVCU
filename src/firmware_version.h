@@ -4,4 +4,4 @@
 #define BUILD_TIMESTAMP __DATE__ " " __TIME__
 #endif
 
-constexpr char FIRMWARE_BUILD_INFO[] = BUILD_TIMESTAMP;
+constexpr const char *FIRMWARE_BUILD_INFO = BUILD_TIMESTAMP;
