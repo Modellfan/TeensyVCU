@@ -1,5 +1,4 @@
 #include "serial_console.h"
-#include "firmware_version.h"
 #include <ctype.h>
 
 static const char *pack_state_to_string(BatteryPack::STATE_PACK state) {
@@ -127,7 +126,6 @@ void print_console_help() {
     console.println("  mX - print module X status (0-7)");
     console.println("  B - print BMS status");
     console.println("  i - print current sensor status");
-    console.println("  F - print firmware version");
     console.println("  h - print this help message");
 }
 
@@ -424,10 +422,6 @@ void serial_console() {
                 break;
             case 'B':
                 print_bms_status();
-                break;
-            case 'F':
-                console.print("Firmware version: ");
-                console.println(FIRMWARE_BUILD_INFO);
                 break;
             case 'h':
             case '?':
