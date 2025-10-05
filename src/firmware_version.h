@@ -1,3 +1,7 @@
 #pragma once
 
-constexpr char FIRMWARE_BUILD_INFO[] = __DATE__ " " __TIME__;
+#ifndef BUILD_TIMESTAMP
+#define BUILD_TIMESTAMP __DATE__ " " __TIME__
+#endif
+
+constexpr char FIRMWARE_BUILD_INFO[] = BUILD_TIMESTAMP;
