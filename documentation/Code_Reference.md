@@ -9,7 +9,7 @@ components fit together and what each callable element is responsible for.
 
 | Symbol | Description |
 | --- | --- |
-| `setup()` | Configures serial interfaces, prints build metadata, starts the cooperative scheduler, and enables all periodic tasks that drive the shunt, contactors, battery pack polling, and higher-level BMS routines. |
+| `setup()` | Configures serial interfaces, starts the cooperative scheduler, and enables all periodic tasks that drive the shunt, contactors, battery pack polling, and higher-level BMS routines. |
 | `loop()` | Runs the cooperative task scheduler and services interactive serial console commands. |
 | `wdtCallback()` | Watchdog handler that emits a diagnostic notice shortly before a watchdog-triggered reset. |
 
@@ -185,7 +185,6 @@ Console commands (entered over USB serial) provide runtime observability:
 | `mX` | Show detailed status for module `X`. |
 | `B` | Print high-level BMS state, SOC, current limits, and vehicle status. |
 | `i` | Show shunt current, temperature, ampere-seconds, and diagnostic info. |
-| `F` | Print firmware build timestamp. |
 | `h` / `?` | Show the command help text. |
 
 Helper routines convert internal enumerations and diagnostic bitmasks to human
