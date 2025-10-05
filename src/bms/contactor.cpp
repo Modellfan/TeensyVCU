@@ -2,8 +2,6 @@
 #include "contactor.h"
 #include "settings.h"
 
-#define CONTACTOR_DISABLE_FEEDBACK
-
 Contactor::Contactor(int outputPin, int inputPin, int debounce_ms, int timeout_ms,
                      bool allowExternalControl)
     : _outputPin(outputPin),

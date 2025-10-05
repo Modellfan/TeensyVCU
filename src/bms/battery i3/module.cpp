@@ -2,10 +2,7 @@
 #include "module.h"
 #include "pack.h"
 #include "utils/can_packer.h"
-#include "CRC8.h"
 #include <ACAN_T4.h>
-
-static CRC8 crc8;
 
 BatteryModule::BatteryModule() {}
 
@@ -16,8 +13,6 @@ BatteryModule::BatteryModule(int _id, BatteryPack *_pack)
 
     // Point back to parent pack
     pack = _pack;
-
-    crc8.begin();
 
     // Initialise all cell voltages to zero
     numCells = 12;
@@ -215,8 +210,7 @@ void BatteryModule::process_message(CANMessage &msg)
 
 bool BatteryModule::check_crc(const CANMessage &msg)
 {
-    if (msg.len == 0)
-    {
+    auto registerFailure = [&]() {
         if (crcFailureCount < 0xFF)
         {
             crcFailureCount++;
@@ -228,36 +222,28 @@ bool BatteryModule::check_crc(const CANMessage &msg)
             dtc = static_cast<DTC_CMU>(dtcValue);
             state = FAULT;
         }
+    };
+
+    if (msg.len == 0)
+    {
+        registerFailure();
         return false;
     }
 
-    constexpr size_t CRC_BUFFER_SIZE = 10;
-    uint8_t crcBuffer[CRC_BUFFER_SIZE];
-    crcBuffer[0] = static_cast<uint8_t>(msg.id >> 8);
-    crcBuffer[1] = static_cast<uint8_t>(msg.id & 0xFF);
+    const uint8_t receivedCrc = msg.data[msg.len - 1];
 
-    const uint8_t payloadLength = msg.len - 1;
-    for (uint8_t i = 0; i < payloadLength; i++)
+    if (pack == nullptr)
     {
-        crcBuffer[i + 2] = msg.data[i];
+        registerFailure();
+        return false;
     }
 
-    const uint8_t receivedCrc = msg.data[msg.len - 1];
-    const uint8_t calculatedCrc = crc8.get_crc8(crcBuffer, payloadLength + 2, finalxor[id]);
+    CANMessage msgCopy = msg;
+    const uint8_t calculatedCrc = pack->getcheck(msgCopy, id);
 
     if (calculatedCrc != receivedCrc)
     {
-        if (crcFailureCount < 0xFF)
-        {
-            crcFailureCount++;
-        }
-
-        if (crcFailureCount >= CMU_CRC_ERROR_THRESHOLD)
-        {
-            const uint8_t dtcValue = static_cast<uint8_t>(dtc) | static_cast<uint8_t>(DTC_CMU_CRC_ERROR);
-            dtc = static_cast<DTC_CMU>(dtcValue);
-            state = FAULT;
-        }
+        registerFailure();
         return false;
     }
 
