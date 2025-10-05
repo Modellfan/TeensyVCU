@@ -249,25 +249,38 @@ static String module_dtc_to_string(BatteryModule::DTC_CMU dtc) {
     if (static_cast<uint8_t>(dtc) == 0) {
         errorString = "None";
     } else {
+        bool hasError = false;
         if (dtc & BatteryModule::DTC_CMU_INTERNAL_ERROR) {
             errorString += "INTERNAL_ERROR, ";
+            hasError = true;
         }
         if (dtc & BatteryModule::DTC_CMU_TEMPERATURE_TOO_HIGH) {
             errorString += "TEMP_TOO_HIGH, ";
+            hasError = true;
         }
         if (dtc & BatteryModule::DTC_CMU_SINGLE_VOLTAGE_IMPLAUSIBLE) {
             errorString += "VOLT_IMPLAUSIBLE, ";
+            hasError = true;
         }
         if (dtc & BatteryModule::DTC_CMU_TEMPERATURE_IMPLAUSIBLE) {
             errorString += "TEMP_IMPLAUSIBLE, ";
+            hasError = true;
         }
         if (dtc & BatteryModule::DTC_CMU_TIMED_OUT) {
             errorString += "TIMED_OUT, ";
+            hasError = true;
         }
         if (dtc & BatteryModule::DTC_CMU_MODULE_VOLTAGE_IMPLAUSIBLE) {
             errorString += "MODULE_VOLT_IMPLAUSIBLE, ";
+            hasError = true;
         }
-        errorString.remove(errorString.length() - 2);
+        if (dtc & BatteryModule::DTC_CMU_CRC_ERROR) {
+            errorString += "CRC_ERROR, ";
+            hasError = true;
+        }
+        if (hasError) {
+            errorString.remove(errorString.length() - 2);
+        }
     }
     return errorString;
 }
