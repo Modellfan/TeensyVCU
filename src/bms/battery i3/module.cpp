@@ -65,10 +65,10 @@ void BatteryModule::process_message(CANMessage &msg)
 
     lastUpdate = millis();
 
-    if (!check_crc(msg))
-    {
-        return;
-    }
+    // if (!check_crc(msg))
+    // {
+    //     return;
+    // }
 
     switch (msg.id & 0x0F0) // removes the module spicif part of the message id
     {
