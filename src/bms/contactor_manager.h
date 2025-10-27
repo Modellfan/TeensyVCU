@@ -51,6 +51,10 @@ public:
     bool getPrechargeInputPin() const;
     bool isNegativeContactorClosed() const;
     bool isContactorVoltageAvailable() const;
+    void setHvBusVoltage(float voltage_v);
+    float getHvBusVoltage() const;
+    bool isHvBusVoltageValid() const;
+    void invalidateHvBusVoltage();
 
 private:
     const char *getCurrentStateString();
@@ -66,6 +70,9 @@ private:
 
     bool _negativeContactor_closed;
     bool _contactorVoltage_available;
+    float _hvBusVoltage_v;
+    bool _hvBusVoltage_valid;
+    unsigned long _hvBusVoltage_lastUpdateMs;
 };
 
 #endif // CONTACTORMANAGER_H

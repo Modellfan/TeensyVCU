@@ -526,6 +526,13 @@ void BMS::read_message()
                 else
                     contactorManager.open();
 
+                // Bytes 4-5 carry the measured HV bus voltage from the main VCU with
+                // a resolution of 0.1 V per bit (0-6553.5 V range, typically 0-450 V).
+                const uint16_t hv_bus_voltage_raw = static_cast<uint16_t>(msg.data[4]) |
+                                                     (static_cast<uint16_t>(msg.data[5]) << 8);
+                const float hv_bus_voltage_v = static_cast<float>(hv_bus_voltage_raw) * 0.1f;
+                contactorManager.setHvBusVoltage(hv_bus_voltage_v);
+
                 vcu_counter = msg.data[3] & 0x0F;
                 last_vcu_msg = millis();
                 vcu_timeout = false;
@@ -536,6 +543,7 @@ void BMS::read_message()
     if ((millis() - last_vcu_msg) > BMS_VCU_TIMEOUT)
     {
         vcu_timeout = true;
+        contactorManager.invalidateHvBusVoltage();
     }
 }
 
