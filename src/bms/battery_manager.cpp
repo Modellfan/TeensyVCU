@@ -557,6 +557,17 @@ PersistentDataStorage::PersistentData BMS::collect_persistent_data() const
     return data;
 }
 
+PersistentDataStorage::PersistentData BMS::get_persistent_data() const
+{
+    return collect_persistent_data();
+}
+
+void BMS::update_persistent_data(const PersistentDataStorage::PersistentData &data)
+{
+    apply_persistent_data(data);
+    persistent_storage.save(data);
+}
+
 void BMS::send_battery_status_message()
 {
     CANMessage msg;

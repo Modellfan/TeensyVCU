@@ -13,5 +13,7 @@ void print_module_status(int index);
 void print_contactor_status();
 void print_bms_status();
 void print_shunt_status();
+void print_persistent_data();
+void modify_persistent_data();
 
 #endif // SERIAL_CONSOLE_H
