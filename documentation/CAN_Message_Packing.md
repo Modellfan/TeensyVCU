@@ -20,7 +20,7 @@ The following tables describe the structure of all CAN messages exchanged betwee
 | 0 | Min Cell Temp | `uint8` | (°C) + 40 | 0–167 | –40 °C to +127 °C |
 | 1 | Max Cell Temp | `uint8` | (°C) + 40 | 0–167 | –40 °C to +127 °C |
 | 2 | Balancing Target Voltage | `uint8` | V × 50 | 0–255 | 0–5.10 V, 0 V when balancing inactive |
-| 3 | Cell Voltage Delta | `uint8` | V × 100 | 0–255 | 0–2.55 V |
+| 3 | Cell Voltage Delta | `uint8` | V × 500 | 0–255 | 0–0.51 V (2 mV resolution; highest minus lowest cell) |
 | 4-5 | Pack Power | `uint16` | (kW × 100) + 30000 | 0–50000 | –300 kW to +200 kW |
 | 6 | Counter (4&nbsp;bit) | `uint8` | lower 4 bits only | 0–15 | bits 7–4 always 0 |
 | 7 | CRC8 | `uint8` |  |  |  |
