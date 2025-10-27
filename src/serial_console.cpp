@@ -3,6 +3,28 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define SERIAL_CONSOLE_STRINGIFY_INNER(x) #x
+#define SERIAL_CONSOLE_STRINGIFY(x) SERIAL_CONSOLE_STRINGIFY_INNER(x)
+
+#ifdef VERSION
+static const char FIRMWARE_VERSION[] = SERIAL_CONSOLE_STRINGIFY(VERSION);
+#else
+static const char FIRMWARE_VERSION[] = "unknown";
+#endif
+static const char FIRMWARE_BUILD_DATE[] = __DATE__;
+static const char FIRMWARE_BUILD_TIME[] = __TIME__;
+
+#undef SERIAL_CONSOLE_STRINGIFY
+#undef SERIAL_CONSOLE_STRINGIFY_INNER
+
+void enable_serial_console() {
+    console.printf("Firmware version: %s (built %s %s)\n",
+                   FIRMWARE_VERSION,
+                   FIRMWARE_BUILD_DATE,
+                   FIRMWARE_BUILD_TIME);
+    console.println("Type 'h' for help.");
+}
+
 static const char *pack_state_to_string(BatteryPack::STATE_PACK state) {
     switch (state) {
         case BatteryPack::INIT: return "INIT";
@@ -188,6 +210,10 @@ static void discard_serial_line() {
 }
 
 void print_console_help() {
+    console.printf("Firmware version: %s (built %s %s)\n",
+                   FIRMWARE_VERSION,
+                   FIRMWARE_BUILD_DATE,
+                   FIRMWARE_BUILD_TIME);
     console.println("Available commands:");
     console.println("  c - close contactors");
     console.println("  o - open contactors");
