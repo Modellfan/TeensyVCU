@@ -18,6 +18,9 @@ Contactormanager::Contactormanager() :
 {
     _currentState = INIT;
     _targetState = OPEN;
+    _hvBusVoltage_v = 0.0f;
+    _hvBusVoltage_valid = false;
+    _hvBusVoltage_lastUpdateMs = 0UL;
 }
 
 void Contactormanager::initialise()
@@ -367,4 +370,31 @@ bool Contactormanager::isNegativeContactorClosed() const
 bool Contactormanager::isContactorVoltageAvailable() const
 {
     return _contactorVoltage_available;
+}
+
+void Contactormanager::setHvBusVoltage(float voltage_v)
+{
+    _hvBusVoltage_v = voltage_v;
+    _hvBusVoltage_valid = true;
+    _hvBusVoltage_lastUpdateMs = millis();
+}
+
+float Contactormanager::getHvBusVoltage() const
+{
+    return _hvBusVoltage_v;
+}
+
+bool Contactormanager::isHvBusVoltageValid() const
+{
+    if (!_hvBusVoltage_valid)
+    {
+        return false;
+    }
+
+    return (millis() - _hvBusVoltage_lastUpdateMs) <= static_cast<unsigned long>(BMS_VCU_TIMEOUT);
+}
+
+void Contactormanager::invalidateHvBusVoltage()
+{
+    _hvBusVoltage_valid = false;
 }
