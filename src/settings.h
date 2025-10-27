@@ -4,6 +4,15 @@
 #define VERSION 2.0
 //#define DEBUG
 
+// Uncomment to enable GVRET protocol streaming on SerialUSB1
+#define ENABLE_GVRET
+
+#ifdef ENABLE_GVRET
+#define GVRET_BUS_SHUNT 0
+#define GVRET_BUS_BATTERY 1
+#define GVRET_BUS_BMS 2
+#endif
+
 //---------------------------------------------------------------------------------------------------------------------------------------------
 //CMU and pack settings
 //---------------------------------------------------------------------------------------------------------------------------------------------

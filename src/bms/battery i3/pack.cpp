@@ -7,6 +7,13 @@
 #include "CRC8.h"
 #include "pack.h"
 
+#ifdef ENABLE_GVRET
+#ifndef GVRET_PORT
+#define GVRET_PORT SerialUSB1
+#endif
+#include "gvret.h"
+#endif
+
 BatteryPack::BatteryPack() {}
 
 BatteryPack::BatteryPack(int _numModules)
@@ -177,6 +184,9 @@ void BatteryPack::read_message()
 
     if (ACAN_T4::BATTERY_CAN.receive(msg))
     {
+#ifdef ENABLE_GVRET
+        sendFrameToUSB(msg, GVRET_BUS_BATTERY);
+#endif
         for (int i = 0; i < numModules; i++)
         {
             modules[i].process_message(msg);
@@ -242,6 +252,9 @@ void BatteryPack::send_message(CANMessage *frame)
 {
     if (ACAN_T4::BATTERY_CAN.tryToSend(*frame))
     {
+#ifdef ENABLE_GVRET
+        sendFrameToUSB(*frame, GVRET_BUS_BATTERY);
+#endif
         // Serial.println("Send ok");
     }
     else
