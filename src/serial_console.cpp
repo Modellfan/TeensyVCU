@@ -273,6 +273,10 @@ static const char *contactor_state_to_string(Contactor::State state) {
     }
 }
 
+static const char *contactor_feedback_to_string(bool is_closed) {
+    return is_closed ? "FEEDBACK CLOSED" : "FEEDBACK OPEN";
+}
+
 static String contactor_dtc_to_string(Contactormanager::DTC_COM dtc) {
     String errorString = "";
     if (dtc == Contactormanager::DTC_COM_NONE) {
@@ -460,13 +464,18 @@ void print_contactor_status() {
     console.printf("POS_DTC:%s PRE_DTC:%s\n",
                    single_contactor_dtc_to_string(contactor_manager.getPositiveDTC()).c_str(),
                    single_contactor_dtc_to_string(contactor_manager.getPrechargeDTC()).c_str());
-    console.printf("POS:%s POS_IN:%d PRE:%s PRE_IN:%d NEG_IN:%d SUPPLY_IN:%d\n",
-                   contactor_state_to_string(contactor_manager.getPositiveState()),
-                   contactor_manager.getPositiveInputPin(),
-                   contactor_state_to_string(contactor_manager.getPrechargeState()),
-                   contactor_manager.getPrechargeInputPin(),
-                   contactor_manager.isNegativeContactorClosed(),
-                   contactor_manager.isContactorVoltageAvailable());
+    const bool positive_feedback_closed = contactor_manager.getPositiveInputPin();
+    const bool precharge_feedback_closed = contactor_manager.getPrechargeInputPin();
+    console.printf(
+        "POS:%s POS_IN:%d (%s) PRE:%s PRE_IN:%d (%s) NEG_IN:%d SUPPLY_IN:%d\n",
+        contactor_state_to_string(contactor_manager.getPositiveState()),
+        positive_feedback_closed,
+        contactor_feedback_to_string(positive_feedback_closed),
+        contactor_state_to_string(contactor_manager.getPrechargeState()),
+        precharge_feedback_closed,
+        contactor_feedback_to_string(precharge_feedback_closed),
+        contactor_manager.isNegativeContactorClosed(),
+        contactor_manager.isContactorVoltageAvailable());
 }
 
 void print_shunt_status() {
