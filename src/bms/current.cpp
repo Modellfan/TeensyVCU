@@ -4,6 +4,13 @@
 #include "current.h"
 #include "utils/can_packer.h"
 
+#ifdef ENABLE_GVRET
+#ifndef GVRET_PORT
+#define GVRET_PORT SerialUSB1
+#endif
+#include "gvret.h"
+#endif
+
 Shunt_ISA_iPace::Shunt_ISA_iPace()
 {
     _state = INIT;
@@ -69,6 +76,9 @@ void Shunt_ISA_iPace::update()
     CANMessage message;
     if (ACAN_T4::ISA_SHUNT_CAN.receive(message))
     {
+#ifdef ENABLE_GVRET
+        sendFrameToUSB(message, GVRET_BUS_SHUNT);
+#endif
         // printFrame(message);
 
         // Check for timeout of the shunt

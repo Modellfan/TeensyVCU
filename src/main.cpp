@@ -13,6 +13,13 @@
 #include "comms_bms.h"
 #include "serial_console.h"
 
+#ifdef ENABLE_GVRET
+#ifndef GVRET_PORT
+#define GVRET_PORT SerialUSB1
+#endif
+#include "gvret.h"
+#endif
+
 #ifndef __IMXRT1062__
 #error "This sketch should be compiled for Teensy 4.1"
 #endif
@@ -40,11 +47,12 @@ BMS battery_manager(batteryPack, shunt, contactor_manager);
 void setup()
 {
   Serial.begin(500000);
+#ifdef ENABLE_GVRET
+  SerialUSB1.begin(1000000);
+#endif
 #ifdef DEBUG
   // Setup internal LED
   pinMode(LED_BUILTIN, OUTPUT);
-  // Setup serial port
-  SerialUSB1.begin(1000000);
   // SignalManager::setStream(SerialUSB1);
   while (!Serial)
   {
@@ -96,6 +104,9 @@ void loop()
 {
   scheduler.execute();
   serial_console();
+#ifdef ENABLE_GVRET
+  gvret_loop();
+#endif
   //Poll can buses
 
   // wdt.feed(); // must feed the watchdog every so often or it'll get angry

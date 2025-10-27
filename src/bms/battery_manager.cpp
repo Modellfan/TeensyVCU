@@ -15,6 +15,13 @@
 
 // #define DEBUG
 
+#ifdef ENABLE_GVRET
+#ifndef GVRET_PORT
+#define GVRET_PORT SerialUSB1
+#endif
+#include "gvret.h"
+#endif
+
 BMS::BMS(BatteryPack &_batteryPack, Shunt_ISA_iPace &_shunt, Contactormanager &_contactorManager) : batteryPack(_batteryPack), shunt(_shunt), contactorManager(_contactorManager)
 {
     state = INIT;
@@ -501,6 +508,9 @@ void BMS::read_message()
 
     if (ACAN_T4::BMS_CAN.receive(msg))
     {
+#ifdef ENABLE_GVRET
+        sendFrameToUSB(msg, GVRET_BUS_BMS);
+#endif
         if (msg.id == BMS_VCU_MSG_ID && msg.len == 8)
         {
             uint8_t tmp[8];
@@ -660,6 +670,9 @@ void BMS::send_message(CANMessage *frame)
 {
     if (ACAN_T4::BMS_CAN.tryToSend(*frame))
     {
+#ifdef ENABLE_GVRET
+        sendFrameToUSB(*frame, GVRET_BUS_BMS);
+#endif
         // Serial.println("Send ok");
     }
     else
