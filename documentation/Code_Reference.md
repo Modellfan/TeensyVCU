@@ -43,8 +43,8 @@ These helpers expose `enable_*` functions that register periodic tasks with the
   state. Supporting helpers (`print_pack_status()`, `print_module_status()`,
   `print_contactor_status()`, etc.) translate enumerations and DTC bitfields
   into human-readable descriptions.
-* `enable_serial_console()` is declared but not yet implemented; console
-  functionality currently runs from `loop()`.
+* `enable_serial_console()` prints a firmware banner (including build date/time)
+  and reminds operators to use `h` for help when the MCU boots.
 
 ## Hardware Abstraction Layers
 
