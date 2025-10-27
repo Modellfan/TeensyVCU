@@ -115,6 +115,33 @@ static String shunt_dtc_to_string(Shunt_ISA_iPace::DTC_ISA dtc) {
     return errorString;
 }
 
+static bool read_serial_token(char *buffer, size_t buffer_size) {
+    size_t i = 0;
+    while (Serial.available() && isspace(static_cast<unsigned char>(Serial.peek()))) {
+        Serial.read();
+    }
+
+    while (Serial.available() && i < buffer_size - 1) {
+        char c = Serial.peek();
+        if (c == '\n' || c == '\r' || isspace(static_cast<unsigned char>(c))) {
+            break;
+        }
+        buffer[i++] = Serial.read();
+    }
+
+    buffer[i] = '\0';
+    return i > 0;
+}
+
+static void discard_serial_line() {
+    while (Serial.available()) {
+        char c = Serial.read();
+        if (c == '\n') {
+            break;
+        }
+    }
+}
+
 void print_console_help() {
     console.println("Available commands:");
     console.println("  c - close contactors");
@@ -126,6 +153,8 @@ void print_console_help() {
     console.println("  mX - print module X status (0-7)");
     console.println("  B - print BMS status");
     console.println("  i - print current sensor status");
+    console.println("  P - print persistent data");
+    console.println("  E idx value - set persistent data value (see 'P')");
     console.println("  h - print this help message");
 }
 
@@ -370,6 +399,67 @@ void print_shunt_status() {
                    shunt_dtc_to_string(shunt.getDTC()).c_str());
 }
 
+void print_persistent_data() {
+    const PersistentDataStorage::PersistentData data = battery_manager.get_persistent_data();
+    console.println("Persistent data:");
+    console.printf("  0: energy_initial_Wh = %.3f\n", data.energy_initial_Wh);
+    console.printf("  1: measured_capacity_Wh = %.3f\n", data.measured_capacity_Wh);
+    console.printf("  2: ampere_seconds_initial = %.3f\n", data.ampere_seconds_initial);
+    console.printf("  3: measured_capacity_Ah = %.3f\n", data.measured_capacity_Ah);
+    console.println("Use 'E idx value' to update a field.");
+}
+
+void modify_persistent_data() {
+    char index_token[8];
+    if (!read_serial_token(index_token, sizeof(index_token))) {
+        console.println("Persistent value index required (see 'P').");
+        discard_serial_line();
+        return;
+    }
+
+    char value_token[32];
+    if (!read_serial_token(value_token, sizeof(value_token))) {
+        console.println("New value required.");
+        discard_serial_line();
+        return;
+    }
+
+    discard_serial_line();
+
+    const int index = atoi(index_token);
+    const float value = atof(value_token);
+
+    PersistentDataStorage::PersistentData data = battery_manager.get_persistent_data();
+    bool updated = true;
+
+    switch (index) {
+        case 0:
+            data.energy_initial_Wh = value;
+            break;
+        case 1:
+            data.measured_capacity_Wh = value;
+            break;
+        case 2:
+            data.ampere_seconds_initial = value;
+            break;
+        case 3:
+            data.measured_capacity_Ah = value;
+            break;
+        default:
+            updated = false;
+            break;
+    }
+
+    if (!updated) {
+        console.println("Invalid persistent value index.");
+        return;
+    }
+
+    battery_manager.update_persistent_data(data);
+    console.println("Persistent data updated.");
+    print_persistent_data();
+}
+
 
 void serial_console() {
     while (Serial.available()) {
@@ -432,6 +522,12 @@ void serial_console() {
             }
             case 'i':
                 print_shunt_status();
+                break;
+            case 'P':
+                print_persistent_data();
+                break;
+            case 'E':
+                modify_persistent_data();
                 break;
             case 'B':
                 print_bms_status();

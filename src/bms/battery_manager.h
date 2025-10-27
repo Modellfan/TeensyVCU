@@ -84,6 +84,9 @@ public:
 
     bool is_balancing_finished() const { return balancing_finished; }
 
+    PersistentDataStorage::PersistentData get_persistent_data() const;
+    void update_persistent_data(const PersistentDataStorage::PersistentData &data);
+
 private:
     PersistentDataStorage persistent_storage;
 
