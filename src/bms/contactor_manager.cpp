@@ -21,6 +21,7 @@ Contactormanager::Contactormanager() :
     _hvBusVoltage_v = 0.0f;
     _hvBusVoltage_valid = false;
     _hvBusVoltage_lastUpdateMs = 0UL;
+    _feedbackDisabled = false;
 }
 
 void Contactormanager::initialise()
@@ -236,6 +237,58 @@ void Contactormanager::update()
         _prechargeContactor.open();
         break;
     }
+}
+
+void Contactormanager::setFeedbackDisabled(bool disabled)
+{
+    if (_feedbackDisabled == disabled)
+    {
+        return;
+    }
+
+    _feedbackDisabled = disabled;
+
+    _prechargeContactor.setFeedbackDisabled(disabled);
+    _positiveContactor.setFeedbackDisabled(disabled);
+
+    if (_feedbackDisabled)
+    {
+        _dtc = DTC_COM_NONE;
+        const bool positive_on = _positiveContactor.getOutputPin();
+        const bool precharge_on = _prechargeContactor.getOutputPin();
+
+        if (positive_on && precharge_on)
+        {
+            _currentState = CLOSED;
+            _targetState = CLOSED;
+        }
+        else if (!positive_on && !precharge_on)
+        {
+            _currentState = OPEN;
+            _targetState = OPEN;
+        }
+        else if (precharge_on && !positive_on)
+        {
+            _currentState = CLOSING_POSITIVE;
+            _targetState = CLOSED;
+        }
+        else
+        {
+            _currentState = OPENING_PRECHARGE;
+            _targetState = OPEN;
+        }
+    }
+    else
+    {
+        _dtc = DTC_COM_NONE;
+        _targetState = OPEN;
+        _currentState = OPEN;
+    }
+}
+
+bool Contactormanager::isFeedbackDisabled() const
+{
+    return _feedbackDisabled;
 }
 
 const char *Contactormanager::getCurrentStateString()

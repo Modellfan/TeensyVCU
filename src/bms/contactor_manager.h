@@ -43,6 +43,8 @@ public:
     State getState();
     DTC_COM getDTC();
     void update();
+    void setFeedbackDisabled(bool disabled);
+    bool isFeedbackDisabled() const;
     Contactor::State getPositiveState() const;
     Contactor::DTC_CON getPositiveDTC() const;
     bool getPositiveInputPin() const;
@@ -73,6 +75,7 @@ private:
     float _hvBusVoltage_v;
     bool _hvBusVoltage_valid;
     unsigned long _hvBusVoltage_lastUpdateMs;
+    bool _feedbackDisabled;
 };
 
 #endif // CONTACTORMANAGER_H

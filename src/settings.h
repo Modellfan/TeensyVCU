@@ -51,10 +51,8 @@
 
 #define CONTACTOR_PRCHG_TIME 2000 //Time for the precharge contactor to be closed before positive contactor
 
-// When defined, feedback inputs are not evaluated and the contactor
-// state machine is bypassed. The input pins remain readable.
-// Useful for debugging when feedback wiring is absent.
-//#define CONTACTOR_DISABLE_FEEDBACK
+// Contactor feedback evaluation can be disabled at runtime through the
+// persistent data interface (see serial console command 'P').
 
 //---------------------------------------------------------------------------------------------------------------------------------------------
 //BMS software module settings

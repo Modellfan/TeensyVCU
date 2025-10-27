@@ -66,7 +66,7 @@ monitoring.
 | Method | Description |
 | --- | --- |
 | `Contactor(int outputPin, int inputPin, int debounce_ms, int timeout_ms, bool allowExternalControl)` | Constructor wiring the control and feedback pins, debounce, timeout, and whether unexpected state changes are tolerated. |
-| `initialise()` | Sets the initial state and validates the feedback pin. If `CONTACTOR_DISABLE_FEEDBACK` is defined, skips feedback checks and starts open for bench testing. |
+| `initialise()` | Sets the initial state and validates the feedback pin. When feedback is disabled via persistent data, skips feedback checks and starts open for bench testing. |
 | `close()` / `open()` | Command the contactor to change state. When feedback is enabled these trigger state-machine transitions and enforce timing constraints; in debug mode they immediately change outputs. |
 | `update()` | Runs the state machine that waits for feedback transitions, applies debounce logic, and records timeout or unexpected-state DTCs. |
 | `getState()` / `getInputPin()` / `getOutputPin()` / `getDTC()` / `getDTCString()` | Observability helpers for the current contactor status. |
