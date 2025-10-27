@@ -269,6 +269,18 @@ static String contactor_dtc_to_string(Contactormanager::DTC_COM dtc) {
             errorString += "POSITIVE_FAULT, ";
             hasError = true;
         }
+        if (dtc & Contactormanager::DTC_COM_PRECHARGE_VOLTAGE_TIMEOUT) {
+            errorString += "MATCH_TIMEOUT, ";
+            hasError = true;
+        }
+        if (dtc & Contactormanager::DTC_COM_EXTERNAL_HV_VOLTAGE_MISSING) {
+            errorString += "EXT_VOLT_MISSING, ";
+            hasError = true;
+        }
+        if (dtc & Contactormanager::DTC_COM_PACK_VOLTAGE_MISSING) {
+            errorString += "PACK_VOLT_MISSING, ";
+            hasError = true;
+        }
         if (hasError) {
             errorString.remove(errorString.length() - 2);
         }
@@ -452,6 +464,10 @@ void print_persistent_data() {
     console.printf("  2: ampere_seconds_initial = %.3f\n", data.ampere_seconds_initial);
     console.printf("  3: measured_capacity_Ah = %.3f\n", data.measured_capacity_Ah);
     console.printf("  4: ignore_contactor_feedback = %s\n", data.ignore_contactor_feedback ? "true" : "false");
+    console.printf("  5: contactor_precharge_strategy = %u\n", data.contactor_precharge_strategy);
+    console.printf("  6: contactor_voltage_match_tolerance_v = %.3f\n", data.contactor_voltage_match_tolerance_v);
+    console.printf("  7: contactor_voltage_match_timeout_ms = %lu\n",
+                   static_cast<unsigned long>(data.contactor_voltage_match_timeout_ms));
     console.println("Use 'E idx value' to update a field (use true/false or 1/0 for boolean values).");
 }
 
@@ -498,6 +514,27 @@ void modify_persistent_data() {
                 return;
             }
             data.ignore_contactor_feedback = bool_value;
+            break;
+        }
+        case 5: {
+            const int strategy = atoi(value_token);
+            if (strategy != CONTACTOR_PRECHARGE_STRATEGY_TIMED_DELAY &&
+                strategy != CONTACTOR_PRECHARGE_STRATEGY_VOLTAGE_MATCH) {
+                console.println("Value must be 0 (timed delay) or 1 (voltage match).");
+                return;
+            }
+            data.contactor_precharge_strategy = static_cast<uint8_t>(strategy);
+            break;
+        }
+        case 6:
+            data.contactor_voltage_match_tolerance_v = value;
+            break;
+        case 7: {
+            if (value <= 0.0f) {
+                console.println("Timeout must be positive.");
+                return;
+            }
+            data.contactor_voltage_match_timeout_ms = static_cast<uint32_t>(value);
             break;
         }
         default:
