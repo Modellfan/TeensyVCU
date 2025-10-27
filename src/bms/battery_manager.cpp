@@ -535,7 +535,7 @@ void BMS::read_message()
                 const float hv_bus_voltage_v = static_cast<float>(hv_bus_voltage_raw) * 0.1f;
                 contactorManager.setHvBusVoltage(hv_bus_voltage_v);
 
-                vcu_counter = msg.data[3] & 0x0F;
+                vcu_counter = msg.data[6] & 0x0F;
                 last_vcu_msg = millis();
                 vcu_timeout = false;
             }

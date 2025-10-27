@@ -56,8 +56,8 @@ the contactor manager diagnostics are forwarded over CAN:
 |-----|--------|------|---------------|-------|-------|
 | 0-1 | SOC | `uint16` | % × 100 | 0–10000 | 0–100.00 % |
 | 2-3 | SOH | `uint16` | % × 100 | 0–10000 | 0–100.00 % |
-| 4 | Balancing Status | `uint8` | enum |  | 0=idle, 1=active, etc. |
-| 5 | BMS Status | `uint8` | enum |  | 0=Active, etc. |
+| 4 | Balancing Status | `uint8` | enum | 0–2 | 0=idle, 1=balancing, 2=finished |
+| 5 | BMS Status | `uint8` | enum | 0–2 | 0=INIT, 1=OPERATING, 2=FAULT |
 | 6 | Counter (4&nbsp;bit) | `uint8` | lower 4 bits only | 0–15 | bits 7–4 always 0 |
 | 7 | CRC8 | `uint8` |  |  |  |
 
@@ -80,6 +80,12 @@ All signals below are unsigned unless otherwise noted.
 | 0 | VehicleOperatingMode | `uint8` | enum |  |
 | 1 | RequestBMSShutdown | `uint8` | 0/1 | boolean as `uint8` |
 | 2 | RequestContactorClose | `uint8` | 0/1 | boolean as `uint8` |
-| 3 | Counter (4&nbsp;bit) | `uint8` | lower 4 bits only | bits 7–4 always 0 |
-| 4-6 | reserved |  |  |  |  |
+| 3 | reserved |  |  |  |  |
+| 4-5 | HV Bus Voltage | `uint16` | V × 10 | 0–65535 | External HV measurement reported by VCU (0–6553.5 V) |
+| 6 | Counter (4&nbsp;bit) | `uint8` | lower 4 bits only | bits 7–4 always 0 |
 | 7 | CRC8 | `uint8` |  |  |
+
+The HV bus voltage field (bytes 4-5) must be refreshed at least every `BMS_VCU_TIMEOUT`
+interval (300 ms). If the measurement becomes stale or invalid, the BMS sets
+`DTC_COM_EXTERNAL_HV_VOLTAGE_MISSING` and derates contactor operation until the
+VCU resumes broadcasting the voltage.
