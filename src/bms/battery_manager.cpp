@@ -607,7 +607,8 @@ void BMS::send_battery_status_message()
     balancingTargetVoltage =
         std::clamp(balancingTargetVoltage, 0.0f, 5.1f);
     uint8_t balancingTarget = static_cast<uint8_t>(balancingTargetVoltage * 50.0f);
-    uint8_t cellDelta = (uint8_t)(batteryPack.get_delta_cell_voltage() * 100.0f);
+    const float cellDeltaScaled = batteryPack.get_delta_cell_voltage() * 500.0f;
+    uint8_t cellDelta = static_cast<uint8_t>(std::clamp(cellDeltaScaled, 0.0f, 255.0f));
     uint16_t packPower = (uint16_t)((batteryPack.get_pack_voltage() * shunt.getCurrent() / 1000.0f) * 100.0f + 30000.0f);
     msg.data[0] = minT;
     msg.data[1] = maxT;
