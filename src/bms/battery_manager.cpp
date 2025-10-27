@@ -553,6 +553,7 @@ void BMS::apply_persistent_data(const PersistentDataStorage::PersistentData &dat
     measured_capacity_Wh = data.measured_capacity_Wh;
     ampere_seconds_initial = data.ampere_seconds_initial;
     measured_capacity_Ah = data.measured_capacity_Ah;
+    contactorManager.setFeedbackDisabled(data.ignore_contactor_feedback);
 }
 
 PersistentDataStorage::PersistentData BMS::collect_persistent_data() const
@@ -562,6 +563,7 @@ PersistentDataStorage::PersistentData BMS::collect_persistent_data() const
     data.measured_capacity_Wh = measured_capacity_Wh;
     data.ampere_seconds_initial = ampere_seconds_initial;
     data.measured_capacity_Ah = measured_capacity_Ah;
+    data.ignore_contactor_feedback = contactorManager.isFeedbackDisabled();
     return data;
 }
 

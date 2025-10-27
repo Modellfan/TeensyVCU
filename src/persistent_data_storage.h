@@ -15,6 +15,7 @@ public:
         float measured_capacity_Wh = BMS_INITIAL_CAPACITY_WH;
         float ampere_seconds_initial = 0.0f;
         float measured_capacity_Ah = BMS_INITIAL_CAPACITY_AH;
+        bool ignore_contactor_feedback = false;
     };
 
     PersistentDataStorage()
@@ -75,7 +76,7 @@ private:
     };
 
     static constexpr uint32_t kMagic = 0x54564355UL; // 'TVCU'
-    static constexpr uint16_t kVersion = 1U;
+    static constexpr uint16_t kVersion = 2U;
     static constexpr size_t kSlotCount = 16U;
 
     bool initialized;

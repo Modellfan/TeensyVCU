@@ -9,7 +9,8 @@ Contactor::Contactor(int outputPin, int inputPin, int debounce_ms, int timeout_m
       _debounce_ms(debounce_ms),
       _timeout_ms(timeout_ms),
       _currentState(INIT),
-      _allowExternalControl(allowExternalControl)
+      _allowExternalControl(allowExternalControl),
+      _feedbackDisabled(false)
 {
     pinMode(_outputPin, OUTPUT);
     pinMode(_inputPin, INPUT_PULLUP);
@@ -20,16 +21,18 @@ Contactor::Contactor(int outputPin, int inputPin, int debounce_ms, int timeout_m
 
 void Contactor::initialise()
 {
-#ifdef CONTACTOR_DISABLE_FEEDBACK
-    // In debug mode start in open state ignoring feedback pins
-    if (_currentState == INIT)
+    if (_feedbackDisabled)
     {
-        _dtc = DTC_CON_NONE;
-        digitalWrite(_outputPin, LOW);
-        _currentState = OPEN;
-        _lastStateChange = millis();
+        if (_currentState == INIT)
+        {
+            _dtc = DTC_CON_NONE;
+            digitalWrite(_outputPin, LOW);
+            _currentState = OPEN;
+            _lastStateChange = millis();
+        }
+        return;
     }
-#else
+
     if (_currentState == INIT)
     {
         _dtc = DTC_CON_NONE;
@@ -54,42 +57,44 @@ void Contactor::initialise()
             _lastStateChange = millis();
         }
     }
-#endif
 }
 
 void Contactor::close()
 {
-#ifdef CONTACTOR_DISABLE_FEEDBACK
-    // Immediately drive the output and set state to CLOSED
-    digitalWrite(_outputPin, HIGH);
-    _currentState = CLOSED;
-    _lastStateChange = millis();
-    _dtc = DTC_CON_NONE;
-#else
+    if (_feedbackDisabled)
+    {
+        digitalWrite(_outputPin, HIGH);
+        _currentState = CLOSED;
+        _lastStateChange = millis();
+        _dtc = DTC_CON_NONE;
+        return;
+    }
+
     if (_currentState == OPEN || _currentState == OPENING)
     {
         _currentState = CLOSING;
         _lastStateChange = millis();
         digitalWrite(_outputPin, HIGH);
     }
-#endif
 }
 
 void Contactor::open()
 {
-#ifdef CONTACTOR_DISABLE_FEEDBACK
-    digitalWrite(_outputPin, LOW);
-    _currentState = OPEN;
-    _lastStateChange = millis();
-    _dtc = DTC_CON_NONE;
-#else
+    if (_feedbackDisabled)
+    {
+        digitalWrite(_outputPin, LOW);
+        _currentState = OPEN;
+        _lastStateChange = millis();
+        _dtc = DTC_CON_NONE;
+        return;
+    }
+
     if (_currentState == CLOSED || _currentState == CLOSING)
     {
         _currentState = OPENING;
         _lastStateChange = millis();
         digitalWrite(_outputPin, LOW);
     }
-#endif
 }
 
 Contactor::State Contactor::getState() const
@@ -109,11 +114,10 @@ bool Contactor::getOutputPin() const
 
 void Contactor::update()
 {
-
-#ifdef CONTACTOR_DISABLE_FEEDBACK
-    // In debug mode no state machine is required
-    return;
-#endif
+    if (_feedbackDisabled)
+    {
+        return;
+    }
 
     switch (_currentState)
     {
@@ -197,6 +201,29 @@ void Contactor::update()
 }
 
 Contactor::DTC_CON Contactor::getDTC() const { return _dtc; }
+
+void Contactor::setFeedbackDisabled(bool disabled)
+{
+    if (_feedbackDisabled == disabled)
+    {
+        return;
+    }
+
+    _feedbackDisabled = disabled;
+
+    if (_feedbackDisabled)
+    {
+        _dtc = DTC_CON_NONE;
+        _lastStateChange = millis();
+        _currentState = digitalRead(_outputPin) == CONTACTOR_CLOSED_STATE ? CLOSED : OPEN;
+    }
+    else
+    {
+        _dtc = DTC_CON_NONE;
+        _currentState = INIT;
+        initialise();
+    }
+}
 
 String Contactor::getDTCString() const
 {

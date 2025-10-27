@@ -1,5 +1,7 @@
 #include "serial_console.h"
 #include <ctype.h>
+#include <stdlib.h>
+#include <string.h>
 
 static const char *pack_state_to_string(BatteryPack::STATE_PACK state) {
     switch (state) {
@@ -131,6 +133,49 @@ static bool read_serial_token(char *buffer, size_t buffer_size) {
 
     buffer[i] = '\0';
     return i > 0;
+}
+
+static bool parse_bool_token(const char *token, bool &value) {
+    if (token == nullptr || token[0] == '\0') {
+        return false;
+    }
+
+    char lowered[16];
+    size_t len = strlen(token);
+    if (len >= sizeof(lowered)) {
+        len = sizeof(lowered) - 1;
+    }
+
+    bool has_digit = false;
+    bool numeric = true;
+
+    for (size_t i = 0; i < len; ++i) {
+        const char c = token[i];
+        lowered[i] = static_cast<char>(tolower(static_cast<unsigned char>(c)));
+        if (!(isdigit(static_cast<unsigned char>(c)) || c == '+' || c == '-' || c == '.')) {
+            numeric = false;
+        }
+        if (isdigit(static_cast<unsigned char>(c))) {
+            has_digit = true;
+        }
+    }
+    lowered[len] = '\0';
+
+    if (strcmp(lowered, "1") == 0 || strcmp(lowered, "true") == 0 || strcmp(lowered, "on") == 0 || strcmp(lowered, "yes") == 0) {
+        value = true;
+        return true;
+    }
+    if (strcmp(lowered, "0") == 0 || strcmp(lowered, "false") == 0 || strcmp(lowered, "off") == 0 || strcmp(lowered, "no") == 0) {
+        value = false;
+        return true;
+    }
+
+    if (numeric && has_digit) {
+        value = (atof(token) != 0.0f);
+        return true;
+    }
+
+    return false;
 }
 
 static void discard_serial_line() {
@@ -406,7 +451,8 @@ void print_persistent_data() {
     console.printf("  1: measured_capacity_Wh = %.3f\n", data.measured_capacity_Wh);
     console.printf("  2: ampere_seconds_initial = %.3f\n", data.ampere_seconds_initial);
     console.printf("  3: measured_capacity_Ah = %.3f\n", data.measured_capacity_Ah);
-    console.println("Use 'E idx value' to update a field.");
+    console.printf("  4: ignore_contactor_feedback = %s\n", data.ignore_contactor_feedback ? "true" : "false");
+    console.println("Use 'E idx value' to update a field (use true/false or 1/0 for boolean values).");
 }
 
 void modify_persistent_data() {
@@ -445,6 +491,15 @@ void modify_persistent_data() {
         case 3:
             data.measured_capacity_Ah = value;
             break;
+        case 4: {
+            bool bool_value = false;
+            if (!parse_bool_token(value_token, bool_value)) {
+                console.println("Value must be boolean (true/false or 1/0).");
+                return;
+            }
+            data.ignore_contactor_feedback = bool_value;
+            break;
+        }
         default:
             updated = false;
             break;
