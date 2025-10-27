@@ -109,6 +109,8 @@ void BMS::Task10Ms()
 
 void BMS::Task100Ms()
 {
+    contactorManager.setPackVoltage(batteryPack.get_pack_voltage(),
+                                    batteryPack.get_state_operating());
     update_state_machine();
     send_battery_status_message();
 }
@@ -554,6 +556,10 @@ void BMS::apply_persistent_data(const PersistentDataStorage::PersistentData &dat
     ampere_seconds_initial = data.ampere_seconds_initial;
     measured_capacity_Ah = data.measured_capacity_Ah;
     contactorManager.setFeedbackDisabled(data.ignore_contactor_feedback);
+    contactorManager.setPrechargeStrategy(
+        static_cast<Contactormanager::PrechargeStrategy>(data.contactor_precharge_strategy));
+    contactorManager.setVoltageMatchTolerance(data.contactor_voltage_match_tolerance_v);
+    contactorManager.setVoltageMatchTimeout(data.contactor_voltage_match_timeout_ms);
 }
 
 PersistentDataStorage::PersistentData BMS::collect_persistent_data() const
@@ -564,6 +570,11 @@ PersistentDataStorage::PersistentData BMS::collect_persistent_data() const
     data.ampere_seconds_initial = ampere_seconds_initial;
     data.measured_capacity_Ah = measured_capacity_Ah;
     data.ignore_contactor_feedback = contactorManager.isFeedbackDisabled();
+    data.contactor_precharge_strategy =
+        static_cast<uint8_t>(contactorManager.getPrechargeStrategy());
+    data.contactor_voltage_match_tolerance_v = contactorManager.getVoltageMatchTolerance();
+    data.contactor_voltage_match_timeout_ms =
+        static_cast<uint32_t>(contactorManager.getVoltageMatchTimeout());
     return data;
 }
 

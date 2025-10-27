@@ -32,9 +32,23 @@ The following tables describe the structure of all CAN messages exchanged betwee
 | 0-1 | Max Discharge Current | `uint16` | A × 10 | 0–65535 | 0–6553.5 A |
 | 2-3 | Max Charge Current | `uint16` | A × 10 | 0–65535 | 0–6553.5 A |
 | 4 | Contactor State | `uint8` | enum | 0–7 | 0=INIT,1=OPEN,2=CLOSING_PRE,3=CLOSING_POS,4=CLOSED,5=OPENING_POS,6=OPENING_PRE,7=FAULT |
-| 5 | Fault Code | `uint8` |  | 0–255 | enum |
+| 5 | Fault Code | `uint8` | bitfield | 0–255 | Contactor manager DTC flags |
 | 6 | Counter (4&nbsp;bit) | `uint8` | lower 4 bits only | 0–15 | bits 7–4 always 0 |
 | 7 | CRC8 | `uint8` |  |  |  |
+
+The `Fault Code` bitfield mirrors the `Contactormanager::DTC_COM` enumeration when
+the contactor manager diagnostics are forwarded over CAN:
+
+| Bit | Name | Description |
+|-----|------|-------------|
+| 0 | `DTC_COM_NO_CONTACTOR_POWER_SUPPLY` | Contactor driver supply is not present. |
+| 1 | `DTC_COM_NEGATIVE_CONTACTOR_FAULT` | Negative contactor feedback reported a fault. |
+| 2 | `DTC_COM_PRECHARGE_CONTACTOR_FAULT` | Precharge contactor feedback reported a fault. |
+| 3 | `DTC_COM_POSITIVE_CONTACTOR_FAULT` | Positive contactor feedback reported a fault. |
+| 4 | `DTC_COM_PRECHARGE_VOLTAGE_TIMEOUT` | Voltage precharge target was not reached before the strategy timeout. |
+| 5 | `DTC_COM_EXTERNAL_HV_VOLTAGE_MISSING` | External HV bus voltage from the VCU has timed out or is invalid. |
+| 6 | `DTC_COM_PACK_VOLTAGE_MISSING` | Internal pack voltage measurement is unavailable or stale. |
+| 7 | (reserved) | Unused; transmit as 0. |
 
 ## MSG4: `BMS_SOC_SOH` (0x41D, 1&nbsp;Hz)
 
