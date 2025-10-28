@@ -218,6 +218,7 @@ void print_console_help() {
     console.println("  c - close contactors");
     console.println("  o - open contactors");
     console.println("  s - show contactor status");
+    console.println("  H - print external HV bus voltage");
     console.println("  p - print pack status");
     console.println("  b - toggle balancing");
     console.println("  vX.XX - set balancing voltage");
@@ -478,6 +479,15 @@ void print_contactor_status() {
         contactor_manager.isContactorVoltageAvailable());
 }
 
+void print_external_voltage() {
+    const float hv_bus_voltage = contactor_manager.getHvBusVoltage();
+    if (contactor_manager.isHvBusVoltageValid()) {
+        console.printf("External HV bus voltage: %.1fV (valid)\n", hv_bus_voltage);
+    } else {
+        console.printf("External HV bus voltage unavailable (last %.1fV)\n", hv_bus_voltage);
+    }
+}
+
 void print_shunt_status() {
     console.printf("Current: %.1fA (avg %.1fA)\n",
                    shunt.getCurrent(),
@@ -602,6 +612,9 @@ void serial_console() {
                 break;
             case 's':
                 print_contactor_status();
+                break;
+            case 'H':
+                print_external_voltage();
                 break;
             case 'p':
                 print_pack_status();
