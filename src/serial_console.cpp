@@ -248,7 +248,7 @@ void print_pack_status() {
                    pack_dtc_to_string(batteryPack.getDTC()).c_str());
 }
 
-static const char *contactor_state_to_string(Contactormanager::State state) {
+static const char *contactor_manager_state_to_string(Contactormanager::State state) {
     switch (state) {
         case Contactormanager::INIT: return "INIT";
         case Contactormanager::OPEN: return "OPEN";
@@ -262,7 +262,19 @@ static const char *contactor_state_to_string(Contactormanager::State state) {
     }
 }
 
-static const char *contactor_state_to_string(Contactor::State state) {
+static const char *contactor_precharge_strategy_to_string(
+    Contactormanager::PrechargeStrategy strategy) {
+    switch (strategy) {
+        case Contactormanager::PrechargeStrategy::TIMED_DELAY:
+            return "TIMED_DELAY";
+        case Contactormanager::PrechargeStrategy::VOLTAGE_MATCH:
+            return "VOLTAGE_MATCH";
+        default:
+            return "UNKNOWN";
+    }
+}
+
+static const char *single_contactor_state_to_string(Contactor::State state) {
     switch (state) {
         case Contactor::INIT: return "INIT";
         case Contactor::OPEN: return "OPEN";
@@ -278,7 +290,7 @@ static const char *contactor_feedback_to_string(bool is_closed) {
     return is_closed ? "FEEDBACK CLOSED" : "FEEDBACK OPEN";
 }
 
-static String contactor_dtc_to_string(Contactormanager::DTC_COM dtc) {
+static String contactor_manager_dtc_to_string(Contactormanager::DTC_COM dtc) {
     String errorString = "";
     if (dtc == Contactormanager::DTC_COM_NONE) {
         errorString = "None";
@@ -458,25 +470,60 @@ void print_bms_status() {
 
 
 void print_contactor_status() {
-    console.printf("Contactor State: %s\n",
-                   contactor_state_to_string(contactor_manager.getState()));
-    console.printf("Contactor DTC: %s\n",
-                   contactor_dtc_to_string(contactor_manager.getDTC()).c_str());
-    console.printf("POS_DTC:%s PRE_DTC:%s\n",
-                   single_contactor_dtc_to_string(contactor_manager.getPositiveDTC()).c_str(),
-                   single_contactor_dtc_to_string(contactor_manager.getPrechargeDTC()).c_str());
+    const Contactormanager::State manager_state = contactor_manager.getState();
+    const Contactormanager::DTC_COM manager_dtc = contactor_manager.getDTC();
+    const Contactor::State positive_state = contactor_manager.getPositiveState();
+    const Contactor::State precharge_state = contactor_manager.getPrechargeState();
+    const Contactor::DTC_CON positive_dtc = contactor_manager.getPositiveDTC();
+    const Contactor::DTC_CON precharge_dtc = contactor_manager.getPrechargeDTC();
     const bool positive_feedback_closed = contactor_manager.getPositiveInputPin();
     const bool precharge_feedback_closed = contactor_manager.getPrechargeInputPin();
-    console.printf(
-        "POS:%s POS_IN:%d (%s) PRE:%s PRE_IN:%d (%s) NEG_IN:%d SUPPLY_IN:%d\n",
-        contactor_state_to_string(contactor_manager.getPositiveState()),
-        positive_feedback_closed,
-        contactor_feedback_to_string(positive_feedback_closed),
-        contactor_state_to_string(contactor_manager.getPrechargeState()),
-        precharge_feedback_closed,
-        contactor_feedback_to_string(precharge_feedback_closed),
-        contactor_manager.isNegativeContactorClosed(),
-        contactor_manager.isContactorVoltageAvailable());
+    const bool negative_contactor_closed = contactor_manager.isNegativeContactorClosed();
+    const bool supply_available = contactor_manager.isContactorVoltageAvailable();
+    const bool feedback_disabled = contactor_manager.isFeedbackDisabled();
+    const Contactormanager::PrechargeStrategy precharge_strategy =
+        contactor_manager.getPrechargeStrategy();
+    const float voltage_match_tolerance =
+        contactor_manager.getVoltageMatchTolerance();
+    const uint32_t voltage_match_timeout =
+        contactor_manager.getVoltageMatchTimeout();
+    const float hv_bus_voltage = contactor_manager.getHvBusVoltage();
+    const bool hv_bus_voltage_valid = contactor_manager.isHvBusVoltageValid();
+    const float pack_voltage = contactor_manager.getPackVoltage();
+    const bool pack_voltage_valid = contactor_manager.isPackVoltageValid();
+
+    console.println("Contactor Manager:");
+    console.printf("  Manager state: %s\n",
+                   contactor_manager_state_to_string(manager_state));
+    console.printf("  Manager DTC: %s (0x%02X)\n",
+                   contactor_manager_dtc_to_string(manager_dtc).c_str(),
+                   static_cast<unsigned int>(manager_dtc));
+    console.printf("  Feedback disabled: %s\n", feedback_disabled ? "true" : "false");
+    console.printf("  Precharge strategy: %s, Voltage match tolerance: %.3fV, Timeout: %lums\n",
+                   contactor_precharge_strategy_to_string(precharge_strategy),
+                   voltage_match_tolerance,
+                   static_cast<unsigned long>(voltage_match_timeout));
+    console.printf("  Negative contactor closed: %s, Supply available: %s\n",
+                   negative_contactor_closed ? "true" : "false",
+                   supply_available ? "true" : "false");
+    console.printf("  HV bus voltage: %.1fV (%s)\n",
+                   hv_bus_voltage,
+                   hv_bus_voltage_valid ? "valid" : "invalid");
+    console.printf("  Pack voltage: %.1fV (%s)\n",
+                   pack_voltage,
+                   pack_voltage_valid ? "valid" : "invalid");
+    console.printf("  Positive contactor - State: %s, Feedback: %s (%d), DTC: %s (0x%02X)\n",
+                   single_contactor_state_to_string(positive_state),
+                   contactor_feedback_to_string(positive_feedback_closed),
+                   positive_feedback_closed,
+                   single_contactor_dtc_to_string(positive_dtc).c_str(),
+                   static_cast<unsigned int>(positive_dtc));
+    console.printf("  Precharge contactor - State: %s, Feedback: %s (%d), DTC: %s (0x%02X)\n",
+                   single_contactor_state_to_string(precharge_state),
+                   contactor_feedback_to_string(precharge_feedback_closed),
+                   precharge_feedback_closed,
+                   single_contactor_dtc_to_string(precharge_dtc).c_str(),
+                   static_cast<unsigned int>(precharge_dtc));
 }
 
 void print_external_voltage() {
