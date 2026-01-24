@@ -528,13 +528,6 @@ void BMS::read_message()
                 else
                     contactorManager.open();
 
-                // Bytes 4-5 carry the measured HV bus voltage from the main VCU with
-                // a resolution of 0.1 V per bit (0-6553.5 V range, typically 0-450 V).
-                const uint16_t hv_bus_voltage_raw = static_cast<uint16_t>(msg.data[4]) |
-                                                     (static_cast<uint16_t>(msg.data[5]) << 8);
-                const float hv_bus_voltage_v = static_cast<float>(hv_bus_voltage_raw) * 0.1f;
-                contactorManager.setHvBusVoltage(hv_bus_voltage_v);
-
                 vcu_counter = msg.data[6] & 0x0F;
                 last_vcu_msg = millis();
                 vcu_timeout = false;
@@ -545,7 +538,6 @@ void BMS::read_message()
     if ((millis() - last_vcu_msg) > BMS_VCU_TIMEOUT)
     {
         vcu_timeout = true;
-        contactorManager.invalidateHvBusVoltage();
     }
 }
 
@@ -555,11 +547,8 @@ void BMS::apply_persistent_data(const PersistentDataStorage::PersistentData &dat
     measured_capacity_Wh = data.measured_capacity_Wh;
     ampere_seconds_initial = data.ampere_seconds_initial;
     measured_capacity_Ah = data.measured_capacity_Ah;
-    contactorManager.setFeedbackDisabled(data.ignore_contactor_feedback);
     contactorManager.setPrechargeStrategy(
         static_cast<Contactormanager::PrechargeStrategy>(data.contactor_precharge_strategy));
-    contactorManager.setVoltageMatchTolerance(data.contactor_voltage_match_tolerance_v);
-    contactorManager.setVoltageMatchTimeout(data.contactor_voltage_match_timeout_ms);
 }
 
 PersistentDataStorage::PersistentData BMS::collect_persistent_data() const
@@ -569,12 +558,8 @@ PersistentDataStorage::PersistentData BMS::collect_persistent_data() const
     data.measured_capacity_Wh = measured_capacity_Wh;
     data.ampere_seconds_initial = ampere_seconds_initial;
     data.measured_capacity_Ah = measured_capacity_Ah;
-    data.ignore_contactor_feedback = contactorManager.isFeedbackDisabled();
     data.contactor_precharge_strategy =
         static_cast<uint8_t>(contactorManager.getPrechargeStrategy());
-    data.contactor_voltage_match_tolerance_v = contactorManager.getVoltageMatchTolerance();
-    data.contactor_voltage_match_timeout_ms =
-        static_cast<uint32_t>(contactorManager.getVoltageMatchTimeout());
     return data;
 }
 

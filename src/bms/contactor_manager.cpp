@@ -20,16 +20,7 @@ Contactormanager::Contactormanager() :
 {
     _currentState = INIT;
     _targetState = OPEN;
-    _hvBusVoltage_v = 0.0f;
-    _hvBusVoltage_valid = false;
-    _hvBusVoltage_lastUpdateMs = 0UL;
-    _packVoltage_v = 0.0f;
-    _packVoltage_valid = false;
-    _packVoltage_lastUpdateMs = 0UL;
     _prechargeStrategy = PrechargeStrategy::TIMED_DELAY;
-    _voltageMatchTolerance_v = CONTACTOR_PRECHARGE_VOLTAGE_TOLERANCE;
-    _voltageMatchTimeout_ms = CONTACTOR_PRECHARGE_MATCH_TIMEOUT_MS;
-    _feedbackDisabled = false;
     _dtc = DTC_COM_NONE;
 }
 
@@ -254,11 +245,10 @@ bool Contactormanager::handleClosingPositiveVoltageMatch()
 {
     const unsigned long now = millis();
     const unsigned long elapsed = now - _lastPreChangeTime;
-    const unsigned long timeout_ms = static_cast<unsigned long>(_voltageMatchTimeout_ms);
 
     if (param::hv_monitor_state != HVMonitorState::OPERATING)
     {
-        if (elapsed > timeout_ms)
+        if (elapsed > CONTACTOR_PRECHARGE_MATCH_TIMEOUT_MS)
         {
             enterFaultState(DTC_COM_PRECHARGE_VOLTAGE_TIMEOUT);
             return true;
@@ -272,65 +262,13 @@ bool Contactormanager::handleClosingPositiveVoltageMatch()
         return false;
     }
 
-    if (elapsed > timeout_ms)
+    if (elapsed > CONTACTOR_PRECHARGE_MATCH_TIMEOUT_MS)
     {
         enterFaultState(DTC_COM_PRECHARGE_VOLTAGE_TIMEOUT);
         return true;
     }
 
     return false;
-}
-
-void Contactormanager::setFeedbackDisabled(bool disabled)
-{
-    if (_feedbackDisabled == disabled)
-    {
-        return;
-    }
-
-    _feedbackDisabled = disabled;
-
-    _prechargeContactor.setFeedbackDisabled(disabled);
-    _positiveContactor.setFeedbackDisabled(disabled);
-
-    if (_feedbackDisabled)
-    {
-        _dtc = DTC_COM_NONE;
-        const bool positive_on = _positiveContactor.getOutputPin();
-        const bool precharge_on = _prechargeContactor.getOutputPin();
-
-        if (positive_on && precharge_on)
-        {
-            _currentState = CLOSED;
-            _targetState = CLOSED;
-        }
-        else if (!positive_on && !precharge_on)
-        {
-            _currentState = OPEN;
-            _targetState = OPEN;
-        }
-        else if (precharge_on && !positive_on)
-        {
-            _currentState = CLOSING_POSITIVE;
-            _targetState = CLOSED;
-        }
-        else
-        {
-            _currentState = OPENING_PRECHARGE;
-            _targetState = OPEN;
-        }
-    }
-    else
-    {
-        _dtc = DTC_COM_NONE;
-        _targetState = OPEN;
-        _currentState = OPEN;
-    }
-}
-
-bool Contactormanager::isFeedbackDisabled() const
-{
-    return _feedbackDisabled;
 }
 
 const char *Contactormanager::getCurrentStateString()
@@ -420,17 +358,6 @@ String Contactormanager::getDTCString()
             errorString += "DTC_COM_PRECHARGE_VOLTAGE_TIMEOUT, ";
             hasError = true;
         }
-        if (_dtc & DTC_COM_EXTERNAL_HV_VOLTAGE_MISSING)
-        {
-            errorString += "DTC_COM_EXTERNAL_HV_VOLTAGE_MISSING, ";
-            hasError = true;
-        }
-        if (_dtc & DTC_COM_PACK_VOLTAGE_MISSING)
-        {
-            errorString += "DTC_COM_PACK_VOLTAGE_MISSING, ";
-            hasError = true;
-        }
-
         if (hasError)
         {
             // Remove the trailing comma and space
@@ -482,63 +409,6 @@ bool Contactormanager::isContactorVoltageAvailable() const
     return _contactorVoltage_available;
 }
 
-void Contactormanager::setHvBusVoltage(float voltage_v)
-{
-    _hvBusVoltage_v = voltage_v;
-    _hvBusVoltage_valid = true;
-    _hvBusVoltage_lastUpdateMs = millis();
-}
-
-float Contactormanager::getHvBusVoltage() const
-{
-    return _hvBusVoltage_v;
-}
-
-bool Contactormanager::isHvBusVoltageValid() const
-{
-    if (!_hvBusVoltage_valid)
-    {
-        return false;
-    }
-
-    return (millis() - _hvBusVoltage_lastUpdateMs) <= static_cast<unsigned long>(BMS_VCU_TIMEOUT);
-}
-
-void Contactormanager::invalidateHvBusVoltage()
-{
-    _hvBusVoltage_valid = false;
-}
-
-void Contactormanager::setPackVoltage(float voltage_v, bool valid)
-{
-    if (valid && std::isfinite(voltage_v))
-    {
-        _packVoltage_v = voltage_v;
-        _packVoltage_valid = true;
-        _packVoltage_lastUpdateMs = millis();
-    }
-    else
-    {
-        _packVoltage_valid = false;
-    }
-}
-
-float Contactormanager::getPackVoltage() const
-{
-    return _packVoltage_v;
-}
-
-bool Contactormanager::isPackVoltageValid() const
-{
-    if (!_packVoltage_valid)
-    {
-        return false;
-    }
-
-    return (millis() - _packVoltage_lastUpdateMs) <=
-           static_cast<unsigned long>(CONTACTOR_PACK_VOLTAGE_VALIDITY_MS);
-}
-
 void Contactormanager::setPrechargeStrategy(PrechargeStrategy strategy)
 {
     switch (strategy)
@@ -558,39 +428,4 @@ Contactormanager::PrechargeStrategy Contactormanager::getPrechargeStrategy() con
     return _prechargeStrategy;
 }
 
-void Contactormanager::setVoltageMatchTolerance(float tolerance_v)
-{
-    if (!std::isfinite(tolerance_v))
-    {
-        _voltageMatchTolerance_v = CONTACTOR_PRECHARGE_VOLTAGE_TOLERANCE;
-        return;
-    }
 
-    if (tolerance_v < 0.0f)
-    {
-        tolerance_v = std::fabs(tolerance_v);
-    }
-
-    _voltageMatchTolerance_v = tolerance_v;
-}
-
-float Contactormanager::getVoltageMatchTolerance() const
-{
-    return _voltageMatchTolerance_v;
-}
-
-void Contactormanager::setVoltageMatchTimeout(uint32_t timeout_ms)
-{
-    if (timeout_ms == 0U)
-    {
-        _voltageMatchTimeout_ms = CONTACTOR_PRECHARGE_MATCH_TIMEOUT_MS;
-        return;
-    }
-
-    _voltageMatchTimeout_ms = timeout_ms;
-}
-
-uint32_t Contactormanager::getVoltageMatchTimeout() const
-{
-    return _voltageMatchTimeout_ms;
-}

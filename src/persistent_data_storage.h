@@ -15,10 +15,7 @@ public:
         float measured_capacity_Wh = BMS_INITIAL_CAPACITY_WH;
         float ampere_seconds_initial = 0.0f;
         float measured_capacity_Ah = BMS_INITIAL_CAPACITY_AH;
-        bool ignore_contactor_feedback = false;
         uint8_t contactor_precharge_strategy = CONTACTOR_PRECHARGE_STRATEGY_DEFAULT;
-        float contactor_voltage_match_tolerance_v = CONTACTOR_PRECHARGE_VOLTAGE_TOLERANCE;
-        uint32_t contactor_voltage_match_timeout_ms = CONTACTOR_PRECHARGE_MATCH_TIMEOUT_MS;
     };
 
     PersistentDataStorage()
@@ -79,7 +76,7 @@ private:
     };
 
     static constexpr uint32_t kMagic = 0x54564355UL; // 'TVCU'
-    static constexpr uint16_t kVersion = 3U;
+    static constexpr uint16_t kVersion = 4U;
     static constexpr size_t kSlotCount = 16U;
 
     bool initialized;

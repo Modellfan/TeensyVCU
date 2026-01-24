@@ -5,8 +5,6 @@
 #include "settings.h"
 #include "bms/contactor.h"
 #include <ACAN_T4.h>
-#include <functional> // Add this line to include the <functional> header
-
 class Contactormanager
 {
 public:
@@ -34,8 +32,6 @@ public:
         DTC_COM_PRECHARGE_CONTACTOR_FAULT = 1 << 2,
         DTC_COM_POSITIVE_CONTACTOR_FAULT = 1 << 3,
         DTC_COM_PRECHARGE_VOLTAGE_TIMEOUT = 1 << 4,
-        DTC_COM_EXTERNAL_HV_VOLTAGE_MISSING = 1 << 5,
-        DTC_COM_PACK_VOLTAGE_MISSING = 1 << 6,
     } DTC_COM;
 
     enum class PrechargeStrategy : uint8_t
@@ -52,8 +48,6 @@ public:
     State getState();
     DTC_COM getDTC();
     void update();
-    void setFeedbackDisabled(bool disabled);
-    bool isFeedbackDisabled() const;
     Contactor::State getPositiveState() const;
     Contactor::DTC_CON getPositiveDTC() const;
     bool getPositiveInputPin() const;
@@ -62,19 +56,8 @@ public:
     bool getPrechargeInputPin() const;
     bool isNegativeContactorClosed() const;
     bool isContactorVoltageAvailable() const;
-    void setHvBusVoltage(float voltage_v);
-    float getHvBusVoltage() const;
-    bool isHvBusVoltageValid() const;
-    void invalidateHvBusVoltage();
-    void setPackVoltage(float voltage_v, bool valid);
-    float getPackVoltage() const;
-    bool isPackVoltageValid() const;
     void setPrechargeStrategy(PrechargeStrategy strategy);
     PrechargeStrategy getPrechargeStrategy() const;
-    void setVoltageMatchTolerance(float tolerance_v);
-    float getVoltageMatchTolerance() const;
-    void setVoltageMatchTimeout(uint32_t timeout_ms);
-    uint32_t getVoltageMatchTimeout() const;
 
 private:
     const char *getCurrentStateString();
@@ -93,16 +76,7 @@ private:
 
     bool _negativeContactor_closed;
     bool _contactorVoltage_available;
-    float _hvBusVoltage_v;
-    bool _hvBusVoltage_valid;
-    unsigned long _hvBusVoltage_lastUpdateMs;
-    float _packVoltage_v;
-    bool _packVoltage_valid;
-    unsigned long _packVoltage_lastUpdateMs;
     PrechargeStrategy _prechargeStrategy;
-    float _voltageMatchTolerance_v;
-    uint32_t _voltageMatchTimeout_ms;
-    bool _feedbackDisabled;
 };
 
 #endif // CONTACTORMANAGER_H

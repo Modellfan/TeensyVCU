@@ -210,49 +210,6 @@ static bool read_serial_token(char *buffer, size_t buffer_size) {
     return i > 0;
 }
 
-static bool parse_bool_token(const char *token, bool &value) {
-    if (token == nullptr || token[0] == '\0') {
-        return false;
-    }
-
-    char lowered[16];
-    size_t len = strlen(token);
-    if (len >= sizeof(lowered)) {
-        len = sizeof(lowered) - 1;
-    }
-
-    bool has_digit = false;
-    bool numeric = true;
-
-    for (size_t i = 0; i < len; ++i) {
-        const char c = token[i];
-        lowered[i] = static_cast<char>(tolower(static_cast<unsigned char>(c)));
-        if (!(isdigit(static_cast<unsigned char>(c)) || c == '+' || c == '-' || c == '.')) {
-            numeric = false;
-        }
-        if (isdigit(static_cast<unsigned char>(c))) {
-            has_digit = true;
-        }
-    }
-    lowered[len] = '\0';
-
-    if (strcmp(lowered, "1") == 0 || strcmp(lowered, "true") == 0 || strcmp(lowered, "on") == 0 || strcmp(lowered, "yes") == 0) {
-        value = true;
-        return true;
-    }
-    if (strcmp(lowered, "0") == 0 || strcmp(lowered, "false") == 0 || strcmp(lowered, "off") == 0 || strcmp(lowered, "no") == 0) {
-        value = false;
-        return true;
-    }
-
-    if (numeric && has_digit) {
-        value = (atof(token) != 0.0f);
-        return true;
-    }
-
-    return false;
-}
-
 static void discard_serial_line() {
     while (Serial.available()) {
         char c = Serial.read();
@@ -272,7 +229,6 @@ void print_console_help() {
     console.println("  cs - configure shunt");
     console.println("  o - open contactors");
     console.println("  s - show contactor status");
-    console.println("  H - print external HV bus voltage");
     console.println("  p - print pack status");
     console.println("  b - toggle balancing");
     console.println("  vX.XX - set balancing voltage");
@@ -368,14 +324,6 @@ static String contactor_manager_dtc_to_string(Contactormanager::DTC_COM dtc) {
         }
         if (dtc & Contactormanager::DTC_COM_PRECHARGE_VOLTAGE_TIMEOUT) {
             errorString += "MATCH_TIMEOUT, ";
-            hasError = true;
-        }
-        if (dtc & Contactormanager::DTC_COM_EXTERNAL_HV_VOLTAGE_MISSING) {
-            errorString += "EXT_VOLT_MISSING, ";
-            hasError = true;
-        }
-        if (dtc & Contactormanager::DTC_COM_PACK_VOLTAGE_MISSING) {
-            errorString += "PACK_VOLT_MISSING, ";
             hasError = true;
         }
         if (hasError) {
@@ -537,17 +485,8 @@ void print_contactor_status() {
     const bool precharge_feedback_closed = contactor_manager.getPrechargeInputPin();
     const bool negative_contactor_closed = contactor_manager.isNegativeContactorClosed();
     const bool supply_available = contactor_manager.isContactorVoltageAvailable();
-    const bool feedback_disabled = contactor_manager.isFeedbackDisabled();
     const Contactormanager::PrechargeStrategy precharge_strategy =
         contactor_manager.getPrechargeStrategy();
-    const float voltage_match_tolerance =
-        contactor_manager.getVoltageMatchTolerance();
-    const uint32_t voltage_match_timeout =
-        contactor_manager.getVoltageMatchTimeout();
-    const float hv_bus_voltage = contactor_manager.getHvBusVoltage();
-    const bool hv_bus_voltage_valid = contactor_manager.isHvBusVoltageValid();
-    const float pack_voltage = contactor_manager.getPackVoltage();
-    const bool pack_voltage_valid = contactor_manager.isPackVoltageValid();
 
     console.println("Contactor Manager:");
     console.printf("  Manager state: %s\n",
@@ -555,41 +494,21 @@ void print_contactor_status() {
     console.printf("  Manager DTC: %s (0x%02X)\n",
                    contactor_manager_dtc_to_string(manager_dtc).c_str(),
                    static_cast<unsigned int>(manager_dtc));
-    console.printf("  Feedback disabled: %s\n", feedback_disabled ? "true" : "false");
-    console.printf("  Precharge strategy: %s, Voltage match tolerance: %.3fV, Timeout: %lums\n",
-                   contactor_precharge_strategy_to_string(precharge_strategy),
-                   voltage_match_tolerance,
-                   static_cast<unsigned long>(voltage_match_timeout));
+    console.printf("  Precharge strategy: %s\n",
+                   contactor_precharge_strategy_to_string(precharge_strategy));
     console.printf("  Negative contactor closed: %s, Supply available: %s\n",
                    negative_contactor_closed ? "true" : "false",
                    supply_available ? "true" : "false");
-    console.printf("  HV bus voltage: %.1fV (%s)\n",
-                   hv_bus_voltage,
-                   hv_bus_voltage_valid ? "valid" : "invalid");
-    console.printf("  Pack voltage: %.1fV (%s)\n",
-                   pack_voltage,
-                   pack_voltage_valid ? "valid" : "invalid");
-    console.printf("  Positive contactor - State: %s, Feedback: %s (%d), DTC: %s (0x%02X)\n",
+    console.printf("  Positive contactor - State: %s, Feedback: %s, DTC: %s (0x%02X)\n",
                    single_contactor_state_to_string(positive_state),
                    contactor_feedback_to_string(positive_feedback_closed),
-                   positive_feedback_closed,
                    single_contactor_dtc_to_string(positive_dtc).c_str(),
                    static_cast<unsigned int>(positive_dtc));
-    console.printf("  Precharge contactor - State: %s, Feedback: %s (%d), DTC: %s (0x%02X)\n",
+    console.printf("  Precharge contactor - State: %s, Feedback: %s, DTC: %s (0x%02X)\n",
                    single_contactor_state_to_string(precharge_state),
                    contactor_feedback_to_string(precharge_feedback_closed),
-                   precharge_feedback_closed,
                    single_contactor_dtc_to_string(precharge_dtc).c_str(),
                    static_cast<unsigned int>(precharge_dtc));
-}
-
-void print_external_voltage() {
-    const float hv_bus_voltage = contactor_manager.getHvBusVoltage();
-    if (contactor_manager.isHvBusVoltageValid()) {
-        console.printf("External HV bus voltage: %.1fV (valid)\n", hv_bus_voltage);
-    } else {
-        console.printf("External HV bus voltage unavailable (last %.1fV)\n", hv_bus_voltage);
-    }
 }
 
 void print_shunt_status() {
@@ -630,12 +549,8 @@ void print_persistent_data() {
     console.printf("  1: measured_capacity_Wh = %.3f\n", data.measured_capacity_Wh);
     console.printf("  2: ampere_seconds_initial = %.3f\n", data.ampere_seconds_initial);
     console.printf("  3: measured_capacity_Ah = %.3f\n", data.measured_capacity_Ah);
-    console.printf("  4: ignore_contactor_feedback = %s\n", data.ignore_contactor_feedback ? "true" : "false");
-    console.printf("  5: contactor_precharge_strategy = %u\n", data.contactor_precharge_strategy);
-    console.printf("  6: contactor_voltage_match_tolerance_v = %.3f\n", data.contactor_voltage_match_tolerance_v);
-    console.printf("  7: contactor_voltage_match_timeout_ms = %lu\n",
-                   static_cast<unsigned long>(data.contactor_voltage_match_timeout_ms));
-    console.println("Use 'E idx value' to update a field (use true/false or 1/0 for boolean values).");
+    console.printf("  4: contactor_precharge_strategy = %u\n", data.contactor_precharge_strategy);
+    console.println("Use 'E idx value' to update a field.");
 }
 
 void modify_persistent_data() {
@@ -675,15 +590,6 @@ void modify_persistent_data() {
             data.measured_capacity_Ah = value;
             break;
         case 4: {
-            bool bool_value = false;
-            if (!parse_bool_token(value_token, bool_value)) {
-                console.println("Value must be boolean (true/false or 1/0).");
-                return;
-            }
-            data.ignore_contactor_feedback = bool_value;
-            break;
-        }
-        case 5: {
             const int strategy = atoi(value_token);
             if (strategy != CONTACTOR_PRECHARGE_STRATEGY_TIMED_DELAY &&
                 strategy != CONTACTOR_PRECHARGE_STRATEGY_VOLTAGE_MATCH) {
@@ -691,17 +597,6 @@ void modify_persistent_data() {
                 return;
             }
             data.contactor_precharge_strategy = static_cast<uint8_t>(strategy);
-            break;
-        }
-        case 6:
-            data.contactor_voltage_match_tolerance_v = value;
-            break;
-        case 7: {
-            if (value <= 0.0f) {
-                console.println("Timeout must be positive.");
-                return;
-            }
-            data.contactor_voltage_match_timeout_ms = static_cast<uint32_t>(value);
             break;
         }
         default:
@@ -741,9 +636,6 @@ void serial_console() {
                 break;
             case 's':
                 print_contactor_status();
-                break;
-            case 'H':
-                print_external_voltage();
                 break;
             case 'p':
                 print_pack_status();
