@@ -211,7 +211,7 @@ public:
         _st_As = parseStatus_(b1);
         setStatusDtc_(_st_As, SHUNT_DTC_STATUS_AS_ERROR);
         if (!_st_As.system_err) {
-          _as_As = static_cast<float>(raw);
+          _as_As += static_cast<float>(raw);
           param::as = _as_As;
         }
       } break;
@@ -220,7 +220,7 @@ public:
         _st_Wh = parseStatus_(b1);
         setStatusDtc_(_st_Wh, SHUNT_DTC_STATUS_WH_ERROR);
         if (!_st_Wh.system_err) {
-          _wh_Wh = static_cast<float>(raw);
+          _wh_Wh += static_cast<float>(raw);
           param::wh = _wh_Wh;
         }
       } break;
@@ -277,6 +277,16 @@ public:
 
   void setDtcFlag(ShuntDTC flag) {
     setDtcFlag_(flag);
+  }
+
+  void resetAs() {
+    _as_As = 0.0f;
+    param::as = 0.0f;
+  }
+
+  void resetWh() {
+    _wh_Wh = 0.0f;
+    param::wh = 0.0f;
   }
 
 bool configure_shunt() {
