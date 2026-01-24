@@ -101,34 +101,34 @@ static String bms_dtc_to_string(BMS::DTC_BMS dtc) {
     return errorString;
 }
 
-static const char *shunt_state_to_string(Shunt_ISA_iPace::STATE_ISA state) {
+static const char *shunt_state_to_string(ShuntState state) {
     switch (state) {
-        case Shunt_ISA_iPace::INIT: return "INIT";
-        case Shunt_ISA_iPace::OPERATING: return "OPERATING";
-        case Shunt_ISA_iPace::FAULT: return "FAULT";
+        case ShuntState::INIT: return "INIT";
+        case ShuntState::OPERATING: return "OPERATING";
+        case ShuntState::FAULT: return "FAULT";
         default: return "UNKNOWN";
     }
 }
 
-static String shunt_dtc_to_string(Shunt_ISA_iPace::DTC_ISA dtc) {
+static String shunt_dtc_to_string(ShuntDTC dtc) {
     String errorString = "";
-    if (dtc == Shunt_ISA_iPace::DTC_ISA_NONE) {
+    if (dtc == SHUNT_DTC_NONE) {
         errorString = "None";
     } else {
         bool hasError = false;
-        if (dtc & Shunt_ISA_iPace::DTC_ISA_CAN_INIT_ERROR) {
+        if (dtc & SHUNT_DTC_CAN_INIT_ERROR) {
             errorString += "CAN_INIT_ERROR, ";
             hasError = true;
         }
-        if (dtc & Shunt_ISA_iPace::DTC_ISA_TEMPERATURE_TOO_HIGH) {
+        if (dtc & SHUNT_DTC_TEMPERATURE_TOO_HIGH) {
             errorString += "TEMP_TOO_HIGH, ";
             hasError = true;
         }
-        if (dtc & Shunt_ISA_iPace::DTC_ISA_MAX_CURRENT_EXCEEDED) {
+        if (dtc & SHUNT_DTC_MAX_CURRENT_EXCEEDED) {
             errorString += "MAX_CURRENT_EXCEEDED, ";
             hasError = true;
         }
-        if (dtc & Shunt_ISA_iPace::DTC_ISA_TIMED_OUT) {
+        if (dtc & SHUNT_DTC_TIMED_OUT) {
             errorString += "TIMED_OUT, ";
             hasError = true;
         }
@@ -537,15 +537,15 @@ void print_external_voltage() {
 
 void print_shunt_status() {
     console.printf("Current: %.1fA (avg %.1fA)\n",
-                   shunt.getCurrent(),
-                   shunt.getCurrentAverage());
+                   param::current,
+                   param::current_avg);
     console.printf("Temperature: %.1fC, AmpereSeconds: %.1fAs, dI/dt: %.1fA/s\n",
-                   shunt.getTemperature(),
-                   shunt.getAmpereSeconds(),
-                   shunt.getCurrentDerivative());
+                   param::temp,
+                   param::as,
+                   param::current_dA_per_s);
     console.printf("State: %s, DTC: %s\n",
-                   shunt_state_to_string(shunt.getState()),
-                   shunt_dtc_to_string(shunt.getDTC()).c_str());
+                   shunt_state_to_string(param::state),
+                   shunt_dtc_to_string(param::dtc).c_str());
 }
 
 void print_persistent_data() {

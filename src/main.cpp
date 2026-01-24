@@ -30,7 +30,7 @@ void wdtCallback()
 
 // Our software components
 BatteryPack batteryPack(MODULES_PER_PACK);
-Shunt_ISA_iPace shunt;
+Shunt_IVTS shunt;
 Contactormanager contactor_manager;
 BMS battery_manager(batteryPack, shunt, contactor_manager);
 
@@ -74,7 +74,7 @@ void setup()
   enable_poll_battery_for_data();
 
   // For the following code the init must be in the update. Init is always blocking
-  // while ((shunt.getState() != Shunt_ISA_iPace::OPERATING) || (contactor_manager.getState() != Contactormanager::OPEN) || (batteryPack.getState() != BatteryPack::OPERATING))
+  // while ((shunt.state() != Shunt_IVTS::OPERATING) || (contactor_manager.getState() != Contactormanager::OPEN) || (batteryPack.getState() != BatteryPack::OPERATING))
   // {
   //   /* code */
   // }
@@ -97,7 +97,12 @@ void loop()
 {
   scheduler.execute();
   serial_console();
-  //Poll can buses
+  // Poll shunt CAN as often as possible
+  CANMessage message;
+  while (ACAN_T4::ISA_SHUNT_CAN.receive(message))
+  {
+    shunt.DecodeCAN(message);
+  }
 
   // wdt.feed(); // must feed the watchdog every so often or it'll get angry
 }

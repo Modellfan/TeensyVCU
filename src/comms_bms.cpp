@@ -1,4 +1,5 @@
 #include "settings.h"
+#include <ACAN_T4.h>
 #include <Arduino.h>
 #include <TaskSchedulerDeclarations.h>
 #include <Watchdog_t4.h>
@@ -15,18 +16,32 @@
 //---------------------------------------------------------------------------------------------------------------------------------------------
 //IPace ISA Shunt Software Component
 //---------------------------------------------------------------------------------------------------------------------------------------------
-void update_shunt()
+void task10ms()
 {
-    shunt.update();
+    shunt.checkTimeout(ISA_SHUNT_TIMEOUT);
 }
 
-Task update_shunt_timer(5, TASK_FOREVER, &update_shunt);
+Task shunt_task10ms_timer(10, TASK_FOREVER, &task10ms);
 
 void enable_update_shunt()
 {
     shunt.initialise();
-    scheduler.addTask(update_shunt_timer);
-    update_shunt_timer.enable();
+
+    ACAN_T4_Settings settings(500 * 1000);
+    const uint32_t errorCode = ACAN_T4::ISA_SHUNT_CAN.begin(settings);
+    if (0 == errorCode)
+    {
+        Serial.println("Shunt CAN ok");
+    }
+    else
+    {
+        Serial.print("Error Shunt CAN: 0x");
+        Serial.println(errorCode, HEX);
+        shunt.setDtcFlag(SHUNT_DTC_CAN_INIT_ERROR);
+    }
+
+    scheduler.addTask(shunt_task10ms_timer);
+    shunt_task10ms_timer.enable();
     Serial.println("Shunt update timer enabled.");
 }
 

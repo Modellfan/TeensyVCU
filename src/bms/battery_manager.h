@@ -46,7 +46,7 @@ public:
         STATE_LIMP_HOME
     };
 
-    BMS(BatteryPack &_batteryPack, Shunt_ISA_iPace &_shunt, Contactormanager &_contactorManager); // Constructor taking a reference to BatteryPack
+    BMS(BatteryPack &_batteryPack, Shunt_IVTS &_shunt, Contactormanager &_contactorManager); // Constructor taking a reference to BatteryPack
 
     // Runnables
     //         void print();
@@ -91,7 +91,7 @@ private:
     PersistentDataStorage persistent_storage;
 
     BatteryPack &batteryPack; // Reference to the BatteryPack
-    Shunt_ISA_iPace &shunt;
+    Shunt_IVTS &shunt;
     Contactormanager &contactorManager;
 
     bool cell_available[CELLS_PER_MODULE * MODULES_PER_PACK];

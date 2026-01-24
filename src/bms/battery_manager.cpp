@@ -15,7 +15,7 @@
 
 // #define DEBUG
 
-BMS::BMS(BatteryPack &_batteryPack, Shunt_ISA_iPace &_shunt, Contactormanager &_contactorManager) : batteryPack(_batteryPack), shunt(_shunt), contactorManager(_contactorManager)
+BMS::BMS(BatteryPack &_batteryPack, Shunt_IVTS &_shunt, Contactormanager &_contactorManager) : batteryPack(_batteryPack), shunt(_shunt), contactorManager(_contactorManager)
 {
     state = INIT;
     dtc = DTC_BMS_NONE;
@@ -142,12 +142,12 @@ void BMS::update_state_machine()
 {
     BatteryPack::STATE_PACK pack_state = batteryPack.getState();
     Contactormanager::State contactor_state = contactorManager.getState();
-    Shunt_ISA_iPace::STATE_ISA shunt_state = shunt.getState();
+    ShuntState shunt_state = param::state;
 
     // Transition to fault state whenever a critical component reports a fault
     if (pack_state == BatteryPack::FAULT ||
         contactor_state == Contactormanager::FAULT ||
-        shunt_state == Shunt_ISA_iPace::FAULT)
+        shunt_state == ShuntState::FAULT)
     {
         if (pack_state == BatteryPack::FAULT)
         {
@@ -157,7 +157,7 @@ void BMS::update_state_machine()
         {
             dtc = static_cast<DTC_BMS>(dtc | DTC_BMS_CONTACTOR_FAULT);
         }
-        if (shunt_state == Shunt_ISA_iPace::FAULT)
+        if (shunt_state == ShuntState::FAULT)
         {
             dtc = static_cast<DTC_BMS>(dtc | DTC_BMS_SHUNT_FAULT);
         }
@@ -171,7 +171,7 @@ void BMS::update_state_machine()
     {
     case INIT:
         if (pack_state == BatteryPack::OPERATING &&
-            shunt_state == Shunt_ISA_iPace::OPERATING &&
+            shunt_state == ShuntState::OPERATING &&
             contactor_state != Contactormanager::INIT &&
             contactor_state != Contactormanager::FAULT)
         {
@@ -194,7 +194,7 @@ void BMS::update_state_machine()
 
 void BMS::update_soc_ocv_lut()
 {
-    pack_current = shunt.getCurrent();
+    pack_current = param::current;
 
     const float abs_current = std::fabs(pack_current);
     const bool below_threshold = abs_current <= BMS_OCV_CURRENT_THRESHOLD;
@@ -262,7 +262,7 @@ void BMS::update_energy_metrics()
     const float dt = static_cast<float>(delta_ms) / 1000.0f;
 
     const float voltage = batteryPack.get_pack_voltage();
-    const float current = shunt.getCurrent();
+    const float current = param::current;
     const float power_w = voltage * current; // instantaneous power
     last_instantaneous_power_w = power_w;
 
@@ -333,7 +333,7 @@ void BMS::estimate_internal_resistance_online()
     static float last_cell_voltage[CELLS_PER_MODULE * MODULES_PER_PACK] = {0};
 
     // Gather current and voltages
-    pack_current = shunt.getCurrent();
+    pack_current = param::current;
 
     for (int i = 0; i < CELLS_PER_MODULE * MODULES_PER_PACK; ++i)
     {
@@ -596,7 +596,7 @@ void BMS::send_battery_status_message()
     msg.id = BMS_MSG_VOLTAGE;
     msg.len = 8;
     uint16_t pack_v = (uint16_t)(batteryPack.get_pack_voltage() * 10.0f);
-    uint16_t pack_i = (uint16_t)((shunt.getCurrent() * 10.0f) + 5000.0f);
+    uint16_t pack_i = (uint16_t)((param::current * 10.0f) + 5000.0f);
     msg.data[0] = pack_v & 0xFF;
     msg.data[1] = pack_v >> 8;
     msg.data[2] = pack_i & 0xFF;
@@ -620,7 +620,7 @@ void BMS::send_battery_status_message()
     uint8_t balancingTarget = static_cast<uint8_t>(balancingTargetVoltage * 50.0f);
     const float cellDeltaScaled = batteryPack.get_delta_cell_voltage() * 500.0f;
     uint8_t cellDelta = static_cast<uint8_t>(std::clamp(cellDeltaScaled, 0.0f, 255.0f));
-    uint16_t packPower = (uint16_t)((batteryPack.get_pack_voltage() * shunt.getCurrent() / 1000.0f) * 100.0f + 30000.0f);
+    uint16_t packPower = (uint16_t)((param::power / 1000.0f) * 100.0f + 30000.0f);
     msg.data[0] = minT;
     msg.data[1] = maxT;
     msg.data[2] = balancingTarget;

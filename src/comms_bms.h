@@ -19,8 +19,8 @@ void led_blink();
 void enable_led_blink();
 
 // Commands to handle the current sensor
-extern Shunt_ISA_iPace shunt;
-void update_shunt();
+extern Shunt_IVTS shunt;
+void task10ms();
 void enable_update_shunt();
 
 // Commands to handle the contactors
