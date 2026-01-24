@@ -12,6 +12,7 @@
 #include "bms/contactor_manager.h"
 #include "bms/battery i3/pack.h"
 #include "bms/battery_manager.h"
+#include "bms/hv_monitor.h"
 
 //---------------------------------------------------------------------------------------------------------------------------------------------
 //IPace ISA Shunt Software Component
@@ -19,6 +20,7 @@
 void task10ms()
 {
     shunt.checkTimeout(ISA_SHUNT_TIMEOUT);
+    hv_monitor.update();
 }
 
 Task shunt_task10ms_timer(10, TASK_FOREVER, &task10ms);
@@ -26,6 +28,7 @@ Task shunt_task10ms_timer(10, TASK_FOREVER, &task10ms);
 void enable_update_shunt()
 {
     shunt.initialise();
+    hv_monitor.initialise();
 
     ACAN_T4_Settings settings(500 * 1000);
     const uint32_t errorCode = ACAN_T4::ISA_SHUNT_CAN.begin(settings);

@@ -15,7 +15,10 @@
 
 // #define DEBUG
 
-BMS::BMS(BatteryPack &_batteryPack, Shunt_IVTS &_shunt, Contactormanager &_contactorManager) : batteryPack(_batteryPack), shunt(_shunt), contactorManager(_contactorManager)
+BMS::BMS(BatteryPack &_batteryPack, Shunt_IVTS &_shunt, Contactormanager &_contactorManager)
+    : batteryPack(_batteryPack),
+      shunt(_shunt),
+      contactorManager(_contactorManager)
 {
     state = INIT;
     dtc = DTC_BMS_NONE;
@@ -104,13 +107,10 @@ void BMS::Task2Ms() { read_message(); }
 
 void BMS::Task10Ms()
 {
-    // Reserved for future use
 }
 
 void BMS::Task100Ms()
 {
-    contactorManager.setPackVoltage(batteryPack.get_pack_voltage(),
-                                    batteryPack.get_state_operating());
     update_state_machine();
     send_battery_status_message();
 }

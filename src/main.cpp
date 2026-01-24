@@ -10,6 +10,7 @@
 #include "bms/contactor_manager.h"
 #include "bms/battery i3/pack.h"
 #include "bms/battery_manager.h"
+#include "bms/hv_monitor.h"
 #include "comms_bms.h"
 #include "serial_console.h"
 
@@ -32,6 +33,7 @@ void wdtCallback()
 BatteryPack batteryPack(MODULES_PER_PACK);
 Shunt_IVTS shunt;
 Contactormanager contactor_manager;
+HVMonitor hv_monitor;
 BMS battery_manager(batteryPack, shunt, contactor_manager);
 
 // Misc global variables

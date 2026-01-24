@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "bms/hv_monitor.h"
+
 #define SERIAL_CONSOLE_STRINGIFY_INNER(x) #x
 #define SERIAL_CONSOLE_STRINGIFY(x) SERIAL_CONSOLE_STRINGIFY_INNER(x)
 
@@ -132,11 +134,62 @@ static String shunt_dtc_to_string(ShuntDTC dtc) {
             errorString += "TIMED_OUT, ";
             hasError = true;
         }
+        if (dtc & SHUNT_DTC_STATUS_I_ERROR) {
+            errorString += "I_STATUS_ERR, ";
+            hasError = true;
+        }
+        if (dtc & SHUNT_DTC_STATUS_U1_ERROR) {
+            errorString += "U1_STATUS_ERR, ";
+            hasError = true;
+        }
+        if (dtc & SHUNT_DTC_STATUS_U2_ERROR) {
+            errorString += "U2_STATUS_ERR, ";
+            hasError = true;
+        }
+        if (dtc & SHUNT_DTC_STATUS_U3_ERROR) {
+            errorString += "U3_STATUS_ERR, ";
+            hasError = true;
+        }
+        if (dtc & SHUNT_DTC_STATUS_T_ERROR) {
+            errorString += "T_STATUS_ERR, ";
+            hasError = true;
+        }
+        if (dtc & SHUNT_DTC_STATUS_W_ERROR) {
+            errorString += "W_STATUS_ERR, ";
+            hasError = true;
+        }
+        if (dtc & SHUNT_DTC_STATUS_AS_ERROR) {
+            errorString += "AS_STATUS_ERR, ";
+            hasError = true;
+        }
+        if (dtc & SHUNT_DTC_STATUS_WH_ERROR) {
+            errorString += "WH_STATUS_ERR, ";
+            hasError = true;
+        }
         if (hasError) {
             errorString.remove(errorString.length() - 2);
         }
     }
     return errorString;
+}
+
+static const char *hv_monitor_state_to_string(HVMonitorState state) {
+    switch (state) {
+        case HVMonitorState::INIT: return "INIT";
+        case HVMonitorState::OPERATING: return "OPERATING";
+        case HVMonitorState::FAULT: return "FAULT";
+        default: return "UNKNOWN";
+    }
+}
+
+static void print_shunt_status_bits(const char *label, Shunt_IVTS::StatusBits bits) {
+    console.printf("  %s: ctr=%u ocs=%u this_me_err=%u any_me_err=%u sys_err=%u\n",
+                   label,
+                   static_cast<unsigned int>(bits.counter),
+                   bits.ocs ? 1 : 0,
+                   bits.this_out_of_range_or_me_err ? 1 : 0,
+                   bits.any_me_err ? 1 : 0,
+                   bits.system_err ? 1 : 0);
 }
 
 static bool read_serial_token(char *buffer, size_t buffer_size) {
@@ -216,6 +269,7 @@ void print_console_help() {
                    FIRMWARE_BUILD_TIME);
     console.println("Available commands:");
     console.println("  c - close contactors");
+    console.println("  cs - configure shunt");
     console.println("  o - open contactors");
     console.println("  s - show contactor status");
     console.println("  H - print external HV bus voltage");
@@ -436,6 +490,9 @@ void print_bms_status() {
     console.printf("BMS State: %s, DTC: %s\n",
                    bms_state_to_string(battery_manager.get_state()),
                    bms_dtc_to_string(battery_manager.get_dtc()).c_str());
+    console.printf("HV Monitor: %s, Voltage Matched: %d\n",
+                   hv_monitor_state_to_string(param::hv_monitor_state),
+                   param::voltage_matched ? 1 : 0);
     if (battery_manager.is_vcu_data_valid()) {
         console.printf(
             "Vehicle State: %s, ReadyToShutdown: %d, VCU Timeout: %d\n",
@@ -536,16 +593,34 @@ void print_external_voltage() {
 }
 
 void print_shunt_status() {
-    console.printf("Current: %.1fA (avg %.1fA)\n",
+    console.println("Shunt:");
+    console.printf("  State: %s\n", shunt_state_to_string(param::state));
+    console.printf("  DTC: %s (0x%04X)\n",
+                   shunt_dtc_to_string(param::dtc).c_str(),
+                   static_cast<unsigned int>(param::dtc));
+    console.printf("  Current: %.3fA (avg %.3fA, dI/dt %.3fA/s)\n",
                    param::current,
-                   param::current_avg);
-    console.printf("Temperature: %.1fC, AmpereSeconds: %.1fAs, dI/dt: %.1fA/s\n",
-                   param::temp,
-                   param::as,
+                   param::current_avg,
                    param::current_dA_per_s);
-    console.printf("State: %s, DTC: %s\n",
-                   shunt_state_to_string(param::state),
-                   shunt_dtc_to_string(param::dtc).c_str());
+    console.printf("  Voltages: U_in_hvbox %.3fV, U_out_hvbox %.3fV, U3 %.3fV\n",
+                   param::u_input_hvbox,
+                   param::u_output_hvbox,
+                   param::u3);
+    console.printf("  Temp: %.1fC, Power: %.1fW\n",
+                   param::temp,
+                   param::power);
+    console.printf("  Charge: %.1fAs, Energy: %.1fWh\n",
+                   param::as,
+                   param::wh);
+    console.println("  Status:");
+    print_shunt_status_bits("I ", shunt.status_I());
+    print_shunt_status_bits("U1", shunt.status_U1());
+    print_shunt_status_bits("U2", shunt.status_U2());
+    print_shunt_status_bits("U3", shunt.status_U3());
+    print_shunt_status_bits("T ", shunt.status_T());
+    print_shunt_status_bits("W ", shunt.status_W());
+    print_shunt_status_bits("As", shunt.status_As());
+    print_shunt_status_bits("Wh", shunt.status_Wh());
 }
 
 void print_persistent_data() {
@@ -650,8 +725,15 @@ void serial_console() {
         char cmd = Serial.read();
         switch (cmd) {
             case 'c':
-                console.println("Closing contactors...");
-                contactor_manager.close();
+                if (Serial.available() && Serial.peek() == 's') {
+                    Serial.read();
+                    console.println("Configuring shunt...");
+                    const bool ok = shunt.configure_shunt();
+                    console.println(ok ? "Shunt configured." : "Shunt configuration failed.");
+                } else {
+                    console.println("Closing contactors...");
+                    contactor_manager.close();
+                }
                 break;
             case 'o':
                 console.println("Opening contactors...");

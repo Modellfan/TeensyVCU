@@ -2,8 +2,8 @@
 
 namespace param {
 float current = 0.0f;
-float u1 = 0.0f;
-float u2 = 0.0f;
+float u_input_hvbox = 0.0f;
+float u_output_hvbox = 0.0f;
 float u3 = 0.0f;
 float temp = 0.0f;
 float power = 0.0f;

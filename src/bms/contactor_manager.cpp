@@ -3,6 +3,7 @@
 #include <ACAN_T4.h>
 #include "bms/contactor_manager.h"
 #include "bms/contactor.h"
+#include "bms/hv_monitor.h"
 #include "utils/can_packer.h"
 #include <cmath>
 
@@ -254,36 +255,18 @@ bool Contactormanager::handleClosingPositiveVoltageMatch()
     const unsigned long now = millis();
     const unsigned long elapsed = now - _lastPreChangeTime;
     const unsigned long timeout_ms = static_cast<unsigned long>(_voltageMatchTimeout_ms);
-    const unsigned long hv_timeout_ms = static_cast<unsigned long>(BMS_VCU_TIMEOUT);
-    const unsigned long pack_timeout_ms =
-        static_cast<unsigned long>(CONTACTOR_PACK_VOLTAGE_VALIDITY_MS);
 
-    if (!isHvBusVoltageValid())
+    if (param::hv_monitor_state != HVMonitorState::OPERATING)
     {
-        if (elapsed > hv_timeout_ms)
+        if (elapsed > timeout_ms)
         {
-            enterFaultState(DTC_COM_EXTERNAL_HV_VOLTAGE_MISSING);
+            enterFaultState(DTC_COM_PRECHARGE_VOLTAGE_TIMEOUT);
             return true;
         }
         return false;
     }
 
-    if (!isPackVoltageValid())
-    {
-        if (elapsed > pack_timeout_ms)
-        {
-            enterFaultState(DTC_COM_PACK_VOLTAGE_MISSING);
-            return true;
-        }
-        return false;
-    }
-
-    const float pack_voltage = getPackVoltage();
-    const float hv_voltage = getHvBusVoltage();
-    const float tolerance = std::fabs(_voltageMatchTolerance_v);
-    const float delta = std::fabs(pack_voltage - hv_voltage);
-
-    if (delta <= tolerance)
+    if (param::voltage_matched)
     {
         _positiveContactor.close();
         return false;

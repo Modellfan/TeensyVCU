@@ -10,18 +10,26 @@ enum class ShuntState : uint8_t {
   FAULT
 };
 
-enum ShuntDTC : uint8_t {
+enum ShuntDTC : uint16_t {
   SHUNT_DTC_NONE = 0,
   SHUNT_DTC_CAN_INIT_ERROR = 1 << 0,
   SHUNT_DTC_TEMPERATURE_TOO_HIGH = 1 << 1,
   SHUNT_DTC_MAX_CURRENT_EXCEEDED = 1 << 2,
   SHUNT_DTC_TIMED_OUT = 1 << 3,
+  SHUNT_DTC_STATUS_I_ERROR = 1 << 4,
+  SHUNT_DTC_STATUS_U1_ERROR = 1 << 5,
+  SHUNT_DTC_STATUS_U2_ERROR = 1 << 6,
+  SHUNT_DTC_STATUS_U3_ERROR = 1 << 7,
+  SHUNT_DTC_STATUS_T_ERROR = 1 << 8,
+  SHUNT_DTC_STATUS_W_ERROR = 1 << 9,
+  SHUNT_DTC_STATUS_AS_ERROR = 1 << 10,
+  SHUNT_DTC_STATUS_WH_ERROR = 1 << 11,
 };
 
 namespace param {
 extern float current;
-extern float u1;
-extern float u2;
+extern float u_input_hvbox;
+extern float u_output_hvbox;
 extern float u3;
 extern float temp;
 extern float power;
@@ -54,9 +62,7 @@ public:
     uint8_t counter = 0;                         // cyclic counter 0..15
   };
 
-  // Constructor: set little_endian = true if you configure IVT-S for LE
-  explicit Shunt_IVTS(bool little_endian = false)
-  : _little_endian(little_endian) {}
+  Shunt_IVTS() = default;
 
   // Call once at startup
   void initialise() {
@@ -89,8 +95,8 @@ public:
     _st_Wh = StatusBits{};
 
     param::current = 0.0f;
-    param::u1 = 0.0f;
-    param::u2 = 0.0f;
+    param::u_input_hvbox = 0.0f;
+    param::u_output_hvbox = 0.0f;
     param::u3 = 0.0f;
     param::temp = 0.0f;
     param::power = 0.0f;
@@ -108,11 +114,6 @@ public:
   // Call this from your external CAN receive loop for every received message
   // ---------------------------------------------------------------------------
   void DecodeCAN(const CANMessage& m) {
-    // Only IVT-S result frames have DLC 6; ignore others quickly
-    if (m.len < 6) {
-      return;
-    }
-
     // Constants: IVT-S default result CAN IDs (node address 0)
     static constexpr uint32_t ID_I   = 0x521;
     static constexpr uint32_t ID_U1  = 0x522;
@@ -123,19 +124,22 @@ public:
     static constexpr uint32_t ID_As  = 0x527;
     static constexpr uint32_t ID_Wh  = 0x528;
 
-    const uint8_t mux = m.data[0];  // DB0 = mux 0x00..0x07
+    // Only IVT-S result frames have DLC 6; ignore others quickly
+    if (m.len < 6) {
+      return;
+    }
+
     const uint8_t b1  = m.data[1];  // DB1 = status + counter
 
-    const int32_t raw = _little_endian
-                        ? readS32_le(m.data)
-                        : readS32_be(m.data);
+    // Reference implementation treats bytes[5..2] as a 32-bit value.
+    const int32_t raw = readS32_le(m.data);
 
     const uint32_t now = millis();
 
     switch (m.id) {
       case ID_I: { // Current [1 mA / LSB]
-        if (mux != 0x00) break;
         _st_I = parseStatus_(b1);
+        setStatusDtc_(_st_I, SHUNT_DTC_STATUS_I_ERROR);
         if (!_st_I.system_err) {
           _cur_A = raw / 1000.0f;
           param::current = _cur_A;
@@ -154,26 +158,26 @@ public:
       } break;
 
       case ID_U1: { // Voltage 1 [1 mV / LSB]
-        if (mux != 0x01) break;
         _st_U1 = parseStatus_(b1);
+        setStatusDtc_(_st_U1, SHUNT_DTC_STATUS_U1_ERROR);
         if (!_st_U1.system_err) {
           _u1_V = raw / 1000.0f;
-          param::u1 = _u1_V;
+          param::u_input_hvbox = _u1_V;
         }
       } break;
 
       case ID_U2: { // Voltage 2 [1 mV / LSB]
-        if (mux != 0x02) break;
         _st_U2 = parseStatus_(b1);
+        setStatusDtc_(_st_U2, SHUNT_DTC_STATUS_U2_ERROR);
         if (!_st_U2.system_err) {
           _u2_V = raw / 1000.0f;
-          param::u2 = _u2_V;
+          param::u_output_hvbox = _u2_V;
         }
       } break;
 
       case ID_U3: { // Voltage 3 [1 mV / LSB]
-        if (mux != 0x03) break;
         _st_U3 = parseStatus_(b1);
+        setStatusDtc_(_st_U3, SHUNT_DTC_STATUS_U3_ERROR);
         if (!_st_U3.system_err) {
           _u3_V = raw / 1000.0f;
           param::u3 = _u3_V;
@@ -181,8 +185,8 @@ public:
       } break;
 
       case ID_T: { // Temperature [0.1 C / LSB]
-        if (mux != 0x04) break;
         _st_T = parseStatus_(b1);
+        setStatusDtc_(_st_T, SHUNT_DTC_STATUS_T_ERROR);
         if (!_st_T.system_err) {
           _temp_C = raw / 10.0f;
           param::temp = _temp_C;
@@ -195,8 +199,8 @@ public:
       } break;
 
       case ID_W: { // Power [1 W / LSB]
-        if (mux != 0x05) break;
         _st_W = parseStatus_(b1);
+        setStatusDtc_(_st_W, SHUNT_DTC_STATUS_W_ERROR);
         if (!_st_W.system_err) {
           _power_W = static_cast<float>(raw);
           param::power = _power_W;
@@ -204,8 +208,8 @@ public:
       } break;
 
       case ID_As: { // Charge [1 As / LSB]
-        if (mux != 0x06) break;
         _st_As = parseStatus_(b1);
+        setStatusDtc_(_st_As, SHUNT_DTC_STATUS_AS_ERROR);
         if (!_st_As.system_err) {
           _as_As = static_cast<float>(raw);
           param::as = _as_As;
@@ -213,8 +217,8 @@ public:
       } break;
 
       case ID_Wh: { // Energy [1 Wh / LSB]
-        if (mux != 0x07) break;
         _st_Wh = parseStatus_(b1);
+        setStatusDtc_(_st_Wh, SHUNT_DTC_STATUS_WH_ERROR);
         if (!_st_Wh.system_err) {
           _wh_Wh = static_cast<float>(raw);
           param::wh = _wh_Wh;
@@ -246,6 +250,7 @@ public:
   // Filtered current + derivative (your convenience values)
   float current_avg_A()    const { return _cur_avg_A;    }
   float current_dA_per_s() const { return _cur_dA_per_s; }
+  float last_current_A()   const { return _last_cur_A;   }
 
   // Status per channel
   StatusBits status_I()  const { return _st_I;  }
@@ -274,17 +279,167 @@ public:
     setDtcFlag_(flag);
   }
 
-private:
-  // Read 32-bit signed value from data[2..5] in Big-Endian
-  static int32_t readS32_be(const uint8_t* d) {
-    return static_cast<int32_t>(
-        (static_cast<uint32_t>(d[2]) << 24) |
-        (static_cast<uint32_t>(d[3]) << 16) |
-        (static_cast<uint32_t>(d[4]) << 8)  |
-        (static_cast<uint32_t>(d[5]))
-    );
+bool configure_shunt() {
+  // ---------------- IVT-S defaults / protocol IDs ----------------
+  static constexpr uint32_t IVT_CMD_ID  = 0x411; // IVT_Msg_Command (default)
+  static constexpr uint32_t IVT_RESP_ID = 0x511; // IVT_Msg_Response (default)
+
+  // Command mux bytes (DB0)
+  static constexpr uint8_t CMD_STORE    = 0x32; // STORE
+  static constexpr uint8_t CMD_SET_MODE = 0x34; // SET_MODE
+  static constexpr uint8_t CMD_SET_CFG_BASE = 0x20; // Set Config Result: 0x2n (n=0..7)
+
+  // Response mux bytes (DB0) - used for stricter ACK matching
+  static constexpr uint8_t RESP_STORE   = 0xB2; // response to STORE
+  static constexpr uint8_t RESP_SET_MODE= 0xB4; // response to SET_MODE
+  // Set Config Result responses are 0xA0..0xA7 (one per result index)
+  static constexpr uint8_t RESP_SET_CFG_BASE = 0xA0;
+
+  // Set Config Result DB1 encoding
+  static constexpr uint8_t MODE_CYCLIC = 0x02;     // low nibble
+  static constexpr uint8_t FLAG_LITTLE_ENDIAN_RESULTS = 0x40; // bit6: affects RESULT PAYLOAD (DB2..DB5 of result frames)
+
+  // ---------------- Helpers ----------------
+
+  // Big Endian encoder for command/config fields.
+  // IVT-S rule: command/config fields are Big Endian unless explicitly stated otherwise.
+  auto put_u16_be_cmd = [](uint8_t &hi, uint8_t &lo, uint16_t value) {
+    hi = static_cast<uint8_t>((value >> 8) & 0xFF); // MSB first
+    lo = static_cast<uint8_t>(value & 0xFF);        // LSB second
+  };
+
+  // Send a command and (optionally) wait for a matching response.
+  // - Enforces >=2ms gap between consecutive commands (delay(2)).
+  // - Can optionally verify the response muxbyte (DB0) to ensure it's the ACK for *this* command.
+  auto send_cmd = [&](const uint8_t data[8],
+                      bool wait_resp,
+                      uint32_t timeout_ms,
+                      uint8_t expected_resp_mux /* 0xFF = don't care */) -> bool {
+    CANMessage tx;
+    tx.id  = IVT_CMD_ID;
+    tx.len = 8;
+    for (uint8_t i = 0; i < 8; ++i) tx.data[i] = data[i];
+
+    if (!ACAN_T4::ISA_SHUNT_CAN.tryToSend(tx)) {
+      return false;
+    }
+
+    if (wait_resp) {
+      const uint32_t start = millis();
+      CANMessage rx;
+
+      while ((millis() - start) < timeout_ms) {
+        if (ACAN_T4::ISA_SHUNT_CAN.receive(rx)) {
+          if (rx.id != IVT_RESP_ID || rx.len < 1) {
+            continue;
+          }
+
+          // If you want strict pairing, check DB0 muxbyte.
+          if (expected_resp_mux != 0xFF) {
+            if (rx.data[0] != expected_resp_mux) {
+              continue; // response is for some other request/result; ignore
+            }
+          }
+
+          // Got the expected response (or any response if expected_resp_mux == 0xFF).
+          break;
+        }
+      }
+
+      if ((millis() - start) >= timeout_ms) {
+        return false;
+      }
+    }
+
+    // Protocol requirement: consecutive commands not faster than 2ms
+    delay(2);
+    return true;
+  };
+
+  // SET_MODE:
+  // DB0 = 0x34
+  // DB1 = actual mode (0=STOP, 1=RUN)
+  // DB2 = startup mode (0=STOP, 1=RUN)  (persisted only after STORE)
+  auto set_mode = [&](uint8_t actual_mode, uint8_t startup_mode) -> bool {
+    uint8_t data[8] = {0}; // unused bytes must be 0x00
+    data[0] = CMD_SET_MODE;
+    data[1] = actual_mode;
+    data[2] = startup_mode;
+    return send_cmd(data, true, 600, RESP_SET_MODE);
+  };
+
+  // Set Config Result for a specific result index:
+  // DB0 = 0x2n
+  // DB1 = flags + mode (cyclic)
+  // DB2..DB3 = interval in ms (COMMAND FIELD => BIG ENDIAN)
+  auto set_config_result = [&](uint8_t result_index, uint16_t interval_ms) -> bool {
+    uint8_t data[8] = {0};
+    data[0] = static_cast<uint8_t>(CMD_SET_CFG_BASE + (result_index & 0x0F));
+
+    // NOTE:
+    // - MODE_CYCLIC configures cyclic transmission for that result message.
+    // - FLAG_LITTLE_ENDIAN_RESULTS affects only the RESULT PAYLOAD byte order (DB2..DB5) of result frames,
+    //   not the command/config encoding.
+    data[1] = static_cast<uint8_t>(FLAG_LITTLE_ENDIAN_RESULTS | MODE_CYCLIC);
+
+    // Measurement interval is a command/config field => BIG ENDIAN
+    put_u16_be_cmd(data[2], data[3], interval_ms);
+
+    // Expect response mux 0xA0..0xA7 for result index 0..7
+    const uint8_t expected = static_cast<uint8_t>(RESP_SET_CFG_BASE + (result_index & 0x0F));
+    return send_cmd(data, true, 600, expected);
+  };
+
+  // STORE:
+  // DB0 = 0x32, rest 0. Only allowed in STOP mode.
+  // Can take up to ~1000ms; no other commands allowed during store.
+  auto store_to_eeprom = [&]() -> bool {
+    uint8_t data[8] = {0};
+    data[0] = CMD_STORE;
+    return send_cmd(data, true, 1500, RESP_STORE);
+  };
+
+  // ---------------- Configuration sequence ----------------
+  // 1) Force STOP before configuring (config allowed only in STOP mode).
+  if (!set_mode(/*actual*/0x00, /*startup*/0x00)) {
+    return false;
   }
 
+  // 2) Configure all 8 result messages to cyclic with datasheet default intervals:
+  // idx: 0=I,1=U1,2=U2,3=U3,4=T,5=W,6=As,7=Wh
+  struct Item { uint8_t idx; uint16_t ms; };
+  constexpr Item items[] = {
+    { 0,  10 }, // I
+    { 1,  20 }, // U1
+    { 2,  20 }, // U2
+    { 3,  20 }, // U3
+    { 4, 100 }, // T
+    { 5,  30 }, // W
+    { 6,  30 }, // As
+    { 7,  30 }, // Wh
+  };
+
+  for (const auto &it : items) {
+    if (!set_config_result(it.idx, it.ms)) {
+      return false;
+    }
+  }
+
+  // 3) Persist configuration + startup mode to EEPROM.
+  if (!store_to_eeprom()) {
+    return false;
+  }
+
+  // 4) Switch to RUN and set startup mode to RUN (persisted by STORE above).
+  if (!set_mode(/*actual*/0x01, /*startup*/0x01)) {
+    return false;
+  }
+
+  return true;
+}
+
+
+private:
   // Read 32-bit signed value from data[2..5] in Little-Endian
   static int32_t readS32_le(const uint8_t* d) {
     return static_cast<int32_t>(
@@ -345,10 +500,15 @@ private:
     param::dtc = _dtc;
   }
 
-private:
-  // Configuration
-  bool _little_endian = false;
+  void setStatusDtc_(const StatusBits& status, ShuntDTC flag) {
+    if (status.this_out_of_range_or_me_err ||
+        status.any_me_err ||
+        status.system_err) {
+      setDtcFlag_(flag);
+    }
+  }
 
+private:
   // State
   STATE    _state         = STATE::INIT;
   uint32_t _last_valid_ms = 0;
