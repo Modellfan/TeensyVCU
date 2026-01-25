@@ -7,6 +7,7 @@
 
 #include "bms/battery i3/pack.h"
 #include "bms/current.h"
+#include "bms/coulomb_counting.h"
 #include "bms/contactor_manager.h"
 #include "utils/can_packer.h"
 #include "settings.h"
@@ -93,6 +94,7 @@ private:
     BatteryPack &batteryPack; // Reference to the BatteryPack
     Shunt_IVTS &shunt;
     Contactormanager &contactorManager;
+    CoulombCounting coulomb_counting;
 
     bool cell_available[CELLS_PER_MODULE * MODULES_PER_PACK];
     float internal_resistance[CELLS_PER_MODULE * MODULES_PER_PACK];

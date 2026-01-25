@@ -13,8 +13,11 @@ public:
     {
         float energy_initial_Wh = 0.0f;
         float measured_capacity_Wh = BMS_INITIAL_CAPACITY_WH;
-        float ampere_seconds_initial = 0.0f;
-        float measured_capacity_Ah = BMS_INITIAL_CAPACITY_AH;
+        float cap_est_as = BMS_INITIAL_CAPACITY_AS;
+        float q_total_init = 0.0f;
+        uint8_t recal_active = 0U;
+        float recal_start_q = 0.0f;
+        float soh = 1.0f;
         uint8_t contactor_precharge_strategy = CONTACTOR_PRECHARGE_STRATEGY_DEFAULT;
     };
 
@@ -76,7 +79,7 @@ private:
     };
 
     static constexpr uint32_t kMagic = 0x54564355UL; // 'TVCU'
-    static constexpr uint16_t kVersion = 4U;
+    static constexpr uint16_t kVersion = 11U;
     static constexpr size_t kSlotCount = 16U;
 
     bool initialized;

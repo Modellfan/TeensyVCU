@@ -78,6 +78,8 @@
 #define BMS_INITIAL_CAPACITY_WH (345.0f * 7.0f * 12.0f)
 #define BMS_INITIAL_CAPACITY_AH 94.0f
 
+// Enhanced Coulomb Counting constants live in bms/coulomb_counting.h
+
 //BMW i3 Specs from Samsung SDI document
 #define SAFETY_LIMIT_CHARGE 4.25
 #define SAFETY_LIMIT_DISCHARGE 1.5

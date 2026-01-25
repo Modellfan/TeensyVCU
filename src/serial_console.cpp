@@ -459,6 +459,26 @@ void print_bms_status() {
         battery_manager.get_soc(),
         battery_manager.get_soc_ocv_lut(),
         battery_manager.get_soc_coulomb_counting());
+    console.println("ECC:");
+    console.printf(
+        "  SOC cc/est: %.1f%% / %.1f%%\n",
+        param::soc_cc * 100.0f,
+        param::soc_est * 100.0f);
+    console.printf(
+        "  cap_est_as: %.1fAs, q_offset_as: %.1fAs, q_total_init: %.1fAs\n",
+        param::cap_est_as,
+        param::q_offset_as,
+        param::q_total_init);
+    console.printf(
+        "  recal_active: %u, recal_start_q: %.1fAs, soh: %.3f\n",
+        param::recal_active ? 1U : 0U,
+        param::recal_start_q,
+        param::soh);
+    console.printf(
+        "  as_session: %.1fAs, q_total: %.1fAs, ocv_rest_timer: %.1fs\n",
+        param::as_session,
+        param::q_total,
+        param::ocv_rest_timer);
     console.printf(
         "Current Limits - Peak Discharge: %.1fA, RMS Discharge: %.1fA, Peak Charge: %.1fA, RMS Charge: %.1fA\n",
         battery_manager.get_current_limit_peak_discharge(),
@@ -547,9 +567,12 @@ void print_persistent_data() {
     console.println("Persistent data:");
     console.printf("  0: energy_initial_Wh = %.3f\n", data.energy_initial_Wh);
     console.printf("  1: measured_capacity_Wh = %.3f\n", data.measured_capacity_Wh);
-    console.printf("  2: ampere_seconds_initial = %.3f\n", data.ampere_seconds_initial);
-    console.printf("  3: measured_capacity_Ah = %.3f\n", data.measured_capacity_Ah);
-    console.printf("  4: contactor_precharge_strategy = %u\n", data.contactor_precharge_strategy);
+    console.printf("  2: cap_est_as = %.3f\n", data.cap_est_as);
+    console.printf("  3: q_total_init = %.3f\n", data.q_total_init);
+    console.printf("  4: recal_active = %u\n", data.recal_active);
+    console.printf("  5: recal_start_q = %.3f\n", data.recal_start_q);
+    console.printf("  6: soh = %.3f\n", data.soh);
+    console.printf("  7: contactor_precharge_strategy = %u\n", data.contactor_precharge_strategy);
     console.println("Use 'E idx value' to update a field.");
 }
 
@@ -584,12 +607,21 @@ void modify_persistent_data() {
             data.measured_capacity_Wh = value;
             break;
         case 2:
-            data.ampere_seconds_initial = value;
+            data.cap_est_as = value;
             break;
         case 3:
-            data.measured_capacity_Ah = value;
+            data.q_total_init = value;
             break;
-        case 4: {
+        case 4:
+            data.recal_active = static_cast<uint8_t>(value != 0.0f);
+            break;
+        case 5:
+            data.recal_start_q = value;
+            break;
+        case 6:
+            data.soh = value;
+            break;
+        case 7: {
             const int strategy = atoi(value_token);
             if (strategy != CONTACTOR_PRECHARGE_STRATEGY_TIMED_DELAY &&
                 strategy != CONTACTOR_PRECHARGE_STRATEGY_VOLTAGE_MATCH) {
