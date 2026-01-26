@@ -34,14 +34,19 @@ void CoulombCounting::initialise(float cap_est_as,
     q_total_ = q_total_init_;
     if (cap_est_as_ > 0.0f)
     {
-        soc_cc_ = (q_total_ + q_offset_as_) / cap_est_as_;
+        soc_cc_ = q_total_ / cap_est_as_;
         soc_cc_ = std::clamp(soc_cc_, 0.0f, 1.0f);
+        soc_est_ = (q_total_ + q_offset_as_) / cap_est_as_;
+        soc_est_ = std::clamp(soc_est_, 0.0f, 1.0f);
+        soc_est_old_ = soc_est_;
     }
     else
     {
         soc_cc_ = 0.0f;
+        soc_est_ = 0.0f;
+        soc_est_old_ = 0.0f;
     }
-    soc_est_ = soc_cc_;
+
     last_update_ms_ = 0U;
     soh_ = (CC_CAP_RATED_AS > 0.0f) ? (cap_est_as_ / CC_CAP_RATED_AS) : 0.0f;
     if (cap_est_as_ > 0.0f)
@@ -96,22 +101,29 @@ void CoulombCounting::update(float v_min, float v_max, float avg_temp_c)
 
     const float dt_s = static_cast<float>(delta_ms) / 1000.0f;
 
+    // soc_est_ is the corrected soc during this session
+    // soc_cc_ is just the dumb uncorrected.
+    // they are offsetted by q_offset_as_ / cap_est_as_. so when cap_est_as_ and q_offset_as_ are stable we diverge
+
     // Coulomb integration (charge positive, discharge negative).
     as_session_ = param::as;
     q_total_ = q_total_init_ + as_session_;
 
+    soc_est_old_ = soc_est_;
     if (cap_est_as_ > 0.0f)
     {
-        soc_cc_ = (q_total_ + q_offset_as_) / cap_est_as_;
+        soc_cc_ = q_total_ / cap_est_as_;
         soc_cc_ = std::clamp(soc_cc_, 0.0f, 1.0f);
+        soc_est_ = (q_total_ + q_offset_as_) / cap_est_as_;
+        soc_est_ = std::clamp(soc_est_, 0.0f, 1.0f);
     }
     else
     {
         soc_cc_ = 0.0f;
+        soc_est_ = 0.0f;
     }
 
-    soc_est_ = soc_cc_;
-
+    // Recalibration of the SOC by OCV LUT
     if (std::fabs(param::current) < CC_REST_THRESHOLD_A)
     {
         ocv_rest_timer_ += dt_s;
@@ -138,20 +150,26 @@ void CoulombCounting::update(float v_min, float v_max, float avg_temp_c)
 
         if (std::isfinite(soc_ocv))
         {
-            soc_est_ += CC_K_GAIN * (soc_ocv - soc_est_);
-            q_offset_as_ += CC_K_GAIN * (soc_ocv - soc_cc_) * cap_est_as_;
+            q_offset_as_ += CC_K_GAIN * (soc_ocv - soc_est_) * cap_est_as_;
         }
     }
 
-    if (soc_cc_ < CC_SOC_LOW_THRESHOLD && !recal_active_)
+    // Todo: we implement a new recalibration algorithm here. we introduce recal_start_soc_ as long as we are below threshold we continue collecting the lowest q_total_ soc_cc pair we can get. As soon as we get above the high threshold, we start calculating the new_cap. recal session should be over, when again below threshold. only then cap_est is taken over with factor alpha
+
+    // Recalibration of the estimated capacity
+    if ((soc_est_ > CC_SOC_LOW_THRESHOLD) && (soc_est_old_ < CC_SOC_LOW_THRESHOLD)) // When ever below the threshold collect the latest values. This consideres also correction of the soc
     {
         recal_active_ = true;
-        recal_start_q_ = q_total_;
+        recal_start_q_ = q_total_; // We don't take the offset for calbration, to not calibrate the capacity with offset shift
     }
 
-    if (soc_cc_ > CC_SOC_HIGH_THRESHOLD && recal_active_)
+    // if (soc_est_ > CC_SOC_HIGH_THRESHOLD && recal_active_) // Keep going correcting
+    // {
+    // }
+
+    if ((soc_est_ < CC_SOC_HIGH_THRESHOLD) && (soc_est_old_ > CC_SOC_HIGH_THRESHOLD) && (recal_active_ == true)) // Calibration is just over, when we hin the high threshold coming from above
     {
-        const float delta_soc = soc_cc_ - CC_SOC_LOW_THRESHOLD;
+        const float delta_soc = soc_est_ - CC_SOC_LOW_THRESHOLD;
         const float delta_q = q_total_ - recal_start_q_;
 
         const float new_cap = delta_q / delta_soc;

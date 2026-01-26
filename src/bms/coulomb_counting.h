@@ -67,6 +67,7 @@ private:
     float ocv_rest_timer_ = 0.0f;
     float soc_cc_ = 0.0f;
     float soc_est_ = 0.0f;
+    float soc_est_old_ = 0.0f;
     float cap_est_as_ = BMS_INITIAL_CAPACITY_AS;
     float q_offset_as_ = 0.0f;
     float q_total_init_ = 0.0f;
