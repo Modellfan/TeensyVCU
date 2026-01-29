@@ -236,9 +236,9 @@ void BMS::update_soc_coulomb_counting()
 
     coulomb_counting.update(lowest_v, highest_v, avg_temp);
     soc_coulomb_counting =
-        std::clamp(param::soc_est * 100.0f, 0.0f, 100.0f);
-    ampere_seconds_initial = param::q_offset_as;
-    measured_capacity_Ah = param::cap_est_as / 3600.0f;
+        std::clamp(param::soc_cc * 100.0f, 0.0f, 100.0f);
+    ampere_seconds_initial = param::b_as;
+    measured_capacity_Ah = param::C_as / 3600.0f;
 }
 
 void BMS::correct_soc()
@@ -553,12 +553,15 @@ void BMS::apply_persistent_data(const PersistentDataStorage::PersistentData &dat
 {
     energy_initial_Wh = data.energy_initial_Wh;
     measured_capacity_Wh = data.measured_capacity_Wh;
-    coulomb_counting.initialise(data.cap_est_as,
-                                data.q_total_init,
-                                data.recal_active != 0U,
-                                data.recal_start_q);
-    ampere_seconds_initial = param::q_offset_as;
-    measured_capacity_Ah = data.cap_est_as / 3600.0f;
+    coulomb_counting.initialise(data.b_as,
+                                data.C_as,
+                                data.soh,
+                                data.have_low_anchor != 0U,
+                                data.q_low_as,
+                                data.soc_low_anchor,
+                                data.was_above_high_set != 0U);
+    ampere_seconds_initial = param::b_as;
+    measured_capacity_Ah = data.C_as / 3600.0f;
     contactorManager.setPrechargeStrategy(
         static_cast<Contactormanager::PrechargeStrategy>(data.contactor_precharge_strategy));
 }
@@ -568,15 +571,13 @@ PersistentDataStorage::PersistentData BMS::collect_persistent_data() const
     PersistentDataStorage::PersistentData data;
     data.energy_initial_Wh = energy_initial_Wh;
     data.measured_capacity_Wh = measured_capacity_Wh;
-    data.cap_est_as = coulomb_counting.cap_est_as();
-    data.q_total_init =
-        coulomb_counting.q_total_init() +
-        coulomb_counting.as_session() +
-        coulomb_counting.q_offset_as();
-    data.recal_active = static_cast<uint8_t>(coulomb_counting.recal_active());
-    data.recal_start_q =
-        coulomb_counting.recal_start_q() + coulomb_counting.q_offset_as();
+    data.b_as = coulomb_counting.b_as();
+    data.C_as = coulomb_counting.C_as();
     data.soh = coulomb_counting.soh();
+    data.have_low_anchor = static_cast<uint8_t>(coulomb_counting.have_low_anchor());
+    data.q_low_as = coulomb_counting.q_low_as();
+    data.soc_low_anchor = coulomb_counting.soc_low_anchor();
+    data.was_above_high_set = static_cast<uint8_t>(coulomb_counting.was_above_high_set());
     data.contactor_precharge_strategy =
         static_cast<uint8_t>(contactorManager.getPrechargeStrategy());
     return data;

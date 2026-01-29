@@ -1,88 +1,121 @@
 # Enhanced Coulomb Counting (ECC) - Pseudocode
 
-This document captures the ECC approach exactly as provided, with one allowed
-deviation: `as_session` is sourced from the shunt (integrated ampere-seconds)
-instead of integrating `I * dt` in software.
+This document captures the ECC approach exactly as provided.
 
 ```text
-# --- Persistent Variables (Stored in NVM) ---
-float cap_est_as           # Estimated usable capacity [As]
-float q_total_init         # Total integrated charge at last shutdown [As]
-bool recal_active          # Is a recalibration in progress?
-float recal_start_q        # Charge at start of recalibration (includes offset) [As]
-float soh                  # Estimated SOH = cap_est_as / cap_rated_as
+# Called every 1s (Task1000ms)
+# Model: q = b + C * SOC
+# SOH = C / C_rated
 
-# --- Runtime Variables (Reset on boot) ---
-float as_session           # Measured charge from shunt since boot [As]
-float ocv_rest_timer = 0   # Time in rest condition [s]
-float q_offset_as = 0      # Runtime-only OCV correction offset [As]
-float soc_cc               # SOC from coulomb counting
-float soc_est              # Final corrected SOC
-float q_total              # Total integrated charge [As]
+# --- Parameters / Thresholds ---
+float soc_low_set   = 0.20
+float soc_high_set  = 0.80
+float soc_hyst      = 0.05
 
-# --- Constants ---
-float K = 0.1                    # OCV correction gain
-float rest_threshold = 10.0      # Idle current threshold [A]
-float rest_time_min = 15.0       # Required rest time for OCV reading [s]
-float soc_low_threshold = 0.20
-float soc_high_threshold = 0.80
-float alpha = 0.5                # Smoothing factor for capacity update
-float cap_rated_as               # Nominal battery capacity [As]
+float soc_low_reset   = soc_low_set  + soc_hyst   # 0.25
+float soc_high_reset  = soc_high_set - soc_hyst   # 0.75
 
-# --- On Boot ---
-function boot():
-    q_offset_as = 0              # Drift resets at boot
+float gamma_b = 0.05     # offset learning gain
+float alpha_C = 0.10     # capacity EMA gain
 
-# --- On Shutdown ---
-function shutdown():
-    q_total = q_total_init + as_session + q_offset_as
-    recal_start_q = recal_start_q + q_offset_as
-    # Save q_total_init, cap_est_as, recal_start_q, recal_active, soh
+# --- Rated capacity (constant / calibration) ---
+float C_rated_as          # rated capacity [As]
 
-# --- SOC Update Function ---
-function update_soc(float I, float V_min, float V_max, float dt):
+# --- Bounds (tune to your system) ---
+float C_min = 0.50 * C_rated_as
+float C_max = 1.20 * C_rated_as
 
-    # --- Coulomb Counting ---
-    # as_session updated externally by shunt hardware.
-    q_total = q_total_init + as_session
-    soc_cc = clamp((q_total + q_offset_as) / cap_est_as, 0.0, 1.0)
-    soc_est = soc_cc
+# b bounds relative to current C (keeps scaling sensible)
+# (choose 0.10..0.20 depending on how tight you want it)
+float b_frac = 0.10
+# step clamp (tracking); acquisition can be handled by larger gamma_b or separate mode if needed
+float b_step_max_frac = 0.001   # max |Δb| per second as fraction of C (e.g., 0.1%/s)
 
-    # --- Rest Detection ---
-    if abs(I) < rest_threshold:
-        ocv_rest_timer += dt
-    else:
-        ocv_rest_timer = 0
+# --- Persistent (NVM) ---
+float b_as                    # offset: q at SOC=0 [As]
+float C_as                    # slope/capacity [As]
+float soh                      # SOH = C_as / C_rated_as
+bool  have_low_anchor
+float q_low_as
+float soc_low_anchor
+bool  was_above_high_set       # persistent cycle-state flag
 
-    # --- OCV-Based SOC Correction ---
-    if ocv_rest_timer > rest_time_min:
-        soc_hi = OCV_to_SOC(V_max)
-        soc_lo = OCV_to_SOC(V_min)
+# --- Runtime (RAM) ---
+float q_as                     # integrated charge [As] (from shunt)
+bool  ocv_valid                # rest & voltage stable
+float soc_ocv                  # OCV -> SOC (0..1)
+float soc_cc                   # SOC from CC using b_as, C_as
 
-        if soc_hi > soc_high_threshold:
-            soc_ocv = soc_hi
-        elif soc_lo < soc_low_threshold:
-            soc_ocv = soc_lo
-        else:
-            soc_ocv = None
+function clamp(x, lo, hi):
+    if x < lo: return lo
+    if x > hi: return hi
+    return x
 
-        if soc_ocv is not None:
-            soc_est += K * (soc_ocv - soc_est)
-            q_offset_as += K * (soc_ocv - soc_cc) * cap_est_as
+function Task1000ms():
 
-    # --- Start Recalibration at Low SOC ---
-    if soc_cc < soc_low_threshold and not recal_active:
-        recal_active = true
-        recal_start_q = q_total
+    # ============================================================
+    # RESET LOW ANCHOR when coming from high_set and going below high_reset
+    # ============================================================
+    if was_above_high_set and (soc_cc <= soc_high_reset):
+        have_low_anchor    = false
+        was_above_high_set = false
 
-    # --- Complete Recalibration at High SOC ---
-    if soc_cc > soc_high_threshold and recal_active:
-        delta_soc = soc_cc - soc_low_threshold
-        delta_q = q_total - recal_start_q
+    # ============================================================
+    # Track that we reached high region at least once (persistent)
+    # ============================================================
+    if soc_cc >= soc_high_set:
+        was_above_high_set = true
 
-        new_cap = delta_q / delta_soc
-        cap_est_as = alpha * new_cap + (1 - alpha) * cap_est_as
-        soh = cap_est_as / cap_rated_as
+    # ============================================================
+    # 1) LOW REGION: anchor + b update (with clamping)
+    # ============================================================
+    if ocv_valid and (soc_ocv <= soc_low_set):
 
-        recal_active = false
+        have_low_anchor = true
+        q_low_as        = q_as
+        soc_low_anchor  = soc_ocv
+
+        # Residual: e = q - (b + C*SOC)
+        e = q_as - (b_as + C_as * soc_ocv)
+
+        # Raw update
+        delta_b = gamma_b * e
+
+        # Step clamp on b update
+        b_step_max = b_step_max_frac * C_as
+        delta_b = clamp(delta_b, -b_step_max, +b_step_max)
+
+        # Apply update
+        b_as = b_as + delta_b
+
+        # Value clamp for b (relative to C)
+        b_min = -b_frac * C_as
+        b_max = +b_frac * C_as
+        b_as  = clamp(b_as, b_min, b_max)
+
+    # ============================================================
+    # 2) HIGH REGION: capacity update (with clamping) + SOH update
+    # ============================================================
+    if ocv_valid and have_low_anchor and (soc_ocv >= soc_high_set):
+
+        # Two-point slope
+        C_new = (q_as - q_low_as) / (soc_ocv - soc_low_anchor)   # spans ~0.2 -> 0.8
+
+        # Reject gross outliers (optional but recommended)
+        C_new = clamp(C_new, 0.30 * C_rated_as, 1.50 * C_rated_as)
+
+        # EMA update
+        C_as = (1 - alpha_C) * C_as + alpha_C * C_new
+
+        # Hard clamp
+        C_as = clamp(C_as, C_min, C_max)
+
+        # Re-clamp b to new C (keeps consistency after C changes)
+        b_min = -b_frac * C_as
+        b_max = +b_frac * C_as
+        b_as  = clamp(b_as, b_min, b_max)
+
+        # SOH update (0..1, can exceed 1 if you allow it; usually clamp to 1.0)
+        soh = C_as / C_rated_as
+        soh = clamp(soh, 0.0, 1.0)
 ```

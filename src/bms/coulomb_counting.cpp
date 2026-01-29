@@ -5,51 +5,85 @@
 
 namespace param
 {
-    float cap_est_as = BMS_INITIAL_CAPACITY_AS;
-    float q_offset_as = 0.0f;
-    float q_total_init = 0.0f;
-    bool recal_active = false;
-    float recal_start_q = 0.0f;
+    float b_as = 0.0f;
+    float C_as = BMS_INITIAL_CAPACITY_AS * 0.5f; //Better have initial capacity too low
     float soh = 1.0f;
-    float as_session = 0.0f;
-    float ocv_rest_timer = 0.0f;
+    bool have_low_anchor = false;
+    float q_low_as = 0.0f;
+    float soc_low_anchor = 0.0f;
+    bool was_above_high_set = false;
+    float q_as = 0.0f;
+    bool ocv_valid = false;
+    float soc_ocv = 0.0f;
     float soc_cc = 0.0f;
-    float soc_est = 0.0f;
-    float q_total = 0.0f;
     CoulombCountingState coulomb_state = CoulombCountingState::INIT;
 }
 
-void CoulombCounting::initialise(float cap_est_as,
-                                 float q_total_init,
-                                 bool recal_active,
-                                 float recal_start_q)
+namespace
 {
-    cap_est_as_ = cap_est_as;
-    q_total_init_ = q_total_init;
-    recal_active_ = recal_active;
-    recal_start_q_ = recal_start_q;
-    q_offset_as_ = 0.0f;
-    as_session_ = 0.0f;
-    ocv_rest_timer_ = 0.0f;
-    q_total_ = q_total_init_;
-    if (cap_est_as_ > 0.0f)
+constexpr float soc_low_set = 0.20f;
+constexpr float soc_high_set = 0.80f;
+constexpr float soc_hyst = 0.05f;
+constexpr float soc_low_reset = soc_low_set + soc_hyst;
+constexpr float soc_high_reset = soc_high_set - soc_hyst;
+
+constexpr float gamma_b = 0.05f;
+constexpr float alpha_C = 0.10f;
+
+constexpr float C_rated_as = CC_CAP_RATED_AS;
+constexpr float C_min = 0.50f * C_rated_as;
+constexpr float C_max = 1.20f * C_rated_as;
+
+constexpr float b_frac = 1.50f;
+constexpr float b_step_max_frac = 0.01f;
+
+float clamp(float x, float lo, float hi)
+{
+    if (x < lo)
     {
-        soc_cc_ = q_total_ / cap_est_as_;
+        return lo;
+    }
+    if (x > hi)
+    {
+        return hi;
+    }
+    return x;
+}
+} // namespace
+
+void CoulombCounting::initialise(float b_as,
+                                 float C_as,
+                                 float soh,
+                                 bool have_low_anchor,
+                                 float q_low_as,
+                                 float soc_low_anchor,
+                                 bool was_above_high_set)
+{
+    b_as_ = b_as;
+    C_as_ = C_as;
+    soh_ = soh;
+    have_low_anchor_ = have_low_anchor;
+    q_low_as_ = q_low_as;
+    soc_low_anchor_ = soc_low_anchor;
+    was_above_high_set_ = was_above_high_set;
+    ocv_valid_ = false;
+    soc_ocv_ = 0.0f;
+    soc_cc_ = 0.0f;
+    q_as_ = param::as;
+    ocv_rest_timer_ = 0.0f;
+
+    if (C_as_ > 0.0f)
+    {
+        soc_cc_ = (q_as_ - b_as_) / C_as_;
         soc_cc_ = std::clamp(soc_cc_, 0.0f, 1.0f);
-        soc_est_ = (q_total_ + q_offset_as_) / cap_est_as_;
-        soc_est_ = std::clamp(soc_est_, 0.0f, 1.0f);
-        soc_est_old_ = soc_est_;
     }
     else
     {
         soc_cc_ = 0.0f;
-        soc_est_ = 0.0f;
-        soc_est_old_ = 0.0f;
     }
 
     last_update_ms_ = 0U;
-    soh_ = (CC_CAP_RATED_AS > 0.0f) ? (cap_est_as_ / CC_CAP_RATED_AS) : 0.0f;
-    if (cap_est_as_ > 0.0f)
+    if (C_as_ > 0.0f)
     {
         state_ = CoulombCountingState::OPERATING;
     }
@@ -72,7 +106,7 @@ void CoulombCounting::update(float v_min, float v_max, float avg_temp_c)
 
     if (state_ == CoulombCountingState::INIT)
     {
-        if (persistent_loaded_ && cap_est_as_ > 0.0f)
+        if (persistent_loaded_ && C_as_ > 0.0f)
         {
             state_ = CoulombCountingState::OPERATING;
         }
@@ -101,29 +135,19 @@ void CoulombCounting::update(float v_min, float v_max, float avg_temp_c)
 
     const float dt_s = static_cast<float>(delta_ms) / 1000.0f;
 
-    // soc_est_ is the corrected soc during this session
-    // soc_cc_ is just the dumb uncorrected.
-    // they are offsetted by q_offset_as_ / cap_est_as_. so when cap_est_as_ and q_offset_as_ are stable we diverge
-
     // Coulomb integration (charge positive, discharge negative).
-    as_session_ = param::as;
-    q_total_ = q_total_init_ + as_session_;
-
-    soc_est_old_ = soc_est_;
-    if (cap_est_as_ > 0.0f)
+    q_as_ = param::as;
+    if (C_as_ > 0.0f)
     {
-        soc_cc_ = q_total_ / cap_est_as_;
+        soc_cc_ = (q_as_ - b_as_) / C_as_;
         soc_cc_ = std::clamp(soc_cc_, 0.0f, 1.0f);
-        soc_est_ = (q_total_ + q_offset_as_) / cap_est_as_;
-        soc_est_ = std::clamp(soc_est_, 0.0f, 1.0f);
     }
     else
     {
         soc_cc_ = 0.0f;
-        soc_est_ = 0.0f;
     }
 
-    // Recalibration of the SOC by OCV LUT
+    // OCV validity based on rest time.
     if (std::fabs(param::current) < CC_REST_THRESHOLD_A)
     {
         ocv_rest_timer_ += dt_s;
@@ -133,53 +157,102 @@ void CoulombCounting::update(float v_min, float v_max, float avg_temp_c)
         ocv_rest_timer_ = 0.0f;
     }
 
-    if (ocv_rest_timer_ > CC_REST_TIME_MIN_S)
+    ocv_valid_ = (ocv_rest_timer_ > CC_REST_TIME_MIN_S);
+    if (ocv_valid_)
     {
         const float soc_hi = SOC_FROM_OCV_TEMP(avg_temp_c, v_max) / 100.0f;
         const float soc_lo = SOC_FROM_OCV_TEMP(avg_temp_c, v_min) / 100.0f;
-        float soc_ocv = NAN;
-
-        if (soc_hi > CC_SOC_HIGH_THRESHOLD)
+        if (soc_hi >= soc_high_set)
         {
-            soc_ocv = soc_hi;
+            soc_ocv_ = soc_hi;
         }
-        else if (soc_lo < CC_SOC_LOW_THRESHOLD)
+        else if (soc_lo <= soc_low_set)
         {
-            soc_ocv = soc_lo;
+            soc_ocv_ = soc_lo;
         }
-
-        if (std::isfinite(soc_ocv))
+        else
         {
-            q_offset_as_ += CC_K_GAIN * (soc_ocv - soc_est_) * cap_est_as_;
+            soc_ocv_ = 0.5f * (soc_hi + soc_lo);
         }
+        soc_ocv_ = std::clamp(soc_ocv_, 0.0f, 1.0f);
+    }
+    else
+    {
+        soc_ocv_ = 0.0f;
     }
 
-    // Todo: we implement a new recalibration algorithm here. we introduce recal_start_soc_ as long as we are below threshold we continue collecting the lowest q_total_ soc_cc pair we can get. As soon as we get above the high threshold, we start calculating the new_cap. recal session should be over, when again below threshold. only then cap_est is taken over with factor alpha
-
-    // Recalibration of the estimated capacity
-    if ((soc_est_ > CC_SOC_LOW_THRESHOLD) && (soc_est_old_ < CC_SOC_LOW_THRESHOLD)) // When ever below the threshold collect the latest values. This consideres also correction of the soc
+    // ============================================================
+    // RESET LOW ANCHOR when coming from high_set and going below high_reset
+    // ============================================================
+    if (was_above_high_set_ && (soc_cc_ <= soc_high_reset))
     {
-        recal_active_ = true;
-        recal_start_q_ = q_total_; // We don't take the offset for calbration, to not calibrate the capacity with offset shift
+        have_low_anchor_ = false;
+        was_above_high_set_ = false;
     }
 
-    // if (soc_est_ > CC_SOC_HIGH_THRESHOLD && recal_active_) // Keep going correcting
-    // {
-    // }
-
-    if ((soc_est_ < CC_SOC_HIGH_THRESHOLD) && (soc_est_old_ > CC_SOC_HIGH_THRESHOLD) && (recal_active_ == true)) // Calibration is just over, when we hin the high threshold coming from above
+    // ============================================================
+    // Track that we reached high region at least once (persistent)
+    // ============================================================
+    if (soc_cc_ >= soc_high_set)
     {
-        const float delta_soc = soc_est_ - CC_SOC_LOW_THRESHOLD;
-        const float delta_q = q_total_ - recal_start_q_;
+        was_above_high_set_ = true;
+    }
 
-        const float new_cap = delta_q / delta_soc;
-        cap_est_as_ = CC_ALPHA * new_cap +
-                      (1.0f - CC_ALPHA) * cap_est_as_;
-        soh_ = (CC_CAP_RATED_AS > 0.0f)
-                   ? (cap_est_as_ / CC_CAP_RATED_AS)
-                   : 0.0f;
+    // ============================================================
+    // 1) LOW REGION: anchor + b update (with clamping)
+    // ============================================================
+    if (ocv_valid_ && (soc_cc_ <= soc_low_set))
+    {
+        // Residual: e = q - (b + C*SOC)
+        const float e = q_as_ - (b_as_ + C_as_ * soc_ocv_);
 
-        recal_active_ = false;
+        // Raw update
+        float delta_b = gamma_b * e;
+
+        // Step clamp on b update
+        const float b_step_max = b_step_max_frac * C_as_;
+        delta_b = clamp(delta_b, -b_step_max, b_step_max);
+
+        // Apply update
+        b_as_ = b_as_ + delta_b;
+
+        // Value clamp for b (relative to C)
+        const float b_min = -b_frac * C_as_;
+        const float b_max = b_frac * C_as_;
+        b_as_ = clamp(b_as_, b_min, b_max);
+
+        have_low_anchor_ = true;
+        q_low_as_ = q_as_;
+        soc_low_anchor_ = soc_cc_;
+    }
+
+    // ============================================================
+    // 2) HIGH REGION: capacity update (with clamping) + SOH update
+    // ============================================================
+    if (ocv_valid_ && have_low_anchor_ && (soc_cc_ >= soc_high_set))
+    {
+        // Two-point slope
+        float C_new = (q_as_ - q_low_as_) / (soc_ocv_ - soc_low_anchor_);
+
+        // Reject gross outliers (optional but recommended)
+        C_new = clamp(C_new, 0.30f * C_rated_as, 1.50f * C_rated_as);
+
+        // EMA update
+        C_as_ = (1.0f - alpha_C) * C_as_ + alpha_C * C_new;
+
+        // Hard clamp
+        C_as_ = clamp(C_as_, C_min, C_max);
+
+        // SOH update (0..1, can exceed 1 if you allow it; usually clamp to 1.0)
+        if (C_rated_as > 0.0f)
+        {
+            soh_ = C_as_ / C_rated_as;
+        }
+        else
+        {
+            soh_ = 0.0f;
+        }
+        soh_ = clamp(soh_, 0.0f, 1.5f);
     }
 
     publish_params_();
@@ -187,16 +260,16 @@ void CoulombCounting::update(float v_min, float v_max, float avg_temp_c)
 
 void CoulombCounting::publish_params_()
 {
-    param::cap_est_as = cap_est_as_;
-    param::q_offset_as = q_offset_as_;
-    param::q_total_init = q_total_init_;
-    param::recal_active = recal_active_;
-    param::recal_start_q = recal_start_q_;
+    param::b_as = b_as_;
+    param::C_as = C_as_;
     param::soh = soh_;
-    param::as_session = as_session_;
-    param::ocv_rest_timer = ocv_rest_timer_;
+    param::have_low_anchor = have_low_anchor_;
+    param::q_low_as = q_low_as_;
+    param::soc_low_anchor = soc_low_anchor_;
+    param::was_above_high_set = was_above_high_set_;
+    param::q_as = q_as_;
+    param::ocv_valid = ocv_valid_;
+    param::soc_ocv = soc_ocv_;
     param::soc_cc = soc_cc_;
-    param::soc_est = soc_est_;
-    param::q_total = q_total_;
     param::coulomb_state = state_;
 }

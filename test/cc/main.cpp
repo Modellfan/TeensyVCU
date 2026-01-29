@@ -32,11 +32,13 @@ static float ocv_from_soc(float temp_c, float target_soc) {
     return best_v;
 }
 struct CcPersist {
-    float cap_est_as = 0.0f;
-    float q_total_init = 0.0f;
-    bool recal_active = false;
-    float recal_start_q = 0.0f;
+    float b_as = 0.0f;
+    float C_as = 0.0f;
     float soh = 1.0f;
+    bool have_low_anchor = false;
+    float q_low_as = 0.0f;
+    float soc_low_anchor = 0.0f;
+    bool was_above_high_set = false;
 };
 
 static CcPersist persist;
@@ -53,24 +55,24 @@ static void print_cc_state(uint32_t t_s,
                            float sim_v_max,
                            float reported_current) {
     Serial.printf(
-        "[%lus] %s I=%.1fA as_session=%.1fAs q_total=%.1fAs q_total_init=%.1fAs "
-        "soc_cc=%.3f soc_est=%.3f cap_est_as=%.1f q_offset_as=%.1f soh=%.3f "
-        "recal_active=%u recal_start_q=%.1f ocv_rest_timer=%.1fs v_min=%.3f v_max=%.3f state=%u "
+        "[%lus] %s I=%.1fA q_as=%.1fAs soc_cc=%.3f b_as=%.1f C_as=%.1f soh=%.3f "
+        "have_low_anchor=%u q_low_as=%.1f soc_low_anchor=%.3f was_above_high_set=%u "
+        "ocv_valid=%u soc_ocv=%.3f v_min=%.3f v_max=%.3f state=%u "
         "sim_soc=%.3f sim_cap_as=%.1f sim_as=%.1f sim_q_total=%.1f sim_v_min=%.3f sim_v_max=%.3f I_rep=%.1f\n",
         static_cast<unsigned long>(t_s),
         phase,
         param::current,
-        param::as_session,
-        param::q_total,
-        param::q_total_init,
+        param::q_as,
         param::soc_cc,
-        param::soc_est,
-        param::cap_est_as,
-        param::q_offset_as,
+        param::b_as,
+        param::C_as,
         param::soh,
-        param::recal_active ? 1U : 0U,
-        param::recal_start_q,
-        param::ocv_rest_timer,
+        param::have_low_anchor ? 1U : 0U,
+        param::q_low_as,
+        param::soc_low_anchor,
+        param::was_above_high_set ? 1U : 0U,
+        param::ocv_valid ? 1U : 0U,
+        param::soc_ocv,
         v_min,
         v_max,
         static_cast<unsigned int>(param::coulomb_state),
@@ -96,10 +98,13 @@ void setup() {
     const float sim_cap_as_init = CC_CAP_RATED_AS * 0.80f;
     const float sim_q_total_init = sim_soc_init * sim_cap_as_init;
 
-    cc.initialise(CC_CAP_RATED_AS,
-                  0.0f,
+    cc.initialise(0.0f,
+                  CC_CAP_RATED_AS*0.5f,
+                  1.0f,
                   false,
-                  0.0f);
+                  0.0f,
+                  0.0f,
+                  false);
 
     Serial.println("ECC test start");
 }
@@ -109,6 +114,7 @@ void loop() {
     static uint32_t sim_time_s = 0U;
     static int phase = 0;
     static bool reset_done = false;
+    static float rest_timer_s = 0.0f;
 
     const uint32_t now = millis();
     if (last_step_ms == 0U) {
@@ -142,7 +148,7 @@ void loop() {
 
     if (phase == 1 &&
         param::coulomb_state == CoulombCountingState::OPERATING &&
-        param::ocv_rest_timer >= 40.0f) {
+        rest_timer_s >= 40.0f) {
         phase = 2;
     }
 
@@ -154,7 +160,7 @@ void loop() {
 
     if (phase == 3 &&
         param::coulomb_state == CoulombCountingState::OPERATING &&
-        param::ocv_rest_timer >= 40.0f) {
+        rest_timer_s >= 40.0f) {
         phase = 0;
     }
 
@@ -172,6 +178,11 @@ void loop() {
             param::current = 0.0f;
             break;
     }
+    if (param::current == 0.0f) {
+        rest_timer_s += 1.0f;
+    } else {
+        rest_timer_s = 0.0f;
+    }
 
     // Simulated battery model (80% capacity).
     sim_as_session += param::current * 1.0f;
@@ -186,8 +197,8 @@ void loop() {
     param::as += reported_current * 1.0f;
 
     const float sim_ocv = ocv_from_soc(25.0f, sim_soc);
-    const float v_min = sim_ocv - 0.01f;
-    const float v_max = sim_ocv + 0.01f;
+    const float v_min = sim_ocv;// - 0.01f;
+    const float v_max = sim_ocv;// + 0.01f;
     const float sim_v_min = v_min;
     const float sim_v_max = v_max;
 
@@ -195,19 +206,22 @@ void loop() {
 
     if (phase == 2 && !reset_done && sim_time_s > 900U) {
         // Simulate ECU reset: save persistent data, recreate CC instance, reload.
-        persist.cap_est_as = param::cap_est_as;
-        persist.q_total_init =
-            param::q_total_init + param::as_session + param::q_offset_as;
-        persist.recal_active = param::recal_active;
-        persist.recal_start_q = param::recal_start_q + param::q_offset_as;
+        persist.b_as = param::b_as;
+        persist.C_as = param::C_as;
         persist.soh = param::soh;
+        persist.have_low_anchor = param::have_low_anchor;
+        persist.q_low_as = param::q_low_as;
+        persist.soc_low_anchor = param::soc_low_anchor;
+        persist.was_above_high_set = param::was_above_high_set;
 
         cc = CoulombCounting();
-        param::as = 0.0f;
-        cc.initialise(persist.cap_est_as,
-                      persist.q_total_init,
-                      persist.recal_active,
-                      persist.recal_start_q);
+        cc.initialise(persist.b_as,
+                      persist.C_as,
+                      persist.soh,
+                      persist.have_low_anchor,
+                      persist.q_low_as,
+                      persist.soc_low_anchor,
+                      persist.was_above_high_set);
         reset_done = true;
     }
 

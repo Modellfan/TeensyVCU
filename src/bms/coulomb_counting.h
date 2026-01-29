@@ -7,12 +7,8 @@
 #include "settings.h"
 
 // Enhanced Coulomb Counting constants
-#define CC_K_GAIN 0.1f
 #define CC_REST_THRESHOLD_A 10.0f
 #define CC_REST_TIME_MIN_S 15.0f
-#define CC_SOC_HIGH_THRESHOLD 0.80f
-#define CC_SOC_LOW_THRESHOLD 0.20f
-#define CC_ALPHA 0.5f
 #define CC_CAP_RATED_AS (94.0f * 3600.0f)
 #define BMS_INITIAL_CAPACITY_AS (BMS_INITIAL_CAPACITY_AH * 3600.0f)
 
@@ -23,17 +19,17 @@ enum class CoulombCountingState : uint8_t {
 };
 
 namespace param {
-extern float cap_est_as;
-extern float q_offset_as;
-extern float q_total_init;
-extern bool recal_active;
-extern float recal_start_q;
+extern float b_as;
+extern float C_as;
 extern float soh;
-extern float as_session;
-extern float ocv_rest_timer;
+extern bool have_low_anchor;
+extern float q_low_as;
+extern float soc_low_anchor;
+extern bool was_above_high_set;
+extern float q_as;
+extern bool ocv_valid;
+extern float soc_ocv;
 extern float soc_cc;
-extern float soc_est;
-extern float q_total;
 extern CoulombCountingState coulomb_state;
 }
 
@@ -41,40 +37,41 @@ class CoulombCounting {
 public:
     CoulombCounting() = default;
 
-    void initialise(float cap_est_as,
-                    float q_total_init,
-                    bool recal_active,
-                    float recal_start_q);
+    void initialise(float b_as,
+                    float C_as,
+                    float soh,
+                    bool have_low_anchor,
+                    float q_low_as,
+                    float soc_low_anchor,
+                    bool was_above_high_set);
 
     void update(float v_min, float v_max, float avg_temp_c);
 
-    float soc_est() const { return soc_est_; }
-    float cap_est_as() const { return cap_est_as_; }
-    float q_offset_as() const { return q_offset_as_; }
-    float q_total_init() const { return q_total_init_; }
-    bool recal_active() const { return recal_active_; }
-    float recal_start_q() const { return recal_start_q_; }
+    float soc_cc() const { return soc_cc_; }
+    float b_as() const { return b_as_; }
+    float C_as() const { return C_as_; }
     float soh() const { return soh_; }
-    float as_session() const { return as_session_; }
-    float ocv_rest_timer() const { return ocv_rest_timer_; }
-    float q_total() const { return q_total_; }
+    bool have_low_anchor() const { return have_low_anchor_; }
+    float q_low_as() const { return q_low_as_; }
+    float soc_low_anchor() const { return soc_low_anchor_; }
+    bool was_above_high_set() const { return was_above_high_set_; }
     CoulombCountingState state() const { return state_; }
 
 private:
     void publish_params_();
 
-    float as_session_ = 0.0f;
-    float ocv_rest_timer_ = 0.0f;
-    float soc_cc_ = 0.0f;
-    float soc_est_ = 0.0f;
-    float soc_est_old_ = 0.0f;
-    float cap_est_as_ = BMS_INITIAL_CAPACITY_AS;
-    float q_offset_as_ = 0.0f;
-    float q_total_init_ = 0.0f;
-    bool recal_active_ = false;
-    float recal_start_q_ = 0.0f;
+    float b_as_ = 0.0f;
+    float C_as_ = BMS_INITIAL_CAPACITY_AS;
     float soh_ = 1.0f;
-    float q_total_ = 0.0f;
+    bool have_low_anchor_ = false;
+    float q_low_as_ = 0.0f;
+    float soc_low_anchor_ = 0.0f;
+    bool was_above_high_set_ = false;
+    float q_as_ = 0.0f;
+    bool ocv_valid_ = false;
+    float soc_ocv_ = 0.0f;
+    float soc_cc_ = 0.0f;
+    float ocv_rest_timer_ = 0.0f;
     uint32_t last_update_ms_ = 0U;
     CoulombCountingState state_ = CoulombCountingState::INIT;
     bool persistent_loaded_ = false;
