@@ -25,11 +25,8 @@ float C_rated_as          # rated capacity [As]
 float C_min = 0.50 * C_rated_as
 float C_max = 1.20 * C_rated_as
 
-# b bounds relative to current C (keeps scaling sensible)
-# (choose 0.10..0.20 depending on how tight you want it)
-float b_frac = 0.10
-# step clamp (tracking); acquisition can be handled by larger gamma_b or separate mode if needed
-float b_step_max_frac = 0.001   # max |Δb| per second as fraction of C (e.g., 0.1%/s)
+float b_frac = 0.10                 # |b| <= b_frac * C
+float b_step_max_frac = 0.001       # max |Δb| per second as fraction of C
 
 # --- Persistent (NVM) ---
 float b_as                    # offset: q at SOC=0 [As]
@@ -37,7 +34,7 @@ float C_as                    # slope/capacity [As]
 float soh                      # SOH = C_as / C_rated_as
 bool  have_low_anchor
 float q_low_as
-float soc_low_anchor
+float soc_low_anchor           # stored as soc_cc (per your request)
 bool  was_above_high_set       # persistent cycle-state flag
 
 # --- Runtime (RAM) ---
@@ -67,15 +64,11 @@ function Task1000ms():
         was_above_high_set = true
 
     # ============================================================
-    # 1) LOW REGION: anchor + b update (with clamping)
+    # 1) LOW REGION: b update (state uses soc_cc) + commit anchor at end
     # ============================================================
-    if ocv_valid and (soc_ocv <= soc_low_set):
+    if ocv_valid and (soc_cc <= soc_low_set):
 
-        have_low_anchor = true
-        q_low_as        = q_as
-        soc_low_anchor  = soc_ocv
-
-        # Residual: e = q - (b + C*SOC)
+        # Residual uses soc_ocv (measurement) against model q = b + C*SOC
         e = q_as - (b_as + C_as * soc_ocv)
 
         # Raw update
@@ -93,13 +86,21 @@ function Task1000ms():
         b_max = +b_frac * C_as
         b_as  = clamp(b_as, b_min, b_max)
 
-    # ============================================================
-    # 2) HIGH REGION: capacity update (with clamping) + SOH update
-    # ============================================================
-    if ocv_valid and have_low_anchor and (soc_ocv >= soc_high_set):
+        # Commit low anchor (store soc_cc per your request)
+        have_low_anchor = true
+        q_low_as        = q_as
+        soc_low_anchor  = soc_cc
 
-        # Two-point slope
-        C_new = (q_as - q_low_as) / (soc_ocv - soc_low_anchor)   # spans ~0.2 -> 0.8
+    # ============================================================
+    # 2) HIGH REGION: capacity update + SOH update
+    #    - State decision uses soc_cc
+    #    - Slope denominator uses soc_ocv (per your correction)
+    # ============================================================
+    if ocv_valid and have_low_anchor and (soc_cc >= soc_high_set):
+
+        # Two-point slope:
+        # numerator uses charge difference; denominator uses current soc_ocv vs stored low anchor soc_cc
+        C_new = (q_as - q_low_as) / (soc_ocv - soc_low_anchor)   # intended span ~0.2 -> 0.8
 
         # Reject gross outliers (optional but recommended)
         C_new = clamp(C_new, 0.30 * C_rated_as, 1.50 * C_rated_as)
@@ -115,7 +116,8 @@ function Task1000ms():
         b_max = +b_frac * C_as
         b_as  = clamp(b_as, b_min, b_max)
 
-        # SOH update (0..1, can exceed 1 if you allow it; usually clamp to 1.0)
+        # SOH update (allow > 1.0 up to 2.0)
         soh = C_as / C_rated_as
-        soh = clamp(soh, 0.0, 1.0)
+        soh = clamp(soh, 0.0, 2.0)
+
 ```
