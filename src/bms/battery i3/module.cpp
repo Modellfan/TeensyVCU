@@ -2,6 +2,7 @@
 #include "module.h"
 #include "pack.h"
 #include "utils/can_packer.h"
+#include "CRC8BMW/crc8bmw_i3.h"
 #include <ACAN_T4.h>
 
 BatteryModule::BatteryModule() {}
@@ -60,10 +61,10 @@ void BatteryModule::process_message(CANMessage &msg)
 
     lastUpdate = millis();
 
-    // if (!check_crc(msg))
-    // {
-    //     return;
-    // }
+    if (!check_crc(msg))
+    {
+        return;
+    }
 
     switch (msg.id & 0x0F0) // removes the module spicif part of the message id
     {
@@ -224,24 +225,7 @@ bool BatteryModule::check_crc(const CANMessage &msg)
         }
     };
 
-    if (msg.len == 0)
-    {
-        registerFailure();
-        return false;
-    }
-
-    const uint8_t receivedCrc = msg.data[msg.len - 1];
-
-    if (pack == nullptr)
-    {
-        registerFailure();
-        return false;
-    }
-
-    CANMessage msgCopy = msg;
-    const uint8_t calculatedCrc = pack->getcheck(msgCopy, id);
-
-    if (calculatedCrc != receivedCrc)
+    if (!CRC8BMWi3(msg))
     {
         registerFailure();
         return false;
@@ -419,47 +403,6 @@ float BatteryModule::get_average_temperature()
     float averageTemperature = sumTemperature / numTemperatureSensors;
 
     return averageTemperature;
-}
-
-String BatteryModule::getDTCString()
-{
-    String errorString = "";
-
-    if (static_cast<uint8_t>(dtc) == 0)
-    {
-        errorString += "None";
-    }
-    else
-    {
-        if (dtc & DTC_CMU_INTERNAL_ERROR)
-        {
-            errorString += "DTC_CMU_INTERNAL_ERROR, ";
-        }
-        if (dtc & DTC_CMU_TEMPERATURE_TOO_HIGH)
-        {
-            errorString += "DTC_CMU_TEMPERATURE_TOO_HIGH, ";
-        }
-        if (dtc & DTC_CMU_SINGLE_VOLTAGE_IMPLAUSIBLE)
-        {
-            errorString += "DTC_CMU_SINGLE_VOLTAGE_IMPLAUSIBLE, ";
-        }
-        if (dtc & DTC_CMU_TEMPERATURE_IMPLAUSIBLE)
-        {
-            errorString += "DTC_CMU_TEMPERATURE_IMPLAUSIBLE, ";
-        }
-        if (dtc & DTC_CMU_TIMED_OUT)
-        {
-            errorString += "DTC_CMU_TIMED_OUT, ";
-        }
-        if (dtc & DTC_CMU_MODULE_VOLTAGE_IMPLAUSIBLE)
-        {
-            errorString += "DTC_CMU_MODULE_VOLTAGE_IMPLAUSIBLE, ";
-        }
-
-        // Remove the trailing comma and space
-        errorString.remove(errorString.length() - 2);
-    }
-    return errorString;
 }
 
 float BatteryModule::get_cell_voltage(byte cellIndex)

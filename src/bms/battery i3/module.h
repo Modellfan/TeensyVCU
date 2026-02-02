@@ -81,7 +81,6 @@ private:
     BatteryPack *pack;    // The parent BatteryPack that contains this module
 
     const char *getStateString();
-    String getDTCString();
 
     bool check_if_module_data_is_populated();
     bool plausibilityCheck();
