@@ -32,6 +32,7 @@ public:
         DTC_COM_PRECHARGE_CONTACTOR_FAULT = 1 << 2,
         DTC_COM_POSITIVE_CONTACTOR_FAULT = 1 << 3,
         DTC_COM_PRECHARGE_VOLTAGE_TIMEOUT = 1 << 4,
+        DTC_COM_VOLTAGE_MONITOR_INVALID = 1 << 5,
     } DTC_COM;
 
     enum class PrechargeStrategy : uint8_t

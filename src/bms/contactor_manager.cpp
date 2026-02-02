@@ -246,11 +246,12 @@ bool Contactormanager::handleClosingPositiveVoltageMatch()
     const unsigned long now = millis();
     const unsigned long elapsed = now - _lastPreChangeTime;
 
+    //Error, if not HV Monitor is in operating for too long
     if (param::hv_monitor_state != HVMonitorState::OPERATING)
     {
         if (elapsed > CONTACTOR_PRECHARGE_MATCH_TIMEOUT_MS)
         {
-            enterFaultState(DTC_COM_PRECHARGE_VOLTAGE_TIMEOUT);
+            enterFaultState(DTC_COM_VOLTAGE_MONITOR_INVALID);
             return true;
         }
         return false;
@@ -262,6 +263,7 @@ bool Contactormanager::handleClosingPositiveVoltageMatch()
         return false;
     }
 
+    //Error if HV Monitor is Operating but still timed out
     if (elapsed > CONTACTOR_PRECHARGE_MATCH_TIMEOUT_MS)
     {
         enterFaultState(DTC_COM_PRECHARGE_VOLTAGE_TIMEOUT);
@@ -356,6 +358,11 @@ String Contactormanager::getDTCString()
         if (_dtc & DTC_COM_PRECHARGE_VOLTAGE_TIMEOUT)
         {
             errorString += "DTC_COM_PRECHARGE_VOLTAGE_TIMEOUT, ";
+            hasError = true;
+        }
+        if (_dtc & DTC_COM_VOLTAGE_MONITOR_INVALID)
+        {
+            errorString += "DTC_COM_VOLTAGE_MONITOR_INVALID, ";
             hasError = true;
         }
         if (hasError)

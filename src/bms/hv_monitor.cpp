@@ -3,4 +3,5 @@
 namespace param {
 bool voltage_matched = false;
 HVMonitorState hv_monitor_state = HVMonitorState::INIT;
+HVMonitorDTC hv_monitor_dtc = DTC_HVM_NONE;
 }

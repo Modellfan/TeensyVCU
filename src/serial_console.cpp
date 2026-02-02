@@ -326,6 +326,10 @@ static String contactor_manager_dtc_to_string(Contactormanager::DTC_COM dtc) {
             errorString += "MATCH_TIMEOUT, ";
             hasError = true;
         }
+        if (dtc & Contactormanager::DTC_COM_VOLTAGE_MONITOR_INVALID) {
+            errorString += "VOLT_MON_INVALID, ";
+            hasError = true;
+        }
         if (hasError) {
             errorString.remove(errorString.length() - 2);
         }

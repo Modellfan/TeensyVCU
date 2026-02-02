@@ -307,6 +307,7 @@ void BMS::lookup_current_limits()
     // Use the coldest cell temperature of the pack as conservative limit.
     // Assumption: The coldest cell determines the safe current limits for both
     // charging and discharging operations.
+    //ToDO: Limit Current , when temperature too high
     float temperature = batteryPack.get_lowest_temperature();
 
     // Lookup tables defined in utils/current_limit_lookup.h

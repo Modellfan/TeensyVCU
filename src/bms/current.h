@@ -290,6 +290,7 @@ public:
   }
 
 bool configure_shunt() {
+  Serial.println("IVT-S shunt config: start");
   // ---------------- IVT-S defaults / protocol IDs ----------------
   static constexpr uint32_t IVT_CMD_ID  = 0x411; // IVT_Msg_Command (default)
   static constexpr uint32_t IVT_RESP_ID = 0x511; // IVT_Msg_Response (default)
@@ -411,9 +412,12 @@ bool configure_shunt() {
 
   // ---------------- Configuration sequence ----------------
   // 1) Force STOP before configuring (config allowed only in STOP mode).
+  Serial.println("IVT-S shunt config: step 1/4 STOP mode");
   if (!set_mode(/*actual*/0x00, /*startup*/0x00)) {
+    Serial.println("IVT-S shunt config: step 1/4 FAILED");
     return false;
   }
+  Serial.println("IVT-S shunt config: step 1/4 OK");
 
   // 2) Configure all 8 result messages to cyclic with datasheet default intervals:
   // idx: 0=I,1=U1,2=U2,3=U3,4=T,5=W,6=As,7=Wh
@@ -429,22 +433,38 @@ bool configure_shunt() {
     { 7, 100 }, // Wh
   };
 
+  Serial.println("IVT-S shunt config: step 2/4 set cyclic results");
   for (const auto &it : items) {
+    Serial.print("IVT-S shunt config: result idx ");
+    Serial.print(it.idx);
+    Serial.print(" interval ");
+    Serial.print(it.ms);
+    Serial.println(" ms");
     if (!set_config_result(it.idx, it.ms)) {
+      Serial.print("IVT-S shunt config: step 2/4 FAILED at idx ");
+      Serial.println(it.idx);
       return false;
     }
   }
+  Serial.println("IVT-S shunt config: step 2/4 OK");
 
   // 3) Persist configuration + startup mode to EEPROM.
+  Serial.println("IVT-S shunt config: step 3/4 store to EEPROM");
   if (!store_to_eeprom()) {
+    Serial.println("IVT-S shunt config: step 3/4 FAILED");
     return false;
   }
+  Serial.println("IVT-S shunt config: step 3/4 OK");
 
   // 4) Switch to RUN and set startup mode to RUN (persisted by STORE above).
+  Serial.println("IVT-S shunt config: step 4/4 RUN mode");
   if (!set_mode(/*actual*/0x01, /*startup*/0x01)) {
+    Serial.println("IVT-S shunt config: step 4/4 FAILED");
     return false;
   }
+  Serial.println("IVT-S shunt config: step 4/4 OK");
 
+  Serial.println("IVT-S shunt config: complete");
   return true;
 }
 
