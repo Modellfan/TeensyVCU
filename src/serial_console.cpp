@@ -439,61 +439,83 @@ void print_module_status(int index) {
 }
 
 void print_bms_status() {
-    console.printf("BMS State: %s, DTC: %s\n",
+    console.println("BMS:");
+    console.printf("  State: %s, DTC: %s\n",
                    bms_state_to_string(battery_manager.get_state()),
                    bms_dtc_to_string(battery_manager.get_dtc()).c_str());
-    console.printf("HV Monitor: %s, Voltage Matched: %d\n",
-                   hv_monitor_state_to_string(param::hv_monitor_state),
+
+    console.println("HV Monitor:");
+    console.printf("  State: %s\n",
+                   hv_monitor_state_to_string(param::hv_monitor_state));
+    console.printf("  Voltage Matched: %d\n",
                    param::voltage_matched ? 1 : 0);
+
+    console.println("Vehicle:");
     if (battery_manager.is_vcu_data_valid()) {
-        console.printf(
-            "Vehicle State: %s, ReadyToShutdown: %d, VCU Timeout: %d\n",
-            vehicle_state_to_string(battery_manager.get_vehicle_state()),
-            battery_manager.get_ready_to_shutdown(),
-            battery_manager.get_vcu_timeout());
+        console.printf("  State: %s\n",
+                       vehicle_state_to_string(battery_manager.get_vehicle_state()));
+        console.printf("  ReadyToShutdown: %d\n",
+                       battery_manager.get_ready_to_shutdown());
+        console.printf("  VCU Timeout: %d\n",
+                       battery_manager.get_vcu_timeout());
     } else {
-        console.printf("Vehicle State: INVALID, VCU Timeout: %d\n",
+        console.printf("  State: INVALID\n");
+        console.printf("  VCU Timeout: %d\n",
                        battery_manager.get_vcu_timeout());
     }
-    console.printf("Max Charge Current: %.1fA, Max Discharge Current: %.1fA\n",
-                   battery_manager.get_max_charge_current(),
-                   battery_manager.get_max_discharge_current());
-    console.printf(
-        "SOC: %.1f%% (OCV %.1f%%, Coulomb %.1f%%)\n",
-        battery_manager.get_soc(),
-        battery_manager.get_soc_ocv_lut(),
-        battery_manager.get_soc_coulomb_counting());
+
+    console.println("SOC:");
+    console.printf("  Selected: %.1f%%\n",
+                   battery_manager.get_soc());
+    console.printf("  OCV LUT: %.1f%%\n",
+                   battery_manager.get_soc_ocv_lut());
+    console.printf("  Coulomb: %.1f%%\n",
+                   battery_manager.get_soc_coulomb_counting());
+
     console.println("ECC:");
-    console.printf(
-        "  SOC cc: %.1f%%\n",
-        param::soc_cc * 100.0f);
-    console.printf(
-        "  b_as: %.1fAs, C_as: %.1fAs, soh: %.3f\n",
-        param::b_as,
-        param::C_as,
-        param::soh);
-    console.printf(
-        "  have_low_anchor: %u, q_low_as: %.1fAs, soc_low_anchor: %.3f\n",
-        param::have_low_anchor ? 1U : 0U,
-        param::q_low_as,
-        param::soc_low_anchor);
-    console.printf(
-        "  was_above_high_set: %u, q_as: %.1fAs, ocv_valid: %u, soc_ocv: %.3f\n",
-        param::was_above_high_set ? 1U : 0U,
-        param::q_as,
-        param::ocv_valid ? 1U : 0U,
-        param::soc_ocv);
-    console.printf(
-        "Current Limits - Peak Discharge: %.1fA, RMS Discharge: %.1fA, Peak Charge: %.1fA, RMS Charge: %.1fA\n",
-        battery_manager.get_current_limit_peak_discharge(),
-        battery_manager.get_current_limit_rms_discharge(),
-        battery_manager.get_current_limit_peak_charge(),
-        battery_manager.get_current_limit_rms_charge());
-    console.printf(
-        "Derated RMS Limits - Discharge: %.1fA, Charge: %.1fA\n",
-        battery_manager.get_current_limit_rms_derated_discharge(),
-        battery_manager.get_current_limit_rms_derated_charge());
-    console.printf("Balancing Finished: %d\n",
+    console.printf("  SOC cc: %.1f%%\n",
+                   param::soc_cc * 100.0f);
+    console.printf("  b_as: %.1fAs\n",
+                   param::b_as);
+    console.printf("  C_as: %.1fAs\n",
+                   param::C_as);
+    console.printf("  soh: %.3f\n",
+                   param::soh);
+    console.printf("  have_low_anchor: %u\n",
+                   param::have_low_anchor ? 1U : 0U);
+    console.printf("  q_low_as: %.1fAs\n",
+                   param::q_low_as);
+    console.printf("  soc_low_anchor: %.3f\n",
+                   param::soc_low_anchor);
+    console.printf("  was_above_high_set: %u\n",
+                   param::was_above_high_set ? 1U : 0U);
+    console.printf("  q_as: %.1fAs\n",
+                   param::q_as);
+    console.printf("  ocv_valid: %u\n",
+                   param::ocv_valid ? 1U : 0U);
+    console.printf("  soc_ocv: %.3f\n",
+                   param::soc_ocv);
+
+    console.println("Current Limits:");
+    console.printf("  Max Charge: %.1fA\n",
+                   battery_manager.get_max_charge_current());
+    console.printf("  Max Discharge: %.1fA\n",
+                   battery_manager.get_max_discharge_current());
+    console.printf("  Peak Discharge: %.1fA\n",
+                   battery_manager.get_current_limit_peak_discharge());
+    console.printf("  RMS Discharge: %.1fA\n",
+                   battery_manager.get_current_limit_rms_discharge());
+    console.printf("  Peak Charge: %.1fA\n",
+                   battery_manager.get_current_limit_peak_charge());
+    console.printf("  RMS Charge: %.1fA\n",
+                   battery_manager.get_current_limit_rms_charge());
+    console.printf("  Derated RMS Discharge: %.1fA\n",
+                   battery_manager.get_current_limit_rms_derated_discharge());
+    console.printf("  Derated RMS Charge: %.1fA\n",
+                   battery_manager.get_current_limit_rms_derated_charge());
+
+    console.println("Balancing:");
+    console.printf("  Finished: %d\n",
                    battery_manager.is_balancing_finished());
 }
 
