@@ -211,27 +211,14 @@ void BatteryModule::process_message(CANMessage &msg)
 
 bool BatteryModule::check_crc(const CANMessage &msg)
 {
-    auto registerFailure = [&]() {
+    if (!CRC8BMWi3(msg))
+    {
         if (crcFailureCount < 0xFF)
         {
             crcFailureCount++;
         }
-
-        if (crcFailureCount >= CMU_CRC_ERROR_THRESHOLD)
-        {
-            const uint8_t dtcValue = static_cast<uint8_t>(dtc) | static_cast<uint8_t>(DTC_CMU_CRC_ERROR);
-            dtc = static_cast<DTC_CMU>(dtcValue);
-            state = FAULT;
-        }
-    };
-
-    if (!CRC8BMWi3(msg))
-    {
-        registerFailure();
         return false;
     }
-
-    crcFailureCount = 0;
 
     return true;
 }
@@ -389,6 +376,11 @@ const char *BatteryModule::getStateString()
 BatteryModule::STATE_CMU BatteryModule::getState() { return state; }
 
 BatteryModule::DTC_CMU BatteryModule::getDTC() { return dtc; }
+
+uint8_t BatteryModule::get_crc_failure_count() const
+{
+    return crcFailureCount;
+}
 
 float BatteryModule::get_average_temperature()
 {

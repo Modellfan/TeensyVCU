@@ -58,6 +58,7 @@ public:
     //Balancing
     bool get_is_balancing();
     bool get_balancing(byte cell);
+    uint8_t get_crc_failure_count() const;
 
 private:
     int id;

@@ -429,6 +429,8 @@ void print_module_status(int index) {
     console.printf("Module %d\n", index);
     console.printf("  State: %s\n", module_state_to_string(mod.getState()));
     console.printf("  DTC: %s\n", module_dtc_to_string(mod.getDTC()).c_str());
+    console.printf("  CRC failures: %u\n",
+                   static_cast<unsigned int>(mod.get_crc_failure_count()));
     console.printf("  Voltage: %3.3fV\n", mod.get_voltage());
     console.printf("  Lowest Cell: %3.3fV, Highest Cell: %3.3fV\n",
                    mod.get_lowest_cell_voltage(), mod.get_highest_cell_voltage());
