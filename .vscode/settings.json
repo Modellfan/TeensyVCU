@@ -17,4 +17,6 @@
         "string_view": "cpp"
     },
     "cmake.configureOnOpen": true
+    ,
+    "latex-workshop.latex.build.forceRecipeUsage": false
 }

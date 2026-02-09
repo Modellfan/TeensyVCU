@@ -154,12 +154,6 @@ private:
     float last_instantaneous_power_w; // Latest instantaneous power sample (W)
     float remaining_wh; // Remaining energy in Wh
 
-    // Non-Volatile Variable!!  
-    float energy_initial_Wh;
-    float measured_capacity_Wh = BMS_INITIAL_CAPACITY_WH;
-    float ampere_seconds_initial;
-    float measured_capacity_Ah = BMS_INITIAL_CAPACITY_AH;
-
     void send_battery_status_message();
 
     // --- Core Functions ---

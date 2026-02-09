@@ -192,42 +192,6 @@ void BMS::update_state_machine()
 //   Battery Management Functions
 // ###############################################################################################################################################################################
 
-void BMS::update_soc_ocv_lut()
-{
-    pack_current = param::current;
-
-    const float abs_current = std::fabs(pack_current);
-    const bool below_threshold = abs_current <= BMS_OCV_CURRENT_THRESHOLD;
-
-    if (!below_threshold)
-    {
-        ocv_current_settle_start_ms = 0;
-        return;
-    }
-
-    const uint32_t now = millis();
-
-    if (ocv_current_settle_start_ms == 0U)
-    {
-        ocv_current_settle_start_ms = now;
-        return;
-    }
-
-    const uint32_t elapsed = now - ocv_current_settle_start_ms;
-    if (elapsed < BMS_OCV_CURRENT_SETTLE_TIME_MS)
-    {
-        return;
-    }
-
-    // Use lowest cell voltage across the pack as OCV reference
-    const float ocv = batteryPack.get_lowest_cell_voltage();
-
-    // Average pack temperature handled by BatteryPack
-    const float avgTemp = batteryPack.get_average_temperature();
-
-    soc_ocv_lut = SOC_FROM_OCV_TEMP(avgTemp, ocv);
-}
-
 void BMS::update_soc_coulomb_counting()
 {
     const float lowest_v = batteryPack.get_lowest_cell_voltage();
@@ -237,18 +201,9 @@ void BMS::update_soc_coulomb_counting()
     coulomb_counting.update(lowest_v, highest_v, avg_temp);
     soc_coulomb_counting =
         std::clamp(param::soc_cc * 100.0f, 0.0f, 100.0f);
-    ampere_seconds_initial = param::b_as;
-    measured_capacity_Ah = param::C_as / 3600.0f;
 }
 
-void BMS::correct_soc()
-{
-    soc = soc_ocv_lut;
-}
-
-void BMS::calculate_soh() {}
-
-void BMS::update_energy_metrics()
+void BMS::update_energy_metrics() //FOr HMI
 {
     static unsigned long last_sample_ms = 0;
     const unsigned long now_ms = millis();
@@ -332,6 +287,7 @@ void BMS::lookup_internal_resistance_table()
     const float ir_mohm = RESISTANCE_FROM_SOC_TEMP(avg_temp, soc_percent, 0);
     internal_resistance_table = ir_mohm / 1000.0f; // convert mΩ to Ω
 }
+
 void BMS::estimate_internal_resistance_online()
 {
     const float current_threshold = IR_ESTIMATION_CURRENT_STEP_THRESHOLD;
@@ -397,6 +353,7 @@ void BMS::estimate_internal_resistance_online()
     internal_resistance_estimated =
         sum_ir / static_cast<float>(CELLS_PER_MODULE * MODULES_PER_PACK);
 }
+
 void BMS::select_internal_resistance_used() {}
 
 void BMS::calculate_voltage_derate()
@@ -433,7 +390,11 @@ void BMS::calculate_voltage_derate()
 
     current_limit_rms_derated_charge = current_limit_rms_charge * charge_derate;
 }
+
+
+
 void BMS::calculate_rms_ema() {}
+
 void BMS::calculate_dynamic_voltage_limit() {}
 
 void BMS::select_current_limit() {}
@@ -550,51 +511,6 @@ void BMS::read_message()
     }
 }
 
-void BMS::apply_persistent_data(const PersistentDataStorage::PersistentData &data)
-{
-    energy_initial_Wh = data.energy_initial_Wh;
-    measured_capacity_Wh = data.measured_capacity_Wh;
-    coulomb_counting.initialise(data.b_as,
-                                data.C_as,
-                                data.soh,
-                                data.have_low_anchor != 0U,
-                                data.q_low_as,
-                                data.soc_low_anchor,
-                                data.was_above_high_set != 0U);
-    ampere_seconds_initial = param::b_as;
-    measured_capacity_Ah = data.C_as / 3600.0f;
-    contactorManager.setPrechargeStrategy(
-        static_cast<Contactormanager::PrechargeStrategy>(data.contactor_precharge_strategy));
-}
-
-PersistentDataStorage::PersistentData BMS::collect_persistent_data() const
-{
-    PersistentDataStorage::PersistentData data;
-    data.energy_initial_Wh = energy_initial_Wh;
-    data.measured_capacity_Wh = measured_capacity_Wh;
-    data.b_as = coulomb_counting.b_as();
-    data.C_as = coulomb_counting.C_as();
-    data.soh = coulomb_counting.soh();
-    data.have_low_anchor = static_cast<uint8_t>(coulomb_counting.have_low_anchor());
-    data.q_low_as = coulomb_counting.q_low_as();
-    data.soc_low_anchor = coulomb_counting.soc_low_anchor();
-    data.was_above_high_set = static_cast<uint8_t>(coulomb_counting.was_above_high_set());
-    data.contactor_precharge_strategy =
-        static_cast<uint8_t>(contactorManager.getPrechargeStrategy());
-    return data;
-}
-
-PersistentDataStorage::PersistentData BMS::get_persistent_data() const
-{
-    return collect_persistent_data();
-}
-
-void BMS::update_persistent_data(const PersistentDataStorage::PersistentData &data)
-{
-    apply_persistent_data(data);
-    persistent_storage.save(data);
-}
-
 void BMS::send_battery_status_message()
 {
     CANMessage msg;
@@ -706,4 +622,56 @@ void BMS::send_message(CANMessage *frame)
         dtc = static_cast<DTC_BMS>(dtc | DTC_BMS_CAN_SEND_ERROR);
         // Serial.println("Send nok");
     }
+}
+
+// ###############################################################################################################################################################################
+//   Storing Persistent Values
+// ###############################################################################################################################################################################
+
+void BMS::apply_persistent_data(const PersistentDataStorage::PersistentData &data)
+{
+    energy_initial_Wh = data.energy_initial_Wh;
+    measured_capacity_Wh = data.measured_capacity_Wh;
+    coulomb_counting.initialise(data.b_as,
+                                data.C_as,
+                                data.soh,
+                                data.have_low_anchor != 0U,
+                                data.q_low_as,
+                                data.soc_low_anchor,
+                                data.was_above_high_set != 0U);
+    ampere_seconds_initial = param::b_as;
+    measured_capacity_Ah = data.C_as / 3600.0f;
+    contactorManager.setPrechargeStrategy(
+        static_cast<Contactormanager::PrechargeStrategy>(data.contactor_precharge_strategy));
+    contactorManager.setPositiveOpenCurrentLimit(data.contactor_positive_open_current_limit_A);
+}
+
+PersistentDataStorage::PersistentData BMS::collect_persistent_data() const
+{
+    PersistentDataStorage::PersistentData data;
+    data.energy_initial_Wh = energy_initial_Wh;
+    data.measured_capacity_Wh = measured_capacity_Wh;
+    data.b_as = coulomb_counting.b_as();
+    data.C_as = coulomb_counting.C_as();
+    data.soh = coulomb_counting.soh();
+    data.have_low_anchor = static_cast<uint8_t>(coulomb_counting.have_low_anchor());
+    data.q_low_as = coulomb_counting.q_low_as();
+    data.soc_low_anchor = coulomb_counting.soc_low_anchor();
+    data.was_above_high_set = static_cast<uint8_t>(coulomb_counting.was_above_high_set());
+    data.contactor_precharge_strategy =
+        static_cast<uint8_t>(contactorManager.getPrechargeStrategy());
+    data.contactor_positive_open_current_limit_A =
+        contactorManager.getPositiveOpenCurrentLimit();
+    return data;
+}
+
+PersistentDataStorage::PersistentData BMS::get_persistent_data() const
+{
+    return collect_persistent_data();
+}
+
+void BMS::update_persistent_data(const PersistentDataStorage::PersistentData &data)
+{
+    apply_persistent_data(data);
+    persistent_storage.save(data);
 }

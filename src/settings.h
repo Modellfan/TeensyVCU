@@ -57,6 +57,10 @@
 
 #define CONTACTOR_PRCHG_TIME 2000 //Time for the precharge contactor to be closed before positive contactor
 
+// Default current threshold (A) below which the positive contactor is allowed to open.
+// This can be overridden via persistent data.
+#define CONTACTOR_POSITIVE_OPEN_CURRENT_DEFAULT_A 2.0f
+
 // Contactor feedback evaluation can be disabled at runtime through the
 // persistent data interface (see serial console command 'P').
 

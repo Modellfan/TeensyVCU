@@ -1,0 +1,145 @@
+% !TEX root = documentation/Operating Current Limiter.tex
+\documentclass{article}
+\usepackage{amsmath,amssymb}
+
+\begin{document}
+
+\section{EWMA \(I^2\) limiter and why it is conservative w.r.t. the window-energy constraint}
+
+\subsection{Original (sliding-window) constraint}
+Let \(I(t)\) be the battery current (positive for charge, negative for discharge). Define the directional currents
+\[
+I_{\mathrm{ch}}(t) = \max(I(t),0), 
+\qquad
+I_{\mathrm{dch}}(t) = \max(-I(t),0).
+\]
+The specification in the figure can be written (for charge) as the sliding-window energy constraint
+\begin{equation}
+\int_{t-W_{\mathrm{ch}}}^{t} I_{\mathrm{ch}}(\tau)^2\, d\tau \;\le\; W_{\mathrm{ch}}\; I_{\mathrm{ch,cont}}(T(t))^2,
+\qquad W_{\mathrm{ch}}=100\text{ s},
+\label{eq:boxcar_charge}
+\end{equation}
+and similarly for discharge with \(W_{\mathrm{dch}}=150\text{ s}\) and \(I_{\mathrm{dch,cont}}(\cdot)\).
+Also, instantaneous peak constraints apply:
+\[
+I_{\mathrm{ch}}(t)\le I_{\mathrm{ch,peak}},\qquad I_{\mathrm{dch}}(t)\le I_{\mathrm{dch,peak}}.
+\]
+
+\subsection{A buffer-free surrogate: EWMA of \(I^2\)}
+A buffer-free approximation replaces the sliding-window average of \(I^2\) by an exponentially weighted moving average (EWMA).
+Define the EWMA state for charge:
+\begin{equation}
+s_{\mathrm{ch}}(t) = \text{EWMA}_\tau \big(I_{\mathrm{ch}}(t)^2\big),
+\end{equation}
+implemented as a first-order low-pass with time constant \(\tau_{\mathrm{ch}}>0\):
+\begin{equation}
+\dot{s}_{\mathrm{ch}}(t) = \frac{I_{\mathrm{ch}}(t)^2 - s_{\mathrm{ch}}(t)}{\tau_{\mathrm{ch}}}.
+\label{eq:ode}
+\end{equation}
+In discrete time, at sample \(k\) with step \(dt_k = t_{k+1}-t_k\), the exact solution of \eqref{eq:ode} over one step yields
+\begin{equation}
+s_{\mathrm{ch},k+1} = (1-\alpha_k)\, s_{\mathrm{ch},k} + \alpha_k\, I_{\mathrm{ch},k}^2,
+\qquad
+\alpha_k = 1-e^{-dt_k/\tau_{\mathrm{ch}}}\in(0,1).
+\label{eq:ewma_update}
+\end{equation}
+Analogous definitions hold for discharge with state \(s_{\mathrm{dch}}\) and \(\tau_{\mathrm{dch}}\).
+
+\subsection{The limiter: invariance of the safe set}
+Let the continuous limit at the current temperature be
+\[
+S_{\max,\mathrm{ch}}(k) = I_{\mathrm{ch,cont}}(T_k)^2.
+\]
+The limiter computes a maximum admissible \emph{instantaneous} charge current magnitude \(I_{\mathrm{ch},k}\) such that
+\begin{equation}
+s_{\mathrm{ch},k+1} \le S_{\max,\mathrm{ch}}(k)
+\quad\text{(or more conservatively, }\le S_{\max,\mathrm{ch}}(k+1)\text{ if you use the next-step temperature).}
+\label{eq:constraint_next}
+\end{equation}
+Using \eqref{eq:ewma_update}, \eqref{eq:constraint_next} becomes
+\[
+(1-\alpha_k)s_{\mathrm{ch},k} + \alpha_k I_{\mathrm{ch},k}^2 \;\le\; S_{\max,\mathrm{ch}}(k).
+\]
+Solving for \(I_{\mathrm{ch},k}^2\) gives the admissible bound
+\begin{equation}
+I_{\mathrm{ch},k}^2 \;\le\; s_{\mathrm{ch},k} + \frac{S_{\max,\mathrm{ch}}(k)-s_{\mathrm{ch},k}}{\alpha_k}.
+\label{eq:imax_sq}
+\end{equation}
+Therefore the limiter can choose
+\begin{equation}
+I_{\mathrm{ch},k} \;\le\; I_{\mathrm{ch,thermal},k}
+:= \sqrt{\max\!\left(0,\; s_{\mathrm{ch},k} + \frac{S_{\max,\mathrm{ch}}(k)-s_{\mathrm{ch},k}}{\alpha_k}\right)}.
+\label{eq:ithermal}
+\end{equation}
+and then apply the peak limit:
+\begin{equation}
+I_{\mathrm{ch},k} \;\le\; \min\!\big(I_{\mathrm{ch,peak}},\, I_{\mathrm{ch,thermal},k}\big).
+\end{equation}
+
+\paragraph{Why this is safe (mathematically).}
+Define the \emph{safe set}
+\[
+\mathcal{S}_{\mathrm{ch}}(k) := \{\, s_{\mathrm{ch},k}\;|\; s_{\mathrm{ch},k} \le S_{\max,\mathrm{ch}}(k)\,\}.
+\]
+Assume \(s_{\mathrm{ch},k}\in\mathcal{S}_{\mathrm{ch}}(k)\). If the controller chooses \(I_{\mathrm{ch},k}\) satisfying \eqref{eq:imax_sq},
+then substituting \eqref{eq:imax_sq} into \eqref{eq:ewma_update} yields
+\[
+s_{\mathrm{ch},k+1}
+= (1-\alpha_k)s_{\mathrm{ch},k} + \alpha_k I_{\mathrm{ch},k}^2
+\le (1-\alpha_k)s_{\mathrm{ch},k} + \alpha_k\left[s_{\mathrm{ch},k} + \frac{S_{\max,\mathrm{ch}}(k)-s_{\mathrm{ch},k}}{\alpha_k}\right]
+= S_{\max,\mathrm{ch}}(k).
+\]
+Hence \(s_{\mathrm{ch},k+1}\in\mathcal{S}_{\mathrm{ch}}(k)\). This proves \emph{forward invariance}:
+if \(s_{\mathrm{ch},0}\le S_{\max,\mathrm{ch}}(0)\), then \(s_{\mathrm{ch},k}\le S_{\max,\mathrm{ch}}(k)\) for all \(k\),
+provided the limiter uses \eqref{eq:ithermal} (and uses a conservative temperature choice if \(S_{\max}\) decreases).
+
+The same proof applies to discharge with \(s_{\mathrm{dch}}\), \(\alpha_k = 1-e^{-dt_k/\tau_{\mathrm{dch}}}\),
+and \(S_{\max,\mathrm{dch}}(k)=I_{\mathrm{dch,cont}}(T_k)^2\).
+
+\subsection{Relation to the original sliding-window constraint}
+Define the boxcar (sliding-window) \emph{average} of \(I_{\mathrm{ch}}^2\) over length \(W\):
+\[
+\overline{I_{\mathrm{ch}}^2}^{\,\mathrm{box}}_W(t) := \frac{1}{W}\int_{t-W}^{t} I_{\mathrm{ch}}(\tau)^2\, d\tau.
+\]
+Then \eqref{eq:boxcar_charge} is equivalent to
+\[
+\overline{I_{\mathrm{ch}}^2}^{\,\mathrm{box}}_{W_{\mathrm{ch}}}(t)\le I_{\mathrm{ch,cont}}(T(t))^2.
+\]
+The EWMA state \(s_{\mathrm{ch}}(t)\) is another linear time-invariant average of \(I_{\mathrm{ch}}^2\), but with an exponential kernel:
+\[
+s_{\mathrm{ch}}(t) = \int_{0}^{\infty} \frac{1}{\tau_{\mathrm{ch}}} e^{-u/\tau_{\mathrm{ch}}}\, I_{\mathrm{ch}}(t-u)^2\, du.
+\]
+\textbf{Important:} in general there is \emph{no universal inequality} stating that the exponential average is always
+above (or always below) the boxcar average for all possible signals \(I(t)\).
+Therefore, a single-state EWMA constraint \(s_{\mathrm{ch}}(t)\le I_{\mathrm{ch,cont}}(T)^2\) is \emph{not} a formal guarantee of
+\eqref{eq:boxcar_charge} for every waveform.
+
+\paragraph{How to make the EWMA approach conservative in practice.}
+To ensure the EWMA-based limiter stays under the \emph{real} sliding-window limit, you introduce an explicit margin factor
+\(0<\kappa<1\) and enforce
+\begin{equation}
+s_{\mathrm{ch}}(t)\le \kappa^2\, I_{\mathrm{ch,cont}}(T(t))^2,
+\qquad
+s_{\mathrm{dch}}(t)\le \kappa^2\, I_{\mathrm{dch,cont}}(T(t))^2,
+\label{eq:kappa}
+\end{equation}
+with \(\kappa\) chosen by worst-case analysis or validation against representative current profiles.
+Equivalently, replace \(I_{\mathrm{cont}}(T)\) in the limiter by \(\kappa I_{\mathrm{cont}}(T)\).
+This produces a provable invariance result for the \emph{EWMA} constraint (as shown above) and empirically bounds the
+boxcar window-energy constraint with safety margin.
+
+\paragraph{If a strict formal guarantee is required.}
+A strict guarantee for the \emph{exact} sliding-window constraint \eqref{eq:boxcar_charge} generally requires tracking the
+window integral itself, which needs either (i) a buffer/ring of past samples, or (ii) a more elaborate approximation such as
+a cascade of multiple first-order filters (multi-stage EWMA) with tuned margins and a formally derived bound.
+
+\subsection{Summary}
+\begin{itemize}
+\item The limiter computes \(I_{\max}\) so that the next EWMA state satisfies \(s_{k+1}\le S_{\max}\). This guarantees (by invariance)
+that the EWMA constraint is never violated.
+\item The EWMA constraint is a surrogate for the true sliding-window constraint; it is not universally equivalent.
+\item To stay \emph{under} the true formula in practice, enforce \eqref{eq:kappa} with a conservative margin \(\kappa<1\),
+or use a higher-fidelity approximation if formal equivalence is required.
+\end{itemize}
+
+\end{document}

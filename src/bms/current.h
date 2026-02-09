@@ -5,7 +5,7 @@
 #include "settings.h"
 
 // Uncomment to enable printing of received CAN frames for the shunt.
-#define SHUNT_CAN_DEBUG
+//#define SHUNT_CAN_DEBUG
 // If you already have a CAN print helper, define SHUNT_CAN_PRINT(msg) before including this header.
 
 enum class ShuntState : uint8_t

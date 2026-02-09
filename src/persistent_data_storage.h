@@ -21,6 +21,8 @@ public:
         float soc_low_anchor = 0.0f;
         uint8_t was_above_high_set = 0U;
         uint8_t contactor_precharge_strategy = CONTACTOR_PRECHARGE_STRATEGY_DEFAULT;
+        float contactor_positive_open_current_limit_A =
+            CONTACTOR_POSITIVE_OPEN_CURRENT_DEFAULT_A;
     };
 
     PersistentDataStorage()
@@ -81,7 +83,7 @@ private:
     };
 
     static constexpr uint32_t kMagic = 0x54564355UL; // 'TVCU'
-    static constexpr uint16_t kVersion = 12U;
+    static constexpr uint16_t kVersion = 13U;
     static constexpr size_t kSlotCount = 16U;
 
     bool initialized;

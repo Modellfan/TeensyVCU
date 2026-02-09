@@ -59,6 +59,9 @@ public:
     bool isContactorVoltageAvailable() const;
     void setPrechargeStrategy(PrechargeStrategy strategy);
     PrechargeStrategy getPrechargeStrategy() const;
+    void setPositiveOpenCurrentLimit(float limit_A);
+    float getPositiveOpenCurrentLimit() const;
+    bool canOpenPositiveContactor() const;
 
 private:
     const char *getCurrentStateString();
@@ -78,6 +81,7 @@ private:
     bool _negativeContactor_closed;
     bool _contactorVoltage_available;
     PrechargeStrategy _prechargeStrategy;
+    float _positiveOpenCurrentLimit_A;
 };
 
 #endif // CONTACTORMANAGER_H

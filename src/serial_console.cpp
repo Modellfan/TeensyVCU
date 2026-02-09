@@ -601,6 +601,8 @@ void print_persistent_data() {
     console.printf("  7: soc_low_anchor = %.3f\n", data.soc_low_anchor);
     console.printf("  8: was_above_high_set = %u\n", data.was_above_high_set);
     console.printf("  9: contactor_precharge_strategy = %u\n", data.contactor_precharge_strategy);
+    console.printf(" 10: contactor_positive_open_current_limit_A = %.3f\n",
+                   data.contactor_positive_open_current_limit_A);
     console.println("Use 'E idx value' to update a field.");
 }
 
@@ -665,6 +667,13 @@ void modify_persistent_data() {
             data.contactor_precharge_strategy = static_cast<uint8_t>(strategy);
             break;
         }
+        case 10:
+            if (value < 0.0f) {
+                console.println("Value must be >= 0.");
+                return;
+            }
+            data.contactor_positive_open_current_limit_A = value;
+            break;
         default:
             updated = false;
             break;

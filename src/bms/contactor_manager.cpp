@@ -22,6 +22,7 @@ Contactormanager::Contactormanager() :
     _targetState = OPEN;
     _prechargeStrategy = PrechargeStrategy::TIMED_DELAY;
     _dtc = DTC_COM_NONE;
+    _positiveOpenCurrentLimit_A = CONTACTOR_POSITIVE_OPEN_CURRENT_DEFAULT_A;
 }
 
 void Contactormanager::initialise()
@@ -168,8 +169,10 @@ void Contactormanager::update()
         }
         else if (_targetState == OPEN)
         {
-            _positiveContactor.open();
-            _currentState = OPENING_POSITIVE;
+   
+                _positiveContactor.open();
+                _currentState = OPENING_POSITIVE;
+          
         }
         break;
 
@@ -179,8 +182,11 @@ void Contactormanager::update()
         }
         else if (_targetState == OPEN)
         {
-            _positiveContactor.open();
-            _currentState = OPENING_POSITIVE;
+            if (canOpenPositiveContactor())
+            {
+                _positiveContactor.open();
+                _currentState = OPENING_POSITIVE;
+            }
         }
         break;
     case OPENING_POSITIVE:
@@ -433,6 +439,25 @@ void Contactormanager::setPrechargeStrategy(PrechargeStrategy strategy)
 Contactormanager::PrechargeStrategy Contactormanager::getPrechargeStrategy() const
 {
     return _prechargeStrategy;
+}
+
+void Contactormanager::setPositiveOpenCurrentLimit(float limit_A)
+{
+    if (!(limit_A >= 0.0f))
+    {
+        limit_A = 0.0f;
+    }
+    _positiveOpenCurrentLimit_A = limit_A;
+}
+
+float Contactormanager::getPositiveOpenCurrentLimit() const
+{
+    return _positiveOpenCurrentLimit_A;
+}
+
+bool Contactormanager::canOpenPositiveContactor() const
+{
+    return std::fabs(param::current) <= _positiveOpenCurrentLimit_A;
 }
 
 
