@@ -49,9 +49,8 @@ the contactor manager diagnostics are forwarded over CAN:
 | 2 | `DTC_COM_PRECHARGE_CONTACTOR_FAULT` | Precharge contactor feedback reported a fault. |
 | 3 | `DTC_COM_POSITIVE_CONTACTOR_FAULT` | Positive contactor feedback reported a fault. |
 | 4 | `DTC_COM_PRECHARGE_VOLTAGE_TIMEOUT` | Voltage precharge target was not reached before the strategy timeout. |
-| 5 | `DTC_COM_EXTERNAL_HV_VOLTAGE_MISSING` | External HV bus voltage from the VCU has timed out or is invalid. |
-| 6 | `DTC_COM_PACK_VOLTAGE_MISSING` | Internal pack voltage measurement is unavailable or stale. |
-| 7 | (reserved) | Unused; transmit as 0. |
+| 5 | `DTC_COM_VOLTAGE_MONITOR_INVALID` | Voltage monitor input was invalid during precharge validation. |
+| 6-7 | (reserved) | Unused; transmit as 0. |
 
 ## MSG4: `BMS_SOC_SOH` (0x41D, 1 Hz)
 
@@ -87,3 +86,19 @@ All signals below are unsigned unless otherwise noted.
 | 4-5 | reserved |  |  |  |
 | 6 | Counter (4-bit) | `uint8` | lower 4 bits only | bits 7-4 always 0 |
 | 7 | CRC8 | `uint8` |  |  |
+
+`VehicleOperatingMode` matches `BMS::VehicleState` (byte values shown):
+
+| Value | Name |
+|-------|------|
+| 255 | `STATE_INVALID` (-1) |
+| 0 | `STATE_SLEEP` |
+| 1 | `STATE_STANDBY` |
+| 2 | `STATE_HV_CONNECTING` |
+| 3 | `STATE_HV_DISCONNECTING` |
+| 4 | `STATE_READY` |
+| 5 | `STATE_CONDITIONING` |
+| 6 | `STATE_DRIVE` |
+| 7 | `STATE_CHARGE` |
+| 8 | `STATE_ERROR` |
+| 9 | `STATE_LIMP_HOME` |

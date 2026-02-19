@@ -37,8 +37,11 @@ public:
 
     enum VehicleState
     {
+        STATE_INVALID = -1,
         STATE_SLEEP = 0,
         STATE_STANDBY,
+        STATE_HV_CONNECTING,
+        STATE_HV_DISCONNECTING,
         STATE_READY,
         STATE_CONDITIONING,
         STATE_DRIVE,

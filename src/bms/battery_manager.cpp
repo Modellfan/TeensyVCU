@@ -482,7 +482,8 @@ void BMS::read_message()
 
             if (crc == msg.data[7])
             {
-                const VehicleState new_vehicle_state = static_cast<VehicleState>(msg.data[0]);
+                const int8_t raw_vehicle_state = static_cast<int8_t>(msg.data[0]);
+                const VehicleState new_vehicle_state = static_cast<VehicleState>(raw_vehicle_state);
                 const bool transitioned_to_standby = (new_vehicle_state == STATE_STANDBY) && (last_vehicle_state != STATE_STANDBY);
 
                 vehicle_state = new_vehicle_state;
