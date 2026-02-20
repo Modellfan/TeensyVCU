@@ -29,16 +29,19 @@ float b_frac = 0.10                 # |b| <= b_frac * C
 float b_step_max_frac = 0.001       # max |Δb| per second as fraction of C
 
 # --- Persistent (NVM) ---
-float b_as                    # offset: q at SOC=0 [As]
+# Values in q-frame are stored rebased against current q_as
+float b_as_nvm                # stored offset term [As], rebased
 float C_as                    # slope/capacity [As]
 float soh                      # SOH = C_as / C_rated_as
 bool  have_low_anchor
-float q_low_as
+float q_low_as_nvm            # stored low anchor charge [As], rebased
 float soc_low_anchor           # stored as soc_cc (per your request)
 bool  was_above_high_set       # persistent cycle-state flag
 
 # --- Runtime (RAM) ---
 float q_as                     # integrated charge [As] (from shunt)
+float b_as                     # runtime offset: q at SOC=0 [As]
+float q_low_as                 # runtime low anchor charge [As]
 bool  ocv_valid                # rest & voltage stable
 float soc_ocv                  # OCV -> SOC (0..1)
 float soc_cc                   # SOC from CC using b_as, C_as
@@ -47,6 +50,19 @@ function clamp(x, lo, hi):
     if x < lo: return lo
     if x > hi: return hi
     return x
+
+function LoadPersistent():
+    # Load all NVM fields first (b_as_nvm, q_low_as_nvm, C_as, soh, flags...)
+    # Convert rebased NVM values back into current q_as frame.
+    # If q_as is reset to 0 at boot, runtime values equal NVM values directly.
+    b_as     = b_as_nvm     + q_as
+    q_low_as = q_low_as_nvm + q_as
+
+function StorePersistent():
+    # Rebase q-referenced values to make them invariant to q_as reset on reboot
+    b_as_nvm     = b_as     - q_as
+    q_low_as_nvm = q_low_as - q_as
+    # Store all NVM fields (b_as_nvm, q_low_as_nvm, C_as, soh, flags...)
 
 function Task1000ms():
 

@@ -333,12 +333,25 @@ void BatteryModule::check_alive()
 bool BatteryModule::plausibilityCheck()
 {
     bool plausible = true;
-    if ((get_lowest_cell_voltage() < CMU_MIN_PLAUSIBLE_VOLTAGE) || (get_highest_cell_voltage() > CMU_MAX_PLAUSIBLE_VOLTAGE))
+
+    const float lowestCellVoltage = get_lowest_cell_voltage();
+    const float highestCellVoltage = get_highest_cell_voltage();
+    const float lowestTemperature = get_lowest_temperature();
+    const float highestTemperature = get_highest_temperature();
+
+    const bool cellVoltageImplausible =
+        (lowestCellVoltage < CMU_MIN_PLAUSIBLE_VOLTAGE) ||
+        (highestCellVoltage > CMU_MAX_PLAUSIBLE_VOLTAGE);
+    if (cellVoltageImplausible)
     {
         plausible = false;
         dtc = static_cast<DTC_CMU>(dtc | DTC_CMU_SINGLE_VOLTAGE_IMPLAUSIBLE);
     }
-    if ((get_lowest_temperature() < CMU_MIN_PLAUSIBLE_TEMPERATURE) || (get_highest_temperature() > CMU_MAX_PLAUSIBLE_TEMPERATURE))
+
+    const bool temperatureImplausible =
+        (lowestTemperature < CMU_MIN_PLAUSIBLE_TEMPERATURE) ||
+        (highestTemperature > CMU_MAX_PLAUSIBLE_TEMPERATURE);
+    if (temperatureImplausible)
     {
         plausible = false;
         dtc = static_cast<DTC_CMU>(dtc | DTC_CMU_TEMPERATURE_IMPLAUSIBLE);
@@ -350,11 +363,65 @@ bool BatteryModule::plausibilityCheck()
         totalVoltage += cellVoltage[c];
     }
 
-    if (((totalVoltage - CMU_MAX_DELTA_MODULE_CELL_VOLTAGE) > moduleVoltage) || ((totalVoltage + CMU_MAX_DELTA_MODULE_CELL_VOLTAGE) < moduleVoltage))
+    const bool moduleVoltageImplausible =
+        ((totalVoltage - CMU_MAX_DELTA_MODULE_CELL_VOLTAGE) > moduleVoltage) ||
+        ((totalVoltage + CMU_MAX_DELTA_MODULE_CELL_VOLTAGE) < moduleVoltage);
+    if (moduleVoltageImplausible)
     {
         plausible = false;
         dtc = static_cast<DTC_CMU>(dtc | DTC_CMU_MODULE_VOLTAGE_IMPLAUSIBLE);
     }
+
+#if defined(CMU_IMPLAUSIBLE_DEBUG) || defined(DEBUG)
+    if (!plausible)
+    {
+        const float moduleDeltaVoltage = totalVoltage - moduleVoltage;
+
+        Serial.printf(
+            "[CMU_IMPLAUSIBLE] t=%lu ms module=%d dtc=0x%02X reasons[V=%u T=%u M=%u] cmuError=%u\n",
+            millis(),
+            id,
+            static_cast<uint8_t>(dtc),
+            cellVoltageImplausible ? 1U : 0U,
+            temperatureImplausible ? 1U : 0U,
+            moduleVoltageImplausible ? 1U : 0U,
+            cmuError ? 1U : 0U);
+
+        Serial.printf(
+            "  cellV[min=%.3f max=%.3f limits=%.3f..%.3f] moduleV[sum=%.3f reported=%.3f delta=%.3f allowed=+/-%.3f]\n",
+            lowestCellVoltage,
+            highestCellVoltage,
+            CMU_MIN_PLAUSIBLE_VOLTAGE,
+            CMU_MAX_PLAUSIBLE_VOLTAGE,
+            totalVoltage,
+            moduleVoltage,
+            moduleDeltaVoltage,
+            CMU_MAX_DELTA_MODULE_CELL_VOLTAGE);
+
+        Serial.printf(
+            "  temp[min=%.2f max=%.2f internal=%.2f limits=%.2f..%.2f]\n",
+            lowestTemperature,
+            highestTemperature,
+            temperatureInternal,
+            CMU_MIN_PLAUSIBLE_TEMPERATURE,
+            CMU_MAX_PLAUSIBLE_TEMPERATURE);
+
+        Serial.print("  cellV_all:");
+        for (int c = 0; c < numCells; c++)
+        {
+            Serial.printf(" c%d=%.3f", c, cellVoltage[c]);
+        }
+        Serial.println();
+
+        Serial.print("  temp_all:");
+        for (int t = 0; t < numTemperatureSensors; t++)
+        {
+            Serial.printf(" t%d=%.2f", t, cellTemperature[t]);
+        }
+        Serial.println();
+    }
+#endif
+
     return plausible;
 }
 

@@ -9,8 +9,16 @@ public:
     void print(const char *msg) {
         Serial.print(msg);
     }
+    template <typename T>
+    void print(const T &value) {
+        Serial.print(value);
+    }
     void println(const char *msg) {
         Serial.println(msg);
+    }
+    template <typename T>
+    void println(const T &value) {
+        Serial.println(value);
     }
     void printf(const char *fmt, ...) {
         char buf[128];

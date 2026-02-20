@@ -19,11 +19,96 @@ static const char FIRMWARE_BUILD_TIME[] = __TIME__;
 #undef SERIAL_CONSOLE_STRINGIFY
 #undef SERIAL_CONSOLE_STRINGIFY_INNER
 
+static uint32_t boot_reset_flags = 0;
+static bool boot_reset_flags_captured = false;
+
+static void capture_boot_reset_flags() {
+#if defined(__IMXRT1062__)
+    if (!boot_reset_flags_captured) {
+        boot_reset_flags = SRC_SRSR;
+        boot_reset_flags_captured = true;
+    }
+#endif
+}
+
+static String decode_boot_reset_flags(uint32_t flags) {
+    String causes = "";
+#if defined(__IMXRT1062__)
+    if (flags & SRC_SRSR_LOCKUP_SYSRESETREQ) {
+        causes += "SW_OR_LOCKUP, ";
+    }
+    if (flags & SRC_SRSR_CSU_RESET_B) {
+        causes += "SECURITY_MONITOR, ";
+    }
+    if (flags & SRC_SRSR_IPP_USER_RESET_B) {
+        causes += "POWER_BUTTON, ";
+    }
+    if (flags & SRC_SRSR_WDOG_RST_B) {
+        causes += "WDOG1_OR_WDOG2, ";
+    }
+    if (flags & SRC_SRSR_JTAG_RST_B) {
+        causes += "JTAG_BOUNDARY, ";
+    }
+    if (flags & SRC_SRSR_JTAG_SW_RST) {
+        causes += "JTAG_SW, ";
+    }
+    if (flags & SRC_SRSR_WDOG3_RST_B) {
+        causes += "WDOG3, ";
+    }
+    if (flags & SRC_SRSR_TEMPSENSE_RST_B) {
+        causes += "TEMPERATURE, ";
+    }
+    if (flags & SRC_SRSR_IPP_RESET_B) {
+        causes += "IPP_RESET_B, ";
+    }
+#else
+    (void)flags;
+#endif
+
+    if (causes.length() == 0) {
+        return "none/unknown";
+    }
+    causes.remove(causes.length() - 2);
+    return causes;
+}
+
+static void print_uptime_line() {
+    const uint32_t uptime_ms = millis();
+    const float uptime_s = uptime_ms * 0.001f;
+    const float uptime_min = uptime_s / 60.0f;
+    console.printf("Uptime: %.1fs (%.2f min)\n", uptime_s, uptime_min);
+}
+
+static void print_boot_diagnostics(bool include_crash_report) {
+    capture_boot_reset_flags();
+    print_uptime_line();
+#if defined(__IMXRT1062__)
+    console.printf("Boot Reset Flags: 0x%08lX\n",
+                   static_cast<unsigned long>(boot_reset_flags));
+    console.printf("Boot Reset Cause(s): %s\n",
+                   decode_boot_reset_flags(boot_reset_flags).c_str());
+    if (include_crash_report) {
+        if (CrashReport) {
+            console.println("CrashReport:");
+            console.print(CrashReport);
+        } else {
+            console.println("CrashReport: none");
+        }
+    } else {
+        console.printf("CrashReport Pending: %s\n", CrashReport ? "yes" : "no");
+    }
+#else
+    (void)include_crash_report;
+#endif
+}
+
 void enable_serial_console() {
+    capture_boot_reset_flags();
     console.printf("Firmware version: %s (built %s %s)\n",
                    FIRMWARE_VERSION,
                    FIRMWARE_BUILD_DATE,
                    FIRMWARE_BUILD_TIME);
+    print_boot_diagnostics(false);
     console.println("Type 'h' for help.");
 }
 
@@ -235,12 +320,15 @@ void print_console_help() {
     console.println("  mX - print module X status (0-7)");
     console.println("  B - print BMS status");
     console.println("  i - print current sensor status");
+    console.println("  u - print uptime + boot diagnostics");
+    console.println("  r - print CrashReport (and clear it)");
     console.println("  P - print persistent data");
     console.println("  E idx value - set persistent data value (see 'P')");
     console.println("  h - print this help message");
 }
 
 void print_pack_status() {
+    print_uptime_line();
     console.printf("Pack Voltage: %3.3fV, Lowest Cell: %3.3fV, Highest Cell: %3.3fV\n",
                    batteryPack.get_pack_voltage(),
                    batteryPack.get_lowest_cell_voltage(),
@@ -425,6 +513,7 @@ void print_module_status(int index) {
         console.println("Invalid module index");
         return;
     }
+    print_uptime_line();
     BatteryModule &mod = batteryPack.modules[index];
     console.printf("Module %d\n", index);
     console.printf("  State: %s\n", module_state_to_string(mod.getState()));
@@ -441,6 +530,7 @@ void print_module_status(int index) {
 }
 
 void print_bms_status() {
+    print_uptime_line();
     console.println("BMS:");
     console.printf("  State: %s, DTC: %s\n",
                    bms_state_to_string(battery_manager.get_state()),
@@ -466,14 +556,6 @@ void print_bms_status() {
                        battery_manager.get_vcu_timeout());
     }
 
-    console.println("SOC:");
-    console.printf("  Selected: %.1f%%\n",
-                   battery_manager.get_soc());
-    console.printf("  OCV LUT: %.1f%%\n",
-                   battery_manager.get_soc_ocv_lut());
-    console.printf("  Coulomb: %.1f%%\n",
-                   battery_manager.get_soc_coulomb_counting());
-
     console.println("ECC:");
     console.printf("  SOC cc: %.1f%%\n",
                    param::soc_cc * 100.0f);
@@ -495,8 +577,8 @@ void print_bms_status() {
                    param::q_as);
     console.printf("  ocv_valid: %u\n",
                    param::ocv_valid ? 1U : 0U);
-    console.printf("  soc_ocv: %.3f\n",
-                   param::soc_ocv);
+    console.printf("  soc_ocv: %.1f%%\n",
+                   param::soc_ocv * 100.0f);
 
     console.println("Current Limits:");
     console.printf("  Max Charge: %.1fA\n",
@@ -523,6 +605,7 @@ void print_bms_status() {
 
 
 void print_contactor_status() {
+    print_uptime_line();
     const Contactormanager::State manager_state = contactor_manager.getState();
     const Contactormanager::DTC_COM manager_dtc = contactor_manager.getDTC();
     const Contactor::State positive_state = contactor_manager.getPositiveState();
@@ -560,6 +643,7 @@ void print_contactor_status() {
 }
 
 void print_shunt_status() {
+    print_uptime_line();
     console.println("Shunt:");
     console.printf("  State: %s\n", shunt_state_to_string(param::state));
     console.printf("  DTC: %s (0x%04X)\n",
@@ -760,6 +844,12 @@ void serial_console() {
             }
             case 'i':
                 print_shunt_status();
+                break;
+            case 'u':
+                print_boot_diagnostics(false);
+                break;
+            case 'r':
+                print_boot_diagnostics(true);
                 break;
             case 'P':
                 print_persistent_data();

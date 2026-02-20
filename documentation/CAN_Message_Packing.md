@@ -34,23 +34,25 @@ Sign convention used by the BMS on CAN:
 |-----|--------|------|---------------|-------|-------|
 | 0-1 | Max Discharge Current | `uint16` | A x 10 | 0-65535 | 0-6553.5 A (magnitude, always positive) |
 | 2-3 | Max Charge Current | `uint16` | A x 10 | 0-65535 | 0-6553.5 A (magnitude, always positive) |
-| 4 | Contactor State | `uint8` | enum | 0-7 | 0=INIT,1=OPEN,2=CLOSING_PRE,3=CLOSING_POS,4=CLOSED,5=OPENING_POS,6=OPENING_PRE,7=FAULT |
-| 5 | Fault Code | `uint8` | bitfield | 0-255 | Contactor manager DTC flags |
+| 4 | Contactor State | `uint8` | enum | 0-7 | 0=INIT,1=OPEN,2=CLOSING_PRE,3=CLOSING_POS,4=CLOSED,5=OPENING_POS,6=OPENING_PRE,7=FAULT (state only) |
+| 5 | Fault Code | `uint8` | bitfield | 0-255 | BMS DTC flags (`BMS::DTC_BMS`) |
 | 6 | Counter (4-bit) | `uint8` | lower 4 bits only | 0-15 | bits 7-4 always 0 |
 | 7 | CRC8 | `uint8` |  |  |  |
 
-The `Fault Code` bitfield mirrors the `Contactormanager::DTC_COM` enumeration when
-the contactor manager diagnostics are forwarded over CAN:
+Current firmware transmits `BMS::dtc` in MSG3 byte 5. The bit mapping is:
 
 | Bit | Name | Description |
 |-----|------|-------------|
-| 0 | `DTC_COM_NO_CONTACTOR_POWER_SUPPLY` | Contactor driver supply is not present. |
-| 1 | `DTC_COM_NEGATIVE_CONTACTOR_FAULT` | Negative contactor feedback reported a fault. |
-| 2 | `DTC_COM_PRECHARGE_CONTACTOR_FAULT` | Precharge contactor feedback reported a fault. |
-| 3 | `DTC_COM_POSITIVE_CONTACTOR_FAULT` | Positive contactor feedback reported a fault. |
-| 4 | `DTC_COM_PRECHARGE_VOLTAGE_TIMEOUT` | Voltage precharge target was not reached before the strategy timeout. |
-| 5 | `DTC_COM_VOLTAGE_MONITOR_INVALID` | Voltage monitor input was invalid during precharge validation. |
-| 6-7 | (reserved) | Unused; transmit as 0. |
+| 0 | `DTC_BMS_CAN_SEND_ERROR` | A CAN transmit error occurred. |
+| 1 | `DTC_BMS_CAN_INIT_ERROR` | BMS CAN initialization failed. |
+| 2 | `DTC_BMS_PACK_FAULT` | Battery pack reported fault. |
+| 3 | `DTC_BMS_CONTACTOR_FAULT` | Contactor manager entered FAULT state. |
+| 4 | `DTC_BMS_SHUNT_FAULT` | Shunt/current measurement reported fault. |
+| 5-7 | (reserved) | Unused; transmit as 0. |
+
+Notes:
+- Byte 4 value `7` means the contactor manager state machine is in `FAULT`.
+- Byte 5 bit `0x08` (`DTC_BMS_CONTACTOR_FAULT`) is a BMS-level fault flag and is not a per-contactor diagnostic bit.
 
 ## MSG4: `BMS_SOC_SOH` (0x41D, 1 Hz)
 

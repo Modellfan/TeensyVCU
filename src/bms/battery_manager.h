@@ -103,6 +103,11 @@ private:
     float internal_resistance[CELLS_PER_MODULE * MODULES_PER_PACK];
     float open_circuite_voltage[CELLS_PER_MODULE * MODULES_PER_PACK];
 
+        // Non-Volatile Variable!!  
+    float energy_initial_Wh;
+    float measured_capacity_Wh = BMS_INITIAL_CAPACITY_WH;
+
+
     // --- Inputs / Raw Data ---
     float cell_voltage[CELLS_PER_MODULE * MODULES_PER_PACK];
     float cell_temp[CELLS_PER_MODULE * MODULES_PER_PACK];
@@ -160,9 +165,7 @@ private:
     void send_battery_status_message();
 
     // --- Core Functions ---
-    void update_soc_ocv_lut();
     void update_soc_coulomb_counting();
-    void correct_soc();
     void calculate_soh();
     void update_energy_metrics();
 
@@ -206,6 +209,7 @@ private:
 
     void apply_persistent_data(const PersistentDataStorage::PersistentData &data);
     PersistentDataStorage::PersistentData collect_persistent_data() const;
+    void store_persistent_and_reset_q_as();
 
     // State and DTC
     STATE_BMS state;

@@ -2,6 +2,7 @@
 
 #include <Arduino.h>
 #include <ACAN_T4.h> // for CANMessage
+#include <cmath>
 #include "settings.h"
 
 // Uncomment to enable printing of received CAN frames for the shunt.
@@ -90,6 +91,8 @@ public:
     _power_W = 0.0f;
     _as_As = 0.0f;
     _wh_Wh = 0.0f;
+    _as_offset_As = 0.0f;
+    _wh_offset_Wh = 0.0f;
 
     _cur_avg_A = 0.0f;
     _cur_dA_per_s = 0.0f;
@@ -165,7 +168,8 @@ public:
       setStatusDtc_(_st_I, SHUNT_DTC_STATUS_I_ERROR);
       if (!_st_I.system_err)
       {
-        _cur_A = raw / 1000.0f;
+        // Flip IVT-S sign so discharge is negative and charge is positive.
+        _cur_A = -raw / 1000.0f;
         param::current = _cur_A;
         _last_valid_ms = now;
         if (_state == STATE::INIT)
@@ -173,7 +177,7 @@ public:
           _state = STATE::OPERATING;
           param::state = _state;
         }
-        if (_cur_A > BMS_MAX_DISCHARGE_PEAK_CURRENT)
+        if (std::fabs(_cur_A) > BMS_MAX_DISCHARGE_PEAK_CURRENT)
         {
           setDtcFlag_(SHUNT_DTC_MAX_CURRENT_EXCEEDED);
           _state = STATE::FAULT;
@@ -244,7 +248,8 @@ public:
       setStatusDtc_(_st_W, SHUNT_DTC_STATUS_W_ERROR);
       if (!_st_W.system_err)
       {
-        _power_W = static_cast<float>(raw);
+        // Keep sign convention aligned with current decode.
+        _power_W = -static_cast<float>(raw);
         param::power = _power_W;
       }
     }
@@ -256,7 +261,10 @@ public:
       setStatusDtc_(_st_As, SHUNT_DTC_STATUS_AS_ERROR);
       if (!_st_As.system_err)
       {
-        _as_As += static_cast<float>(raw);
+        // IVT-S provides an absolute counter. Convert to a software-relative
+        // counter so resetAs() can re-zero without requiring a hardware reset.
+        const float as_abs = -static_cast<float>(raw);
+        _as_As = as_abs - _as_offset_As;
         param::as = _as_As;
       }
     }
@@ -268,7 +276,9 @@ public:
       setStatusDtc_(_st_Wh, SHUNT_DTC_STATUS_WH_ERROR);
       if (!_st_Wh.system_err)
       {
-        _wh_Wh += static_cast<float>(raw);
+        // IVT-S provides an absolute counter. Convert to software-relative form.
+        const float wh_abs = -static_cast<float>(raw);
+        _wh_Wh = wh_abs - _wh_offset_Wh;
         param::wh = _wh_Wh;
       }
     }
@@ -334,12 +344,14 @@ public:
 
   void resetAs()
   {
+    _as_offset_As += _as_As;
     _as_As = 0.0f;
     param::as = 0.0f;
   }
 
   void resetWh()
   {
+    _wh_offset_Wh += _wh_Wh;
     _wh_Wh = 0.0f;
     param::wh = 0.0f;
   }
@@ -660,6 +672,8 @@ private:
   float _power_W = 0.0f;
   float _as_As = 0.0f;
   float _wh_Wh = 0.0f;
+  float _as_offset_As = 0.0f;
+  float _wh_offset_Wh = 0.0f;
 
   // Filtered / derived values
   float _cur_avg_A = 0.0f;

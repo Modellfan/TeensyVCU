@@ -118,9 +118,7 @@ void BMS::Task100Ms()
 void BMS::Task1000Ms()
 {
     //SOC & SOE function
-    update_soc_ocv_lut();
     update_soc_coulomb_counting();
-    correct_soc();
 
     //HMI function
     update_energy_metrics();
@@ -489,7 +487,7 @@ void BMS::read_message()
                 vehicle_state = new_vehicle_state;
                 if (transitioned_to_standby)
                 {
-                    persistent_storage.save(collect_persistent_data());
+                    store_persistent_and_reset_q_as();
                 }
                 last_vehicle_state = new_vehicle_state;
 
@@ -572,8 +570,10 @@ void BMS::send_battery_status_message()
     msg3_counter = (msg3_counter + 1) & 0x0F;
 
     msg.id = BMS_MSG_SOC;
-    uint16_t soc16 = (uint16_t)(soc * 100.0f);
-    uint16_t soh16 = (uint16_t)(10000);
+    const float soc_cc_percent = std::clamp(param::soc_cc * 100.0f, 0.0f, 100.0f);
+    uint16_t soc16 = static_cast<uint16_t>(soc_cc_percent * 100.0f);
+    const float soh_percent = std::clamp(param::soh * 100.0f, 0.0f, 100.0f);
+    uint16_t soh16 = static_cast<uint16_t>(soh_percent * 100.0f);
     msg.data[0] = soc16 & 0xFF;
     msg.data[1] = soc16 >> 8;
     msg.data[2] = soh16 & 0xFF;
@@ -631,17 +631,19 @@ void BMS::send_message(CANMessage *frame)
 
 void BMS::apply_persistent_data(const PersistentDataStorage::PersistentData &data)
 {
+    const float q_as_ref = param::as;
+    const float b_as_runtime = data.b_as + q_as_ref;
+    const float q_low_as_runtime = data.q_low_as + q_as_ref;
+
     energy_initial_Wh = data.energy_initial_Wh;
     measured_capacity_Wh = data.measured_capacity_Wh;
-    coulomb_counting.initialise(data.b_as,
+    coulomb_counting.initialise(b_as_runtime,
                                 data.C_as,
                                 data.soh,
                                 data.have_low_anchor != 0U,
-                                data.q_low_as,
+                                q_low_as_runtime,
                                 data.soc_low_anchor,
                                 data.was_above_high_set != 0U);
-    ampere_seconds_initial = param::b_as;
-    measured_capacity_Ah = data.C_as / 3600.0f;
     contactorManager.setPrechargeStrategy(
         static_cast<Contactormanager::PrechargeStrategy>(data.contactor_precharge_strategy));
     contactorManager.setPositiveOpenCurrentLimit(data.contactor_positive_open_current_limit_A);
@@ -649,14 +651,16 @@ void BMS::apply_persistent_data(const PersistentDataStorage::PersistentData &dat
 
 PersistentDataStorage::PersistentData BMS::collect_persistent_data() const
 {
+    const float q_as_ref = param::q_as;
+
     PersistentDataStorage::PersistentData data;
     data.energy_initial_Wh = energy_initial_Wh;
     data.measured_capacity_Wh = measured_capacity_Wh;
-    data.b_as = coulomb_counting.b_as();
+    data.b_as = coulomb_counting.b_as() - q_as_ref;
     data.C_as = coulomb_counting.C_as();
     data.soh = coulomb_counting.soh();
     data.have_low_anchor = static_cast<uint8_t>(coulomb_counting.have_low_anchor());
-    data.q_low_as = coulomb_counting.q_low_as();
+    data.q_low_as = coulomb_counting.q_low_as() - q_as_ref;
     data.soc_low_anchor = coulomb_counting.soc_low_anchor();
     data.was_above_high_set = static_cast<uint8_t>(coulomb_counting.was_above_high_set());
     data.contactor_precharge_strategy =
@@ -664,6 +668,18 @@ PersistentDataStorage::PersistentData BMS::collect_persistent_data() const
     data.contactor_positive_open_current_limit_A =
         contactorManager.getPositiveOpenCurrentLimit();
     return data;
+}
+
+void BMS::store_persistent_and_reset_q_as()
+{
+    const PersistentDataStorage::PersistentData data = collect_persistent_data();
+    persistent_storage.save(data);
+
+    // Reset shunt charge counter after persisting so runtime q frame restarts at zero.
+    shunt.resetAs();
+
+    // Re-apply the same persistent data in the new q_as frame (q_as == 0).
+    apply_persistent_data(data);
 }
 
 PersistentDataStorage::PersistentData BMS::get_persistent_data() const
@@ -674,5 +690,5 @@ PersistentDataStorage::PersistentData BMS::get_persistent_data() const
 void BMS::update_persistent_data(const PersistentDataStorage::PersistentData &data)
 {
     apply_persistent_data(data);
-    persistent_storage.save(data);
+    store_persistent_and_reset_q_as();
 }

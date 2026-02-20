@@ -2,7 +2,8 @@
 #define SETTINGS_H
 
 #define VERSION 2.0
-//#define DEBUG
+// #define DEBUG
+#define CMU_IMPLAUSIBLE_DEBUG
 
 //---------------------------------------------------------------------------------------------------------------------------------------------
 //CMU and pack settings
@@ -13,7 +14,7 @@
 
 //CMU Settings
 #define CMU_MAX_INTERNAL_WARNING_TEMPERATURE 70.00f
-#define CMU_MAX_DELTA_MODULE_CELL_VOLTAGE 2.00f
+#define CMU_MAX_DELTA_MODULE_CELL_VOLTAGE 5.00f
 #define CMU_MIN_PLAUSIBLE_VOLTAGE 2.00f
 #define CMU_MAX_PLAUSIBLE_VOLTAGE 5.00f
 #define CMU_MAX_PLAUSIBLE_TEMPERATURE 80.00f
