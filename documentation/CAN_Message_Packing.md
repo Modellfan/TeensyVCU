@@ -75,6 +75,42 @@ Notes:
 | 6 | Counter (4-bit) | `uint8` | lower 4 bits only | 0-15 | bits 7-4 always 0 |
 | 7 | CRC8 | `uint8` |  |  |  |
 
+## Extra section: explicit contactor telemetry mirrored from serial console (`BMS_CONTACTOR_TELEMETRY`, 0x601, 10 Hz)
+
+This message explicitly publishes the same contactor values printed by serial console command `s` (`print_contactor_status()`):
+- Manager state
+- Manager DTC
+- Precharge strategy
+- Negative contactor closed
+- Contactor supply available
+- Positive contactor state
+- Positive contactor feedback
+- Positive contactor DTC
+- Precharge contactor state
+- Precharge contactor feedback
+- Precharge contactor DTC
+- Positive contactor can open (current-dependent)
+
+Enums are byte-aligned (not sub-byte packed). Bools are packed into a single
+bitfield byte. This telemetry frame intentionally has no alive counter and no
+CRC byte.
+
+| Byte | Signal | Type | Encoding |
+|-----|--------|------|----------|
+| 0 | Manager state | enum (`uint8`) | `Contactormanager::State` (`0..7`) |
+| 1 | Manager DTC | bitfield (`uint8`) | `Contactormanager::DTC_COM` |
+| 2 | Precharge strategy | enum (`uint8`) | `0=TIMED_DELAY`, `1=VOLTAGE_MATCH` |
+| 3 | Positive contactor state | enum (`uint8`) | `Contactor::State` (`0..5`) |
+| 4 | Positive contactor DTC | bitfield (`uint8`) | `Contactor::DTC_CON` |
+| 5 | Precharge contactor state | enum (`uint8`) | `Contactor::State` (`0..5`) |
+| 6 | Precharge contactor DTC | bitfield (`uint8`) | `Contactor::DTC_CON` |
+| 7 bit0 | Negative contactor closed | bool | `0=false`, `1=true` |
+| 7 bit1 | Contactor supply available | bool | `0=false`, `1=true` |
+| 7 bit2 | Positive contactor feedback | bool | `0=open`, `1=closed` |
+| 7 bit3 | Precharge contactor feedback | bool | `0=open`, `1=closed` |
+| 7 bit4 | Positive contactor can open | bool | `0=no`, `1=yes` |
+| 7 bit7:5 | reserved |  | transmit `0` |
+
 ## VCU to BMS (`BMS_VCU`, 0x437)
 
 All signals below are unsigned unless otherwise noted.

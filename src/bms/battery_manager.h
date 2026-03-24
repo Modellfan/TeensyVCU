@@ -63,6 +63,7 @@ public:
     void Task10Ms(); // Poll messages
     void Task100Ms();
     void Task1000Ms();
+    void Monitor100Ms();
 
     // Balancing control
     void update_balancing();
@@ -163,6 +164,7 @@ private:
     float remaining_wh; // Remaining energy in Wh
 
     void send_battery_status_message();
+    void send_contactor_telemetry_message();
 
     // --- Core Functions ---
     void update_soc_coulomb_counting();
@@ -198,7 +200,6 @@ private:
     uint8_t msg3_counter;
     uint8_t msg4_counter;
     uint8_t msg5_counter;
-
     uint8_t vcu_counter;
     unsigned long last_vcu_msg;
     bool vcu_timeout;

@@ -132,6 +132,11 @@ void BMS::Task1000Ms()
     update_balancing();
 }
 
+void BMS::Monitor100Ms()
+{
+    send_contactor_telemetry_message();
+}
+
 // ###############################################################################################################################################################################
 //   BMS State Machine
 // ###############################################################################################################################################################################
@@ -610,6 +615,27 @@ void BMS::send_battery_status_message()
     send_message(&msg);
 
     msg5_counter = (msg5_counter + 1) & 0x0F;
+}
+
+void BMS::send_contactor_telemetry_message()
+{
+    CANMessage msg;
+    msg.id = BMS_MSG_CONTACTOR_TELEMETRY;
+    msg.len = 8;
+
+    msg.data[0] = static_cast<uint8_t>(contactorManager.getState());
+    msg.data[1] = static_cast<uint8_t>(contactorManager.getDTC());
+    msg.data[2] = static_cast<uint8_t>(contactorManager.getPrechargeStrategy());
+    msg.data[3] = static_cast<uint8_t>(contactorManager.getPositiveState());
+    msg.data[4] = static_cast<uint8_t>(contactorManager.getPositiveDTC());
+    msg.data[5] = static_cast<uint8_t>(contactorManager.getPrechargeState());
+    msg.data[6] = static_cast<uint8_t>(contactorManager.getPrechargeDTC());
+    msg.data[7] = (contactorManager.isNegativeContactorClosed() ? 1U : 0U) |
+                  ((contactorManager.isContactorVoltageAvailable() ? 1U : 0U) << 1) |
+                  ((contactorManager.getPositiveInputPin() ? 1U : 0U) << 2) |
+                  ((contactorManager.getPrechargeInputPin() ? 1U : 0U) << 3) |
+                  ((contactorManager.canOpenPositiveContactor() ? 1U : 0U) << 4);
+    send_message(&msg);
 }
 
 void BMS::send_message(CANMessage *frame)

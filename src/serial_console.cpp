@@ -630,6 +630,9 @@ void print_contactor_status() {
     console.printf("  Negative contactor closed: %s, Supply available: %s\n",
                    negative_contactor_closed ? "true" : "false",
                    supply_available ? "true" : "false");
+    console.printf("  Positive contactor can open: %s, Open-current limit: %.2fA\n",
+                   contactor_manager.canOpenPositiveContactor() ? "true" : "false",
+                   contactor_manager.getPositiveOpenCurrentLimit());
     console.printf("  Positive contactor - State: %s, Feedback: %s, DTC: %s (0x%02X)\n",
                    single_contactor_state_to_string(positive_state),
                    contactor_feedback_to_string(positive_feedback_closed),
