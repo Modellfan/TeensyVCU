@@ -144,6 +144,7 @@ static const char *bms_state_to_string(BMS::STATE_BMS state) {
     switch (state) {
         case BMS::INIT: return "INIT";
         case BMS::OPERATING: return "OPERATING";
+        case BMS::SHUTDOWN: return "SHUTDOWN";
         case BMS::FAULT: return "FAULT";
         default: return "UNKNOWN";
     }
