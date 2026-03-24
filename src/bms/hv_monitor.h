@@ -18,6 +18,7 @@ enum HVMonitorDTC : uint8_t {
 
 namespace param {
 extern bool voltage_matched;
+extern float hv_monitor_delta_voltage;
 extern HVMonitorState hv_monitor_state;
 extern HVMonitorDTC hv_monitor_dtc;
 }
@@ -34,6 +35,7 @@ public:
     _state = HVMonitorState::INIT;
     _dtc = DTC_HVM_NONE;
     param::voltage_matched = false;
+    param::hv_monitor_delta_voltage = 0.0f;
     param::hv_monitor_state = _state;
     param::hv_monitor_dtc = _dtc;
   }
@@ -42,6 +44,7 @@ public:
     if (param::state == ShuntState::FAULT) {
       _state = HVMonitorState::FAULT;
       param::voltage_matched = false;
+      param::hv_monitor_delta_voltage = 0.0f;
       return;
     }
 
@@ -50,6 +53,7 @@ public:
       setDtcFlag_(DTC_HVM_INVALID_IN_VOLTAGE);
       _state = HVMonitorState::FAULT;
       param::voltage_matched = false;
+      param::hv_monitor_delta_voltage = 0.0f;
       param::hv_monitor_state = _state;
       return;
     }
@@ -72,11 +76,12 @@ public:
     param::hv_monitor_state = _state;
 
     if (_state == HVMonitorState::OPERATING) {
-      const float delta_v =
-          std::fabs(param::u_input_hvbox - param::u_output_hvbox);
-      param::voltage_matched = (delta_v <= HV_MONITOR_VOLTAGE_MATCH_TOLLERANCE);
+      param::hv_monitor_delta_voltage = calculateDeltaVoltage_();
+      param::voltage_matched =
+          (param::hv_monitor_delta_voltage <= HV_MONITOR_VOLTAGE_MATCH_TOLLERANCE);
     } else {
       param::voltage_matched = false;
+      param::hv_monitor_delta_voltage = 0.0f;
     }
   }
 
@@ -84,6 +89,10 @@ public:
   HVMonitorDTC getDTC() const { return _dtc; }
 
 private:
+  float calculateDeltaVoltage_() const {
+    return std::fabs(param::u_input_hvbox - param::u_output_hvbox);
+  }
+
   void setDtcFlag_(HVMonitorDTC flag) {
     _dtc = static_cast<HVMonitorDTC>(_dtc | flag);
     param::hv_monitor_dtc = _dtc;
