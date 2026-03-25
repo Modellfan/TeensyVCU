@@ -143,7 +143,7 @@ void enable_BMS_tasks()
 
 void BMS_Monitor100ms()
 {
-    //battery_manager.Monitor100Ms();
+    battery_manager.Monitor100Ms();
 }
 
 void BMS_Monitor1000ms()
@@ -212,4 +212,3 @@ void enable_update_system_load()
     update_system_load_timer.enable();
     Serial.println("System Load update timer enabled.");
 }
-
