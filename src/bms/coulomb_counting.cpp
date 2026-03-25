@@ -99,7 +99,6 @@ void CoulombCounting::update(float v_min, float v_max, float avg_temp_c)
 {
     if (param::state == ShuntState::FAULT)
     {
-        state_ = CoulombCountingState::FAULT;
         publish_params_();
         return;
     }

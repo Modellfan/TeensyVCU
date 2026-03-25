@@ -183,6 +183,10 @@ public:
           _state = STATE::FAULT;
           param::state = _state;
         }
+        else
+        {
+          maybeRecoverFromFault_();
+        }
         onCurrentUpdate_(now);
       }
     }
@@ -196,6 +200,7 @@ public:
       {
         _u1_V = raw / 1000.0f;
         param::u_input_hvbox = _u1_V;
+        maybeRecoverFromFault_();
       }
     }
     break;
@@ -208,6 +213,7 @@ public:
       {
         _u2_V = raw / 1000.0f;
         param::u_output_hvbox = _u2_V;
+        maybeRecoverFromFault_();
       }
     }
     break;
@@ -220,6 +226,7 @@ public:
       {
         _u3_V = raw / 1000.0f;
         param::u3 = _u3_V;
+        maybeRecoverFromFault_();
       }
     }
     break;
@@ -238,6 +245,10 @@ public:
           _state = STATE::FAULT;
           param::state = _state;
         }
+        else
+        {
+          maybeRecoverFromFault_();
+        }
       }
     }
     break;
@@ -251,6 +262,7 @@ public:
         // Keep sign convention aligned with current decode.
         _power_W = -static_cast<float>(raw);
         param::power = _power_W;
+        maybeRecoverFromFault_();
       }
     }
     break;
@@ -266,6 +278,7 @@ public:
         const float as_abs = -static_cast<float>(raw);
         _as_As = as_abs - _as_offset_As;
         param::as = _as_As;
+        maybeRecoverFromFault_();
       }
     }
     break;
@@ -280,6 +293,7 @@ public:
         const float wh_abs = -static_cast<float>(raw);
         _wh_Wh = wh_abs - _wh_offset_Wh;
         param::wh = _wh_Wh;
+        maybeRecoverFromFault_();
       }
     }
     break;
@@ -628,11 +642,43 @@ private:
     param::dtc = _dtc;
   }
 
+  static bool hasStatusError_(const StatusBits &status)
+  {
+    return status.this_out_of_range_or_me_err ||
+           status.any_me_err ||
+           status.system_err;
+  }
+
+  bool recoveryConditionsMet_() const
+  {
+    const bool current_ok = std::fabs(_cur_A) <= BMS_MAX_DISCHARGE_PEAK_CURRENT;
+    const bool temperature_ok = _temp_C <= ISA_SHUNT_MAX_TEMPERATURE;
+    const bool status_ok = !hasStatusError_(_st_I) &&
+                           !hasStatusError_(_st_U1) &&
+                           !hasStatusError_(_st_U2) &&
+                           !hasStatusError_(_st_U3) &&
+                           !hasStatusError_(_st_T) &&
+                           !hasStatusError_(_st_W) &&
+                           !hasStatusError_(_st_As) &&
+                           !hasStatusError_(_st_Wh);
+    const bool has_live_data = _last_valid_ms > 0;
+    return current_ok && temperature_ok && status_ok && has_live_data;
+  }
+
+  void maybeRecoverFromFault_()
+  {
+    if (_state == STATE::FAULT && recoveryConditionsMet_())
+    {
+      _state = STATE::OPERATING;
+      _dtc = SHUNT_DTC_NONE;
+      param::state = _state;
+      param::dtc = _dtc;
+    }
+  }
+
   void setStatusDtc_(const StatusBits &status, ShuntDTC flag)
   {
-    if (status.this_out_of_range_or_me_err ||
-        status.any_me_err ||
-        status.system_err)
+    if (hasStatusError_(status))
     {
       setDtcFlag_(flag);
     }
