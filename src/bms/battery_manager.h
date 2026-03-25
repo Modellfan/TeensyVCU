@@ -22,6 +22,7 @@ public:
     {
         INIT,      // pack is being initialized
         OPERATING, // pack is in operation state
+        SHUTDOWN,  // pack is in forced shutdown state
         FAULT      // pack is in fault state
     };
 

@@ -142,6 +142,16 @@ void BMS::update_state_machine()
     Contactormanager::State contactor_state = contactorManager.getState();
     ShuntState shunt_state = param::state;
 
+    if (ready_to_shutdown && state != SHUTDOWN)
+    {
+        store_persistent_and_reset_q_as();
+        // TODO: analyse if task should also be stoped.
+        state = SHUTDOWN;
+        max_discharge_current = 0.0f;
+        max_charge_current = 0.0f;
+        return;
+    }
+
     // Transition to fault state whenever a critical component reports a fault
     if (pack_state == BatteryPack::FAULT ||
         contactor_state == Contactormanager::FAULT ||
@@ -178,6 +188,10 @@ void BMS::update_state_machine()
         break;
 
     case OPERATING:
+        break;
+
+    case SHUTDOWN:
+        // Stay in forced shutdown until power cycle or explicit reset.
         break;
 
     case FAULT:
