@@ -111,6 +111,54 @@ CRC byte.
 | 7 bit4 | Positive contactor can open | bool | `0=no`, `1=yes` |
 | 7 bit7:5 | reserved |  | transmit `0` |
 
+
+## Extra section: shunt + HV monitor telemetry (`0x602`-`0x605`, 10 Hz)
+
+These frames mirror all currently available shunt and HV monitor runtime telemetry
+(`param::*`) in the same style as contactor telemetry: fixed CAN IDs and raw
+telemetry payload bytes without CRC/counter fields. All numeric values are packed
+as `uint16` with defined scale/offset.
+Values that exceed the representable range are saturated to `0..65535`.
+
+### `BMS_SHUNT_HV_META` (0x602)
+
+| Byte | Signal | Type | Encoding |
+|-----|--------|------|----------|
+| 0 | Shunt state | enum (`uint8`) | `ShuntState` (`0=INIT,1=OPERATING,2=FAULT`) |
+| 1 | Shunt DTC LSB | `uint8` | `param::dtc` bits 7:0 |
+| 2 | Shunt DTC MSB | `uint8` | `param::dtc` bits 15:8 |
+| 3 | HV monitor state | enum (`uint8`) | `HVMonitorState` (`0=INIT,1=OPERATING,2=FAULT`) |
+| 4 | HV monitor DTC | bitfield (`uint8`) | `HVMonitorDTC` |
+| 5 | Voltage matched | bool (`uint8`) | `0=false`, `1=true` |
+| 6-7 | HV monitor delta voltage | `uint16` | `V x 100` |
+
+### `BMS_MSG_SHUNT_HV_I_CURRENT_COUNTERS` (0x603)
+
+| Byte | Signal | Type | Scaling/Offset |
+|-----|--------|------|----------------|
+| 0-1 | Current | `uint16` | `(A x 10) + 5000` |
+| 2-3 | Current average | `uint16` | `(A x 10) + 5000` |
+| 4-5 | Charge counter (`As`) | `uint16` | `As + 32768` |
+| 6-7 | Energy counter (`Wh`) | `uint16` | `Wh + 32768` |
+
+### `BMS_MSG_SHUNT_HV_DI_TEMP_POWER` (0x604)
+
+| Byte | Signal | Type | Scaling/Offset |
+|-----|--------|------|----------------|
+| 0-1 | Current derivative | `uint16` | `(A/s x 1) + 32768` |
+| 2-3 | Temperature | `uint16` | `(degC x 10) + 400` |
+| 4-5 | Power | `uint16` | `(W x 0.1) + 32768` |
+| 6-7 | reserved | `uint16` | `0` |
+
+### `BMS_MSG_SHUNT_HV_U12_U3` (0x605)
+
+| Byte | Signal | Type | Scaling/Offset |
+|-----|--------|------|----------------|
+| 0-1 | Input HV box voltage (`U1`) | `uint16` | `V x 100` |
+| 2-3 | Output HV box voltage (`U2`) | `uint16` | `V x 100` |
+| 4-5 | `U3` voltage | `uint16` | `V x 100` |
+| 6-7 | reserved | `uint16` | `0` |
+
 ## VCU to BMS (`BMS_VCU`, 0x437)
 
 All signals below are unsigned unless otherwise noted.

@@ -166,6 +166,7 @@ private:
 
     void send_battery_status_message();
     void send_contactor_telemetry_message();
+    void send_shunt_hv_monitor_telemetry_messages();
 
     // --- Core Functions ---
     void update_soc_coulomb_counting();

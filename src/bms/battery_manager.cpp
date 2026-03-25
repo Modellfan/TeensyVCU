@@ -4,6 +4,7 @@
 #include "bms/battery_manager.h"
 #include "bms/current.h"
 #include "bms/contactor_manager.h"
+#include "bms/hv_monitor.h"
 #include "utils/can_packer.h"
 #include "utils/can_crc.h"
 #include "utils/current_limit_lookup.h"
@@ -14,6 +15,29 @@
 #include <algorithm>
 
 // #define DEBUG
+
+
+namespace {
+
+uint16_t encodeUnsigned(float value, float scale, float offset)
+{
+    const float encoded = (value * scale) + offset;
+    const float clamped = std::clamp(encoded, 0.0f, 65535.0f);
+    return static_cast<uint16_t>(clamped);
+}
+
+uint16_t encodeSignedOffset(float value, float scale)
+{
+    return encodeUnsigned(value, scale, 32768.0f);
+}
+
+void writeUint16ToCanBytes(CANMessage &msg, uint8_t start_index, uint16_t value)
+{
+    msg.data[start_index + 0] = static_cast<uint8_t>(value & 0xFF);
+    msg.data[start_index + 1] = static_cast<uint8_t>(value >> 8);
+}
+
+}
 
 BMS::BMS(BatteryPack &_batteryPack, Shunt_IVTS &_shunt, Contactormanager &_contactorManager)
     : batteryPack(_batteryPack),
@@ -135,6 +159,7 @@ void BMS::Task1000Ms()
 void BMS::Monitor100Ms()
 {
     send_contactor_telemetry_message();
+    send_shunt_hv_monitor_telemetry_messages();
 }
 
 // ###############################################################################################################################################################################
@@ -649,6 +674,46 @@ void BMS::send_contactor_telemetry_message()
                   ((contactorManager.getPositiveInputPin() ? 1U : 0U) << 2) |
                   ((contactorManager.getPrechargeInputPin() ? 1U : 0U) << 3) |
                   ((contactorManager.canOpenPositiveContactor() ? 1U : 0U) << 4);
+    send_message(&msg);
+}
+
+
+void BMS::send_shunt_hv_monitor_telemetry_messages()
+{
+    CANMessage msg;
+    msg.len = 8;
+
+    msg.id = BMS_MSG_SHUNT_HV_META;
+    msg.data[0] = static_cast<uint8_t>(param::state);
+    msg.data[1] = static_cast<uint8_t>(param::dtc & 0xFF);
+    msg.data[2] = static_cast<uint8_t>((param::dtc >> 8) & 0xFF);
+    msg.data[3] = static_cast<uint8_t>(param::hv_monitor_state);
+    msg.data[4] = static_cast<uint8_t>(param::hv_monitor_dtc);
+    msg.data[5] = param::voltage_matched ? 1U : 0U;
+    writeUint16ToCanBytes(msg, 6, encodeUnsigned(param::hv_monitor_delta_voltage, 100.0f, 0.0f));
+    send_message(&msg);
+
+    msg.id = BMS_MSG_SHUNT_HV_I_CURRENT_COUNTERS;
+    writeUint16ToCanBytes(msg, 0, encodeUnsigned(param::current, 10.0f, 5000.0f));
+    writeUint16ToCanBytes(msg, 2, encodeUnsigned(param::current_avg, 10.0f, 5000.0f));
+    writeUint16ToCanBytes(msg, 4, encodeSignedOffset(param::as, 1.0f));
+    writeUint16ToCanBytes(msg, 6, encodeSignedOffset(param::wh, 1.0f));
+    send_message(&msg);
+
+    msg.id = BMS_MSG_SHUNT_HV_DI_TEMP_POWER;
+    writeUint16ToCanBytes(msg, 0, encodeSignedOffset(param::current_dA_per_s, 1.0f));
+    writeUint16ToCanBytes(msg, 2, encodeUnsigned(param::temp, 10.0f, 400.0f));
+    writeUint16ToCanBytes(msg, 4, encodeSignedOffset(param::power, 0.1f));
+    msg.data[6] = 0U;
+    msg.data[7] = 0U;
+    send_message(&msg);
+
+    msg.id = BMS_MSG_SHUNT_HV_U12_U3;
+    writeUint16ToCanBytes(msg, 0, encodeUnsigned(param::u_input_hvbox, 100.0f, 0.0f));
+    writeUint16ToCanBytes(msg, 2, encodeUnsigned(param::u_output_hvbox, 100.0f, 0.0f));
+    writeUint16ToCanBytes(msg, 4, encodeUnsigned(param::u3, 100.0f, 0.0f));
+    msg.data[6] = 0U;
+    msg.data[7] = 0U;
     send_message(&msg);
 }
 
