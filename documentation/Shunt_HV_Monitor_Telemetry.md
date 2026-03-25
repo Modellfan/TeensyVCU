@@ -74,3 +74,13 @@ In the HV Monitor section, prints:
 
 ### Current visibility gap
 - `param::hv_monitor_dtc` exists internally but is not currently printed by the serial monitor.
+
+### CAN telemetry availability
+
+All values listed in this document are now exported on BMS CAN via dedicated telemetry
+messages (`0x602`-`0x605`) alongside contactor telemetry (`0x601`).
+
+- `0x602` publishes shunt/HV monitor states and DTC bitfields.
+- `0x603`..`0x605` publish scaled/offset `uint16` telemetry values.
+
+See `documentation/CAN_Message_Packing.md` for exact byte-level layout.
